@@ -1,6 +1,5 @@
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc;
-use tokio::task;
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread;
 use eframe;
 use egui;
 use crate::{Command, CommandResult};
@@ -20,15 +19,15 @@ impl eframe::App for App {
                 if ui.button("First Task").clicked() {
                     println!("First Task button clicked.");
                     let sender = self.command_sender.clone();
-                    task::spawn(async move {
-                        if let Err(e) = sender.send(Command::FirstTask).await {
+                    thread::spawn(move || {
+                        if let Err(e) = sender.send(Command::FirstTask) {
                             eprintln!("Failed to send FirstTask command: {:?}", e);
                         }
                     });
 
                     let sender = self.command_sender.clone();
-                    task::spawn(async move {
-                        if let Err(e) = sender.send(Command::SecondTask).await {
+                    thread::spawn(move || {
+                        if let Err(e) = sender.send(Command::SecondTask) {
                             eprintln!("Failed to send SecondTask command: {:?}", e);
                         }
                     });
@@ -36,8 +35,8 @@ impl eframe::App for App {
                 if ui.button("Second Task").clicked() {
                     println!("Second Task button clicked.");
                     let sender = self.command_sender.clone();
-                    task::spawn(async move {
-                        if let Err(e) = sender.send(Command::SecondTask).await {
+                    thread::spawn(move || {
+                        if let Err(e) = sender.send(Command::SecondTask) {
                             eprintln!("Failed to send SecondTask command: {:?}", e);
                         }
                     });
