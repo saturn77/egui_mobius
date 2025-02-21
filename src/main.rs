@@ -1,88 +1,129 @@
-mod app_ui;
-mod mobius; // placeholder for the Mobius module framework
-
-use app_ui::App;
-use std::sync::{Arc, Mutex, mpsc};
-use std::thread;
-use std::time::Duration;
-use eframe;
-
-#[derive(Debug, Clone)]
-pub enum Command {
-    FirstTask,
-    SecondTask,
-}
+use tokio::sync::mpsc;
+use tokio::task;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use eframe::egui;
+use tokio::time::Duration;
 
 #[derive(Debug)]
-pub enum CommandResult {
-    Success(String),
-    Failure(String),
+pub enum SignalMessage {
+    Command(String),
+    Result(String),
 }
 
-pub fn process_commands(
-    logger_text: Arc<Mutex<String>>,
-    command_receiver: mpsc::Receiver<Command>,
-    result_sender: mpsc::Sender<CommandResult>,
-) {
-    let mut local_index: u32 = 0;
-    while let Ok(command) = command_receiver.recv() {
-        println!("Received command: {:?}", command);
+#[derive(Clone)]
+pub struct Signal {
+    sender: mpsc::Sender<SignalMessage>,
+    receiver: Arc<Mutex<mpsc::Receiver<SignalMessage>>>,
+}
 
-        match command {
-            Command::FirstTask => {
-                println!("Processing FirstTask...");
-                let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", local_index);
-                local_index += 1;
-                logger_text.lock().unwrap().push_str(&banner_string);
+/// Create a Signal struct for communication between the frontend and backend
+/// in an effort to make the system more responsive, and in particular, to allow
+/// the GUI windowing close function to work properly. This formulation seems to
+/// work well with the tokio runtime, and the tokio::spawn() function, allowing
+/// the window to close without hanging. More experimentation will be needed. 
+/// 21 Feb 2025, James B. 
 
-                thread::sleep(Duration::from_millis(100)); // Simulate long task
-                if rand::random::<bool>() {
-                    println!("FirstTask succeeded.");
-                    logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
-                    result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
-                } else {
-                    println!("FirstTask failed.\n");
-                    logger_text.lock().unwrap().push_str("Processing FirstTask Command (failed).\n");
-                    result_sender.send(CommandResult::Failure("First Task failed!".to_string())).unwrap();
+impl Signal {
+    // Create a new Signal with the sender and receiver
+    pub fn new() -> Self {
+        let (sender, receiver) = mpsc::channel(32);
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        Signal { sender, receiver }
+    }
+
+    // Send a command to the backend
+    pub async fn send_command(&self, command: String) {
+        let _ = self.sender.send(SignalMessage::Command(command)).await;
+    }
+
+    // Send a SignalMessage to the backend
+    pub async fn send_message(&self, message: SignalMessage) {
+        let _ = self.sender.send(message).await;
+    }
+
+    // Receive a result from the backend
+    pub async fn receive_result(&self) -> Option<SignalMessage> {
+        let mut receiver = self.receiver.lock().await;
+        receiver.recv().await
+    }
+}
+
+pub struct MyApp {
+    signal: Signal,
+}
+
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.handle_ui(ctx);
+    }
+}
+
+impl MyApp {
+    fn new(signal: Signal) -> Self {
+        Self { signal }
+    }
+
+    fn handle_ui(&mut self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            if ui.button("Send Command to Backend").clicked() {
+                let signal_clone = self.signal.clone();
+                tokio::spawn(async move {
+                    signal_clone.send_command("Hello Backend!".to_string()).await;
+                });
+            }
+
+            // Receive a result (blocking)
+            tokio::spawn({
+                let signal_clone = self.signal.clone();
+                async move {
+                    if let Some(result) = signal_clone.receive_result().await {
+                        match result {
+                            SignalMessage::Result(res) => {
+                                eprintln!("Backend responded: {}", res);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            });
+        });
+    }
+}
+
+pub fn backend(signal: Signal) {
+    let signal_clone = signal.clone();
+
+    task::spawn(async move {
+        while let Some(message) = signal.receive_result().await {
+            match message {
+                SignalMessage::Command(cmd) => {
+                    // Simulate backend work
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    let result = format!("Processed: {}", cmd);
+                    signal_clone.send_message(SignalMessage::Result(result)).await;
+                }
+                SignalMessage::Result(res) => {
+                    // Handle result message if needed
+                    eprintln!("Received result: {}", res);
                 }
             }
-            Command::SecondTask => {
-                println!("Processing SecondTask");
-                logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
-                thread::sleep(Duration::from_millis(100));
-                result_sender.send(CommandResult::Success("Second Task completed!".to_string())).unwrap();
-            }
         }
-    }
+    });
 }
 
-fn main() {
-    let (command_sender, command_receiver) = mpsc::channel::<Command>();
-    let (result_sender, result_receiver) = mpsc::channel::<CommandResult>();
+#[tokio::main]
+async fn main() {
+    // Create Signal instance for communication
+    let signal = Signal::new();
+    
+    // Start the backend processing in a new task
+    backend(signal.clone());
 
-    let app = App {
-        logger_text: Arc::new(Mutex::new(String::new())),
-        command_sender: command_sender.clone(),
-        result_receiver: Arc::new(Mutex::new(None)),
-    };
-
-    let logger_text = app.logger_text.clone();
-    let result_receiver_clone: Arc<Mutex<Option<CommandResult>>> = Arc::clone(&app.result_receiver);
-
-    // Implement the backend task processor for the commands
-    thread::spawn(move || process_commands(logger_text, command_receiver, result_sender));
-
-    // Run the app
-    if let Err(e) = eframe::run_native(
-        "My App",
-        eframe::NativeOptions::default(),
-        Box::new(|_cc| Ok(Box::new(app))),
-    ) {
-        eprintln!("Failed to run eframe: {:?}", e);
-    }
-
-    // Process results
-    while let Ok(result) = result_receiver.recv() {
-        *result_receiver_clone.lock().unwrap() = Some(result);
+    // Set up the eframe app
+    let app = MyApp::new(signal);
+    if let Err(e) = eframe::run_native("Signal App", eframe::NativeOptions::default(), Box::new(|_cc| Ok(Box::new(app) as Box<dyn eframe::App>))) {
+        eprintln!("Failed to run eframe: {}", e);
     }
 }
