@@ -1,37 +1,42 @@
-#[allow(dead_code)]
-use tokio::sync::mpsc;
+#![allow(dead_code)]
+
 use std::sync::{Arc, Mutex};
 
-pub trait CommandTrait: Send + 'static {}
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub enum CommandResult {
-    Success(String),
-    Failure(String),
+use std::sync::mpsc;
+
+// Backend (business logic) will be handled in a separate thread
+#[derive(Debug)]
+pub enum SignalMessage<T> {
+    Command(T),
+    Result(T),
 }
-#[allow(dead_code)]
-#[derive(Clone)]
+
+#[derive(Clone, Debug)]
 pub struct Signal<T> {
-    pub sender: mpsc::Sender<T>,
-    pub receiver: Arc<Mutex<Option<T>>>,
-    pub result_receiver: Arc<Mutex<Option<CommandResult>>>,
+    sender: mpsc::Sender<SignalMessage<T>>,
+    receiver: Arc<Mutex<mpsc::Receiver<SignalMessage<T>>>>,
 }
 
-#[allow(dead_code)]
 impl<T> Signal<T> {
-    pub fn get_result(&self) -> Option<CommandResult> {
-        self.result_receiver.lock().unwrap().clone()
-    }
-}
-
-#[allow(dead_code)]
-impl<C: CommandTrait> Signal<C> {
-    pub fn new() -> (Self, mpsc::Receiver<C>) {
-        let (command_sender, command_receiver) = mpsc::channel::<C>(32);
-        (Self { sender: command_sender, receiver: Arc::new(Mutex::new(None)), result_receiver: Arc::new(Mutex::new(None)) }, command_receiver)
+    pub fn new() -> Self {
+        let (sender, receiver) = mpsc::channel();
+        Signal {
+            sender,
+            receiver: Arc::new(Mutex::new(receiver)),
+        }
     }
 
-    pub async fn send_command(&self, command: C) -> Result<(), mpsc::error::SendError<C>> {
-        self.sender.send(command).await
+    pub fn send_command(&self, message: T) {
+        self.sender.send(SignalMessage::Command(message)).unwrap();
+    }
+
+    pub fn send_result(&self, message: T) {
+        self.sender.send(SignalMessage::Result(message)).unwrap();
+    }
+
+    // Non-blocking receive function: Returns None if no message is available
+    pub fn try_receive(&self) -> Option<SignalMessage<T>> {
+        let receiver = self.receiver.lock().unwrap();
+        receiver.try_recv().ok()
     }
 }
