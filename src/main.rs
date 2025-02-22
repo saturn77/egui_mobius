@@ -20,8 +20,10 @@ pub enum CommandResult {
     Failure(String),
 }
 
+type SafeChar = Arc<Mutex<String>>;
+
 pub async fn process_commands(
-    logger_text: Arc<Mutex<String>>,
+    logger_text: SafeChar,
     mut command_receiver: mpsc::Receiver<Command>,
     result_sender: mpsc::Sender<CommandResult>,
 ) {
