@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use std::sync::{Arc, Mutex};
-
-use std::sync::mpsc;
+use std::sync::Arc;
+use tokio::sync::{Mutex, mpsc};
 
 // Backend (business logic) will be handled in a separate thread
 #[derive(Debug, Clone)]
@@ -17,24 +16,24 @@ pub struct Signal<T> {
     pub receiver: Arc<Mutex<mpsc::Receiver<WireType<T>>>>,
 }
 
-impl<T: Send + 'static > Signal<T> {
+impl<T: Send + 'static> Signal<T> {
     pub fn new() -> Self {
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel(32);
         let receiver = Arc::new(Mutex::new(receiver));
         Signal { sender, receiver }
     }
 
-    pub fn send_command(&self, message: T) {
-        self.sender.send(WireType::Command(message)).unwrap();
+    pub async fn send_command(&self, message: T) {
+        self.sender.send(WireType::Command(message)).await.unwrap();
     }
 
-    pub fn send_result(&self, message: T) {
-        self.sender.send(WireType::Result(message)).unwrap();
+    pub async fn send_result(&self, message: T) {
+        self.sender.send(WireType::Result(message)).await.unwrap();
     }
 
     // Non-blocking receive function: Returns None if no message is available
-    pub fn try_receive(&self) -> Option<WireType<T>> {
-        let receiver = self.receiver.lock().unwrap();
+    pub async fn try_receive(&self) -> Option<WireType<T>> {
+        let mut receiver = self.receiver.lock().await;
         receiver.try_recv().ok()
     }
 }
