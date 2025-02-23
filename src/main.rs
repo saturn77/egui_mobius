@@ -1,12 +1,13 @@
+#[allow(dead_code)]
 mod app_ui;
 mod mobius; // placeholder for the Mobius module framework
 
 use app_ui::App;
-use mobius::types::MobiusReceiver;
+use mobius::types::{MobiusString, MobiusCommandDeque, MobiusEventEnque};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-use tokio::task;
-use tokio::time::{sleep, Duration};
+
+
 use eframe;
 
 #[derive(Debug, Clone)]
@@ -21,70 +22,60 @@ pub enum CommandResult {
     Failure(String),
 }
 
-use crate::mobius::types::{MobiusString, MobiusSender};
-
-pub async fn process_commands(
-    logger_text: MobiusString,
-    mut command_receiver: mpsc::Receiver<Command>,
-    result_sender: MobiusSender<CommandResult>,
+fn process_commands(
+    logger_text       : MobiusString,
+    command_receiver  : MobiusCommandDeque<Command>,
+    event_sender      : MobiusEventEnque<CommandResult>,
 ) {
-    let mut local_index: u32 = 0;
-    while let Some(command) = command_receiver.recv().await {
-        println!("Received command: {:?}", command);
 
-        match command {
+    if let Ok(processed_command) = command_receiver.try_recv(){
+        println!("Processing command: {:?}", processed_command);
+        let event_response_string : String;
+        match processed_command {
             Command::FirstTask => {
                 println!("Processing FirstTask...");
-                let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", local_index);
-                local_index += 1;
+                let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", 1);
                 logger_text.lock().unwrap().push_str(&banner_string);
-
-                sleep(Duration::from_millis(100)).await; // Simulate long task
-                if rand::random::<bool>() {
-                    let mut delay_counter = 0;
-                    println!("FirstTask succeeded.");
-                    logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
-                    while delay_counter < 10 {
-                        delay_counter += 1;
-                        sleep(Duration::from_millis(200)).await;
-                        *logger_text.lock().unwrap() += &format!(". ");
-                    }
-                    result_sender.send(CommandResult::Success("First Task completed!".to_string())).await.unwrap();
-                } else {
-                    println!("FirstTask failed.\n");
-                    logger_text.lock().unwrap().push_str("Processing FirstTask Command (failed).\n");
-                    result_sender.send(CommandResult::Failure("First Task failed!".to_string())).await.unwrap();
-                }
+                event_response_string = "First Task completed!".to_string();
+                println!("FirstTask succeeded.");
+                logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
+                
             }
             Command::SecondTask => {
                 println!("Processing SecondTask");
                 logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
-                sleep(Duration::from_millis(100)).await;
-                result_sender.send(CommandResult::Success("Second Task completed!".to_string())).await.unwrap();
+                event_response_string = "Second Task completed!".to_string();
+                
             }
         }
+        // async send the event response
+        event_sender.send(CommandResult::Success(event_response_string));
     }
 }
 
 #[tokio::main]
 async fn main() {
 
-    let (command_sender, command_receiver) = mpsc::channel::<Command>(32);
-    let (result_sender, mut result_receiver) = mpsc::channel::<CommandResult>(32);
+    let (command_sender, command_receiver) = crossbeam_channel::bounded(32); 
+    let (event_sender, event_receiver) = mpsc::channel::<CommandResult>(32);
 
 
 
     let app = App {
         logger_text: Arc::new(Mutex::new(String::new())),
         command_sender,
-        result_receiver,
+        event_receiver,
     };
 
     let logger_text = app.logger_text.clone();
 
 
-    // Implement the backend task processor for the commands
-    task::spawn(process_commands(logger_text, command_receiver, result_sender));
+    // Implement the backend task processor for the commands, using std::thread::spawn
+    std::thread::spawn(move || {
+        loop {
+            process_commands(logger_text.clone(), command_receiver.clone(), event_sender.clone());
+        }
+    });
 
     // Run the app
     if let Err(e) = eframe::run_native(
@@ -94,6 +85,5 @@ async fn main() {
     ) {
         eprintln!("Failed to run eframe: {:?}", e);
     }
-
 
 }

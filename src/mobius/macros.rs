@@ -4,7 +4,7 @@ macro_rules! mobius_send_command {
         {
             let sender = $sender.clone();
             task::spawn(async move {
-                if let Err(e) = sender.send($command).await {
+                if let Err(e) = sender.send($command) {
                     eprintln!("Failed to send {:?} command: {:?}", $command, e);
                 }
             });

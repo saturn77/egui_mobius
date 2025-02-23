@@ -8,8 +8,8 @@ use crate::mobius::types::*;
 
 pub struct App {
     pub logger_text     : MobiusString,
-    pub command_sender  : MobiusSender<Command>,
-    pub result_receiver : MobiusReceiver<CommandResult>,
+    pub command_sender  : MobiusCommandEnque<Command>,
+    pub event_receiver  : MobiusEventDeque<CommandResult>,
 }
 
 impl eframe::App for App {
