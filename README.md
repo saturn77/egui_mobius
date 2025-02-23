@@ -1,7 +1,18 @@
-# Mobius
+
+# Mobius_Egui  
 Modular and ergonomic construction of egui applications. 
 
-![alt text](assets/mobius_strip.png)
+![Mobius_Egui Logo](./assets/mobius_egui_logo.png)  
+
+**Mobius_Egui** is a Rust framework designed to modularize and separate front-end and back-end logic in Egui applications. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip.  
+
+## Why Mobius_Egui?  
+In traditional Egui applications, UI and backend logic are often tightly coupled. Mobius_Egui solves this by providing a structured approach to communication between layers, improving maintainability and scalability.  
+
+## Features  
+- Clear separation of UI and business logic.  
+- Flexible command and event processing using `std::mpsc`.  
+- Modular design for cleaner, more maintainable code.  
 
 ## Quick Start
 One can test out the examples by running these steps 
@@ -12,43 +23,37 @@ cargo build
 cargo run --example simple_monitor
 ```
 
-## Introduction 
-The Egui framework is powerful and effective, but is challenging to 
-work with in larger applications. Considering the many benefits of 
-Egui, it is worthwhile to consider making a framework or library that
-will modularize the code and partition the front and back ends to a 
-degree that makes the code more : 
+## Installation
+When using mobius_egui as a library, add the following to your `Cargo.toml`:  
+```toml
+[dependencies]
+mobius_egui = "0.1.0"
+eframe = "0.22"
+egui = "0.22"
+```  
 
- - maintainable
- - versatile
- - composable
+## Usage  
+Example of sending a command from the UI:  
+```rust
+if ui.button("First Task").clicked() {
+    mobius_send_command!(self.command_sender, Command::FirstTask);
+}
+```  
+Example backend processing:  
+```rust
+match command {
+    Command::FirstTask => {
+        logger_text.lock().unwrap().push_str("Processing FirstTask...\n");
+        result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
+    }
+}
+```  
 
-The implementation of these features relies on the concept of backend and frontend, and sender and receivers. Considering this, the name Mobius was adopted because eventually the front and back ends will function as a one side surface even though they are separated in code. 
+## Contributing  
+Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request.  
 
-## Planned Features
+## License  
+This project is licensed under the MIT License.  
 
-### Core Functionality
-- Modularization system
-- Async support via Tokio
-- Exploration of Signals and Slots mechanism
-
-### User Interface Components
-- Common UI elements (buttons, sliders, text inputs, etc.) as *reusable* widgets
-- Customizable themes based on existing Egui theming libraries
-
-### State Management
-- Global state management; which is the default for Egui
-- Local state management
-
-### Documentation and Examples
-- Comprehensive documentation
-- Example projects
-
-### Testing and Debugging Tools
-- Unit tests
-- Debugging tools
-
-### Performance Optimization
-- Efficient rendering
-- Resource management
-
+## Contact  
+For support or questions, open an issue or reach out on [GitHub Discussions](https://github.com/saturn77/mobius_egui/discussions).  
