@@ -1,8 +1,7 @@
 use eframe;
 use egui;
 use crate::{Command, CommandResult};
-use tokio::task;
-
+use crossbeam_channel::Sender;
 use mobius_egui::mobius_send_command;
 use mobius_egui::types::*;
 
@@ -28,7 +27,7 @@ impl eframe::App for App {
                 }
                 if ui.button("Clear Terminal").clicked() {
                     println!("Clear Terminal button clicked.");
-                    self.logger_text.lock().unwrap().clear();
+                    logger_text.lock().unwrap().clear();
                 }
             });
 

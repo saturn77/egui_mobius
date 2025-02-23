@@ -6,11 +6,13 @@ use mobius_egui::types::{MobiusString, MobiusCommandDeque, MobiusEventEnque};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use eframe;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum Command {
     FirstTask,
     SecondTask,
+    ClearTerminal,
 }
 
 #[derive(Debug)]
@@ -24,45 +26,73 @@ fn process_commands(
     command_receiver  : MobiusCommandDeque<Command>,
     event_sender      : MobiusEventEnque<CommandResult>,
 ) {
-
-    if let Ok(processed_command) = command_receiver.try_recv(){
-        println!("Processing command: {:?}", processed_command);
-        let event_response_string : String;
-        match processed_command {
-            Command::FirstTask => {
-                println!("Processing FirstTask...");
-                let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", 1);
-                logger_text.lock().unwrap().push_str(&banner_string);
-                event_response_string = "First Task completed!".to_string();
-                println!("FirstTask succeeded.");
-                logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
-                
+    loop {
+        match command_receiver.try_recv() {
+            Ok(processed_command) => {
+                println!("Processing command: {:?}", processed_command);
+                let event_response_string: String;
+                match processed_command {
+                    Command::FirstTask => {
+                        println!("Processing FirstTask...");
+                        let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", 1);
+                        if let Ok(mut logger) = logger_text.lock() {
+                            logger.push_str(&banner_string);
+                            logger.push_str("Processing FirstTask Command (success).\n");
+                        }
+                        event_response_string = "First Task completed!".to_string();
+                        println!("FirstTask succeeded.");
+                    }
+                    Command::SecondTask => {
+                        println!("Processing SecondTask");
+                        if let Ok(mut logger) = logger_text.lock() {
+                            logger.push_str("Processing SecondTask Command (success).\n");
+                        }
+                        event_response_string = "Second Task completed!".to_string();
+                    }
+                    Command::ClearTerminal => {
+                        println!("Clearing Terminal...");
+                        if let Ok(mut logger) = logger_text.lock() {
+                            logger.clear();
+                        }
+                        event_response_string = "Terminal cleared!".to_string();
+                        println!("Terminal cleared.");
+                    }
+                }
+                // async send the event response, after launching a tokio runtime
+                let _ = tokio::runtime::Runtime::new().unwrap().block_on(async {
+                    event_sender.send(CommandResult::Success(event_response_string)).await
+                });
             }
-            Command::SecondTask => {
-                println!("Processing SecondTask");
-                logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
-                event_response_string = "Second Task completed!".to_string();
-                
+            Err(crossbeam_channel::TryRecvError::Empty) => {
+                // No command to process, continue the loop
+                std::thread::sleep(std::time::Duration::from_millis(100)); // Add a small delay to avoid busy-waiting
+            }
+            Err(crossbeam_channel::TryRecvError::Disconnected) => {
+                println!("Command receiver disconnected");
+                break;
             }
         }
-        // async send the event response, after launching a tokio runtime
-        let _ =
-            tokio::runtime::Runtime::new().unwrap().block_on(async {
-                event_sender.send(CommandResult::Success(event_response_string)).await
-            });
-
     }
+}
+
+fn recreate_channels(
+    app: &mut App,
+) -> (crossbeam_channel::Sender<Command>, crossbeam_channel::Receiver<Command>, mpsc::Sender<CommandResult>, mpsc::Receiver<CommandResult>) {
+    let (command_sender, command_receiver) = crossbeam_channel::bounded(0);
+    let (event_sender, event_receiver) = mpsc::channel::<CommandResult>(64);
+
+    app.command_sender = command_sender.clone();
+    app.event_receiver = event_receiver;
+
+    (command_sender, command_receiver, event_sender, event_receiver)
 }
 
 #[tokio::main]
 async fn main() {
+    let (command_sender, command_receiver) = crossbeam_channel::bounded(64); 
+    let (event_sender, event_receiver) = mpsc::channel::<CommandResult>(256); // Increased capacity
 
-    let (command_sender, command_receiver) = crossbeam_channel::bounded(32); 
-    let (event_sender, event_receiver) = mpsc::channel::<CommandResult>(32);
-
-
-
-    let app = App {
+    let mut app = App {
         logger_text: Arc::new(Mutex::new(String::new())),
         command_sender,
         event_receiver,
@@ -70,13 +100,11 @@ async fn main() {
 
     let logger_text = app.logger_text.clone();
 
-
     // Implement the backend task processor for the commands, using std::thread::spawn
-    std::thread::spawn(move || {
-        loop {
-            process_commands(logger_text.clone(), command_receiver.clone(), event_sender.clone());
-        }
-    });
+    let (command_sender, command_receiver, event_sender, _event_receiver) = recreate_channels(&mut app);
+    //std::thread::spawn(move || {
+        process_commands(logger_text.clone(), command_receiver.clone(), event_sender.clone());
+    //});
 
     // Run the app
     if let Err(e) = eframe::run_native(
@@ -86,5 +114,4 @@ async fn main() {
     ) {
         eprintln!("Failed to run eframe: {:?}", e);
     }
-
 }
