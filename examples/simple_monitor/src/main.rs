@@ -1,13 +1,12 @@
 #[allow(dead_code)]
 mod app_ui;
-mod mobius; // placeholder for the Mobius module framework
+
+use mobius_egui;   
 
 use app_ui::App;
-use mobius::types::{MobiusString, MobiusCommandDeque, MobiusEventEnque};
+use mobius_egui::types::{MobiusString, MobiusCommandDeque, MobiusEventEnque};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-
-
 use eframe;
 
 #[derive(Debug, Clone)]
