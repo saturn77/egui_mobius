@@ -2,6 +2,7 @@ mod app_ui;
 mod mobius; // placeholder for the Mobius module framework
 
 use app_ui::App;
+use mobius::types::MobiusReceiver;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio::task;
@@ -20,12 +21,12 @@ pub enum CommandResult {
     Failure(String),
 }
 
-type SafeChar = Arc<Mutex<String>>;
+use crate::mobius::types::{MobiusString, MobiusSender};
 
 pub async fn process_commands(
-    logger_text: SafeChar,
+    logger_text: MobiusString,
     mut command_receiver: mpsc::Receiver<Command>,
-    result_sender: mpsc::Sender<CommandResult>,
+    result_sender: MobiusSender<CommandResult>,
 ) {
     let mut local_index: u32 = 0;
     while let Some(command) = command_receiver.recv().await {
@@ -38,10 +39,16 @@ pub async fn process_commands(
                 local_index += 1;
                 logger_text.lock().unwrap().push_str(&banner_string);
 
-                sleep(Duration::from_secs(1)).await; // Simulate long task
+                sleep(Duration::from_millis(100)).await; // Simulate long task
                 if rand::random::<bool>() {
+                    let mut delay_counter = 0;
                     println!("FirstTask succeeded.");
                     logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
+                    while delay_counter < 10 {
+                        delay_counter += 1;
+                        sleep(Duration::from_millis(200)).await;
+                        *logger_text.lock().unwrap() += &format!(". ");
+                    }
                     result_sender.send(CommandResult::Success("First Task completed!".to_string())).await.unwrap();
                 } else {
                     println!("FirstTask failed.\n");
@@ -52,7 +59,7 @@ pub async fn process_commands(
             Command::SecondTask => {
                 println!("Processing SecondTask");
                 logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
-                sleep(Duration::from_secs(1)).await;
+                sleep(Duration::from_millis(100)).await;
                 result_sender.send(CommandResult::Success("Second Task completed!".to_string())).await.unwrap();
             }
         }
@@ -61,17 +68,20 @@ pub async fn process_commands(
 
 #[tokio::main]
 async fn main() {
+
     let (command_sender, command_receiver) = mpsc::channel::<Command>(32);
     let (result_sender, mut result_receiver) = mpsc::channel::<CommandResult>(32);
+
+
 
     let app = App {
         logger_text: Arc::new(Mutex::new(String::new())),
         command_sender,
-        result_receiver: Arc::new(Mutex::new(None)),
+        result_receiver,
     };
 
     let logger_text = app.logger_text.clone();
-    let result_receiver_clone: Arc<Mutex<Option<CommandResult>>> = Arc::clone(&app.result_receiver);
+
 
     // Implement the backend task processor for the commands
     task::spawn(process_commands(logger_text, command_receiver, result_sender));
@@ -85,8 +95,5 @@ async fn main() {
         eprintln!("Failed to run eframe: {:?}", e);
     }
 
-    // Process results
-    while let Some(result) = result_receiver.recv().await {
-        *result_receiver_clone.lock().unwrap() = Some(result);
-    }
+
 }
