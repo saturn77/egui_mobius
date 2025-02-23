@@ -3,7 +3,14 @@ Async framework facilitating a modular construction of egui applications.
 
 ![alt text](assets/mobius_strip.png)
 
-
+## Quick Start
+One can test out the examples by running these steps 
+```bash
+git clone git@github.com:saturn77/mobius_egui.git 
+cd mobius_egui
+cargo build
+cargo run --example simple_monitor
+```
 
 ## Introduction 
 The Egui framework is powerful and effective, but is challenging to 
