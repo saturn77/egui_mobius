@@ -1,18 +1,78 @@
-#[allow(dead_code)]
-mod app_ui;
 
-use app_ui::App;
-use mobius_egui::types::{MobiusString, MobiusCommandDeque, MobiusEventEnque};
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc;
-use eframe;
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread;
 use std::time::Duration;
+use eframe;
+use egui;
+
+pub struct App {
+    pub logger_text: Arc<Mutex<String>>,
+    pub command_sender: mpsc::Sender<Command>,
+    pub result_receiver: Arc<Mutex<Option<CommandResult>>>,
+}
+
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+
+            // add buttons to send commands
+            ui.horizontal(|ui| {
+                if ui.button("First Task").clicked() {
+                    println!("First Task button clicked.");
+                    let sender = self.command_sender.clone();
+                    thread::spawn(move || {
+                        if let Err(e) = sender.send(Command::FirstTask) {
+                            eprintln!("Failed to send FirstTask command: {:?}", e);
+                        }
+                    });
+
+                    let sender = self.command_sender.clone();
+                    thread::spawn(move || {
+                        if let Err(e) = sender.send(Command::SecondTask) {
+                            eprintln!("Failed to send SecondTask command: {:?}", e);
+                        }
+                    });
+                }
+                if ui.button("Second Task").clicked() {
+                    println!("Second Task button clicked.");
+                    let sender = self.command_sender.clone();
+                    thread::spawn(move || {
+                        if let Err(e) = sender.send(Command::SecondTask) {
+                            eprintln!("Failed to send SecondTask command: {:?}", e);
+                        }
+                    });
+                }
+            });
+
+            //*******************************************************************
+            // Main Scroller for Terminal Window
+            //*******************************************************************
+
+            let scroller_text_color: egui::Color32 = egui::Color32::GREEN;
+
+            let mut _scroller = egui::ScrollArea::vertical()
+                .id_salt("terminal_scroller")
+                .stick_to_bottom(false)
+                .max_height(400.0_f32)
+                .show(ui, |ui| {
+                    egui::TextEdit::multiline(&mut *self.logger_text.lock().unwrap())
+                        .id(egui::Id::new("terminal"))
+                        .text_color(scroller_text_color)
+                        .font(egui::TextStyle::Monospace) // for cursor height
+                        .interactive(true)
+                        .desired_rows(20)
+                        .lock_focus(true)
+                        .desired_width(550.)
+                        .show(ui);
+                });
+        });
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Command {
     FirstTask,
     SecondTask,
-    ClearTerminal,
 }
 
 #[derive(Debug)]
@@ -21,90 +81,58 @@ pub enum CommandResult {
     Failure(String),
 }
 
-fn process_commands(
-    logger_text       : MobiusString,
-    command_receiver  : MobiusCommandDeque<Command>,
-    event_sender      : MobiusEventEnque<CommandResult>,
+pub fn process_commands(
+    logger_text: Arc<Mutex<String>>,
+    command_receiver: mpsc::Receiver<Command>,
+    result_sender: mpsc::Sender<CommandResult>,
 ) {
-    loop {
-        match command_receiver.try_recv() {
-            Ok(processed_command) => {
-                println!("Processing command: {:?}", processed_command);
-                let event_response_string: String;
-                match processed_command {
-                    Command::FirstTask => {
-                        println!("Processing FirstTask...");
-                        let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", 1);
-                        if let Ok(mut logger) = logger_text.lock() {
-                            logger.push_str(&banner_string);
-                            logger.push_str("Processing FirstTask Command (success).\n");
-                        }
-                        event_response_string = "First Task completed!".to_string();
-                        println!("FirstTask succeeded.");
-                    }
-                    Command::SecondTask => {
-                        println!("Processing SecondTask");
-                        if let Ok(mut logger) = logger_text.lock() {
-                            logger.push_str("Processing SecondTask Command (success).\n");
-                        }
-                        event_response_string = "Second Task completed!".to_string();
-                    }
-                    Command::ClearTerminal => {
-                        println!("Clearing Terminal...");
-                        if let Ok(mut logger) = logger_text.lock() {
-                            logger.clear();
-                        }
-                        event_response_string = "Terminal cleared!".to_string();
-                        println!("Terminal cleared.");
-                    }
+    let mut local_index: u32 = 0;
+    while let Ok(command) = command_receiver.recv() {
+        println!("Received command: {:?}", command);
+
+        match command {
+            Command::FirstTask => {
+                println!("Processing FirstTask...");
+                let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", local_index);
+                local_index += 1;
+                logger_text.lock().unwrap().push_str(&banner_string);
+
+                thread::sleep(Duration::from_millis(100)); // Simulate long task
+                if rand::random::<bool>() {
+                    println!("FirstTask succeeded.");
+                    logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
+                    result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
+                } else {
+                    println!("FirstTask failed.\n");
+                    logger_text.lock().unwrap().push_str("Processing FirstTask Command (failed).\n");
+                    result_sender.send(CommandResult::Failure("First Task failed!".to_string())).unwrap();
                 }
-                // async send the event response, after launching a tokio runtime
-                let _ = tokio::runtime::Runtime::new().unwrap().block_on(async {
-                    event_sender.send(CommandResult::Success(event_response_string)).await
-                });
             }
-            Err(crossbeam_channel::TryRecvError::Empty) => {
-                // No command to process, continue the loop
-                std::thread::sleep(std::time::Duration::from_millis(100)); // Add a small delay to avoid busy-waiting
-            }
-            Err(crossbeam_channel::TryRecvError::Disconnected) => {
-                println!("Command receiver disconnected");
-                break;
+            Command::SecondTask => {
+                println!("Processing SecondTask");
+                logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
+                thread::sleep(Duration::from_millis(100));
+                result_sender.send(CommandResult::Success("Second Task completed!".to_string())).unwrap();
             }
         }
     }
 }
 
-fn recreate_channels(
-    app: &mut App,
-) -> (crossbeam_channel::Sender<Command>, crossbeam_channel::Receiver<Command>, mpsc::Sender<CommandResult>, mpsc::Receiver<CommandResult>) {
-    let (command_sender, command_receiver) = crossbeam_channel::bounded(0);
-    let (event_sender, event_receiver) = mpsc::channel::<CommandResult>(64);
+fn main() {
+    let (command_sender, command_receiver) = mpsc::channel::<Command>();
+    let (result_sender, result_receiver) = mpsc::channel::<CommandResult>();
 
-    app.command_sender = command_sender.clone();
-    app.event_receiver = event_receiver;
-
-    (command_sender, command_receiver, event_sender, event_receiver)
-}
-
-#[tokio::main]
-async fn main() {
-    let (command_sender, command_receiver) = crossbeam_channel::bounded(64); 
-    let (event_sender, event_receiver) = mpsc::channel::<CommandResult>(256); // Increased capacity
-
-    let mut app = App {
+    let app = App {
         logger_text: Arc::new(Mutex::new(String::new())),
-        command_sender,
-        event_receiver,
+        command_sender: command_sender.clone(),
+        result_receiver: Arc::new(Mutex::new(None)),
     };
 
     let logger_text = app.logger_text.clone();
+    let result_receiver_clone: Arc<Mutex<Option<CommandResult>>> = Arc::clone(&app.result_receiver);
 
-    // Implement the backend task processor for the commands, using std::thread::spawn
-    let (command_sender, command_receiver, event_sender, _event_receiver) = recreate_channels(&mut app);
-    //std::thread::spawn(move || {
-        process_commands(logger_text.clone(), command_receiver.clone(), event_sender.clone());
-    //});
+    // Implement the backend task processor for the commands
+    thread::spawn(move || process_commands(logger_text, command_receiver, result_sender));
 
     // Run the app
     if let Err(e) = eframe::run_native(
@@ -113,5 +141,10 @@ async fn main() {
         Box::new(|_cc| Ok(Box::new(app))),
     ) {
         eprintln!("Failed to run eframe: {:?}", e);
+    }
+
+    // Process results
+    while let Ok(result) = result_receiver.recv() {
+        *result_receiver_clone.lock().unwrap() = Some(result);
     }
 }
