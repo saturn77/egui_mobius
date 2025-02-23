@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 
 // Backend (business logic) will be handled in a separate thread
 #[derive(Debug, Clone)]
@@ -9,6 +9,7 @@ pub enum WireType<T> {
     Command(T),
     Result(T),
 }
+
 
 #[derive(Clone, Debug)]
 pub struct Signal<T> {
@@ -33,7 +34,7 @@ impl<T: Send + 'static> Signal<T> {
 
     // Non-blocking receive function: Returns None if no message is available
     pub async fn try_receive(&self) -> Option<WireType<T>> {
-        let mut receiver = self.receiver.lock().await;
+        let mut receiver = self.receiver.lock().unwrap();
         receiver.try_recv().ok()
     }
 }
