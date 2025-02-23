@@ -48,8 +48,12 @@ fn process_commands(
                 
             }
         }
-        // async send the event response
-        event_sender.send(CommandResult::Success(event_response_string));
+        // async send the event response, after launching a tokio runtime
+        let _ =
+            tokio::runtime::Runtime::new().unwrap().block_on(async {
+                event_sender.send(CommandResult::Success(event_response_string)).await
+            });
+
     }
 }
 
