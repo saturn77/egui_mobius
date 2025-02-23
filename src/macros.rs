@@ -1,6 +1,16 @@
 #[macro_export]
 macro_rules! mobius_send_command {
-    ($sender:expr, $commands:expr) => {
+    ($sender:expr, $command:expr) => {
+        {
+            let sender = $sender.clone();
+            std::thread::spawn(move || {
+                if let Err(e) = sender.send($command) {
+                    eprintln!("\n***** Failed to send command: {:?}", e);
+                }
+            });
+        }
+    };
+    ($sender:expr, $commands:expr, multiple) => {
         {
             let sender = $sender.clone();
             std::thread::spawn(move || {
@@ -10,6 +20,15 @@ macro_rules! mobius_send_command {
                     }
                 }
             });
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! clear_logger {
+    ($logger_text:expr) => {
+        {
+            $logger_text.lock().unwrap().clear();
         }
     };
 }
