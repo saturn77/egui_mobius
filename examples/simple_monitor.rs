@@ -1,8 +1,6 @@
 #[allow(dead_code)]
 mod app_ui;
 
-use mobius_egui;   
-
 use app_ui::App;
 use mobius_egui::types::{MobiusString, MobiusCommandDeque, MobiusEventEnque};
 use std::sync::{Arc, Mutex};
