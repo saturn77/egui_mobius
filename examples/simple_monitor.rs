@@ -5,10 +5,14 @@ use std::time::Duration;
 use eframe;
 use egui;
 
+use mobius_egui::types::{MobiusString, MobiusEnque, MobiusDeque}; 
+#[macro_use]
+use mobius_egui::mobius_send_command;
+
 pub struct App {
-    pub logger_text: Arc<Mutex<String>>,
-    pub command_sender: mpsc::Sender<Command>,
-    pub result_receiver: Arc<Mutex<Option<CommandResult>>>,
+    pub logger_text     : MobiusString,
+    pub command_sender  : MobiusEnque<Command>,
+    pub result_receiver : Arc<Mutex<Option<CommandResult>>>,
 }
 
 impl eframe::App for App {
@@ -19,28 +23,13 @@ impl eframe::App for App {
             ui.horizontal(|ui| {
                 if ui.button("First Task").clicked() {
                     println!("First Task button clicked.");
-                    let sender = self.command_sender.clone();
-                    thread::spawn(move || {
-                        if let Err(e) = sender.send(Command::FirstTask) {
-                            eprintln!("Failed to send FirstTask command: {:?}", e);
-                        }
-                    });
-
-                    let sender = self.command_sender.clone();
-                    thread::spawn(move || {
-                        if let Err(e) = sender.send(Command::SecondTask) {
-                            eprintln!("Failed to send SecondTask command: {:?}", e);
-                        }
-                    });
+                    let commands = vec![Command::FirstTask, Command::SecondTask];
+                    mobius_send_command!(self.command_sender, commands);
                 }
                 if ui.button("Second Task").clicked() {
                     println!("Second Task button clicked.");
-                    let sender = self.command_sender.clone();
-                    thread::spawn(move || {
-                        if let Err(e) = sender.send(Command::SecondTask) {
-                            eprintln!("Failed to send SecondTask command: {:?}", e);
-                        }
-                    });
+                    let commands = vec![Command::SecondTask];
+                    mobius_send_command!(self.command_sender, commands);
                 }
             });
 
@@ -82,9 +71,9 @@ pub enum CommandResult {
 }
 
 pub fn process_commands(
-    logger_text: Arc<Mutex<String>>,
-    command_receiver: mpsc::Receiver<Command>,
-    result_sender: mpsc::Sender<CommandResult>,
+    logger_text       : MobiusString,
+    command_receiver  : MobiusDeque<Command>,
+    result_sender     : MobiusEnque<CommandResult>,
 ) {
     let mut local_index: u32 = 0;
     while let Ok(command) = command_receiver.recv() {
@@ -117,7 +106,9 @@ pub fn process_commands(
         }
     }
 }
-
+//**********************************************************
+// Main Function - No Tokio Runtime Required
+//********************************************************** 
 fn main() {
     let (command_sender, command_receiver) = mpsc::channel::<Command>();
     let (result_sender, result_receiver) = mpsc::channel::<CommandResult>();
