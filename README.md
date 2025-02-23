@@ -1,5 +1,5 @@
 # Mobius
-Async framework facilitating a modular construction of egui applications. 
+Modular and ergonomic construction of egui applications. 
 
 ![alt text](assets/mobius_strip.png)
 
