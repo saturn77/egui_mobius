@@ -1,4 +1,3 @@
-
 # Mobius_Egui  
 Modular and ergonomic construction of egui applications. 
 
@@ -18,7 +17,7 @@ In traditional Egui applications, UI and backend logic are often tightly coupled
 There are multiple crates in the repository, and each example
 is a crate. 
 One can test out an example by running these steps, in this
-case the simple_monitor, and just subsitute an appropriate 
+case the simple_monitor, and just substitute an appropriate 
 example name.  
 ```bash
 git clone git@github.com:saturn77/mobius_egui.git 
@@ -42,23 +41,45 @@ eframe = { version = "0.31.0", default-features = false, features = [
 ```  
 
 ## Usage  
-Example of sending a command from the UI, inspired by the concept of Signals and Slots:
+Example of sending a command from the UI using the `Signal` struct:
 ```rust
 if ui.button("First Task").clicked() {
-    Signal!(self.command_sender, Command::FirstTask);
+    let signal = Signal::new(self.command_sender.clone());
+    if let Err(e) = signal.send(Command::FirstTask) {
+        eprintln!("Error sending command: {}", e);
+    }
 }
 ```
 
-
-Example backend processing:  
+Example of setting up a `Slot` to handle commands:
 ```rust
-match command {
-    Command::FirstTask => {
-        logger_text.lock().unwrap().push_str("Processing FirstTask...\n");
-        result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
+use std::sync::mpsc::{self, Receiver, Sender};
+
+fn main() {
+    let (command_sender, command_receiver): (Sender<Command>, Receiver<Command>) = mpsc::channel();
+    let signal = Signal::new(command_sender);
+    let slot = Slot::new(command_receiver);
+
+    // Define a handler function for the slot
+    let handler = |command: Command| {
+        match command {
+            Command::FirstTask => {
+                println!("Processing FirstTask...");
+                // Process the command and send the result
+                result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
+            }
+        }
+    };
+
+    // Start the slot with the handler
+    slot.start(handler);
+
+    // Example of sending a command
+    if let Err(e) = signal.send(Command::FirstTask) {
+        eprintln!("Error sending command: {}", e);
     }
 }
-```  
+```
 
 ## Contributing  
 Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request.  
@@ -67,4 +88,4 @@ Contributions are welcome! Please fork the repository, create a feature branch, 
 This project is licensed under the MIT License.  
 
 ## Contact  
-For support or questions, open an issue or reach out on [GitHub Discussions](https://github.com/saturn77/mobius_egui/discussions).  
+For support or questions, open an issue or reach out on [GitHub Discussions](https://github.com/saturn77/mobius_egui/discussions).
