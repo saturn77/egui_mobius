@@ -1,4 +1,4 @@
-cargo-features = ["edition2024"]
+#cargo-features = ["edition2024"]
 [package]
 name = "simple_monitor"
 version = "0.1.0"

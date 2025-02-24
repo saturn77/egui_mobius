@@ -1,4 +1,4 @@
-cargo-features = ["edition2024"]
+#cargo-features = ["edition2024"]
 
 [workspace]
 members = [
@@ -6,3 +6,5 @@ members = [
     "examples/simple_monitor",
     "examples/signals_slots",
 ]
+
+resolver = "3"
