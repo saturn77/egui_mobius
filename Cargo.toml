@@ -4,4 +4,5 @@ cargo-features = ["edition2024"]
 members = [
     "crates/mobius_egui",
     "examples/simple_monitor",
+    "examples/signals_slots",
 ]

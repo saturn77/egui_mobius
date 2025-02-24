@@ -7,8 +7,8 @@
 use std::sync::mpsc::Sender;
 use std::thread;
 
-struct Signal<T> {
-    sender: Sender<T>,
+pub struct Signal<T> {
+    pub sender: Sender<T>,
 }
 
 impl<T> Signal<T>
