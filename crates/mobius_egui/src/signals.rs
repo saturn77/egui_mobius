@@ -1,40 +1,43 @@
 #![allow(dead_code)]
 
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc;
+// improved concept of the Signal! macro
+// Signal struct with send and send_multiple methods
+// Signal struct is used to send commands to the MobiusEnque<Command> sender
 
-// Backend (business logic) will be handled in a separate thread
-#[derive(Debug, Clone)]
-pub enum WireType<T> {
-    Command(T),
-    Result(T),
+use std::sync::mpsc::Sender;
+use std::thread;
+
+struct Signal<T> {
+    sender: Sender<T>,
 }
 
-
-#[derive(Clone, Debug)]
-pub struct Signal<T> {
-    pub sender: mpsc::Sender<WireType<T>>,
-    pub receiver: Arc<Mutex<mpsc::Receiver<WireType<T>>>>,
-}
-
-impl<T: Send + 'static> Signal<T> {
-    pub fn new() -> Self {
-        let (sender, receiver) = mpsc::channel(32);
-        let receiver = Arc::new(Mutex::new(receiver));
-        Signal { sender, receiver }
+impl<T> Signal<T>
+where
+    T: Send + 'static,
+{
+    pub fn new(sender: Sender<T>) -> Self {
+        Signal { sender }
     }
 
-    pub async fn send_command(&self, message: T) {
-        self.sender.send(WireType::Command(message)).await.unwrap();
+    pub fn send(&self, command: T) -> Result<(), String> {
+        let sender = self.sender.clone();
+        thread::spawn(move || {
+            if let Err(e) = sender.send(command) {
+                eprintln!("\n***** Failed to send command: {:?}", e);
+            }
+        });
+        Ok(())
     }
 
-    pub async fn send_result(&self, message: T) {
-        self.sender.send(WireType::Result(message)).await.unwrap();
-    }
-
-    // Non-blocking receive function: Returns None if no message is available
-    pub async fn try_receive(&self) -> Option<WireType<T>> {
-        let mut receiver = self.receiver.lock().unwrap();
-        receiver.try_recv().ok()
+    pub fn send_multiple(&self, commands: Vec<T>) -> Result<(), String> {
+        let sender = self.sender.clone();
+        thread::spawn(move || {
+            for command in commands {
+                if let Err(e) = sender.send(command) {
+                    eprintln!("\n***** Failed to send command: {:?}", e);
+                }
+            }
+        });
+        Ok(())
     }
 }
