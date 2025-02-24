@@ -2,7 +2,7 @@
 # Mobius_Egui  
 Modular and ergonomic construction of egui applications. 
 
-![Mobius_Egui Logo](./assets/mobius_egui_logo.png)  
+![Mobius_Egui Logo](./assets/mobius_strip.png)  
 
 **Mobius_Egui** is a Rust framework designed to modularize and separate front-end and back-end logic in Egui applications. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip.  
 
@@ -15,12 +15,17 @@ In traditional Egui applications, UI and backend logic are often tightly coupled
 - Modular design for cleaner, more maintainable code.  
 
 ## Quick Start
-One can test out the examples by running these steps 
+There are multiple crates in the repository, and each example
+is a crate. 
+One can test out an example by running these steps, in this
+case the simple_monitor, and just subsitute an appropriate 
+example name.  
 ```bash
 git clone git@github.com:saturn77/mobius_egui.git 
 cd mobius_egui
 cargo build
-cargo run --example simple_monitor
+cd examples
+cargo run -p simple_monitor
 ```
 
 ## Installation
@@ -28,17 +33,23 @@ When using mobius_egui as a library, add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 mobius_egui = "0.1.0"
-eframe = "0.22"
-egui = "0.22"
+egui = "0.31.0"
+eframe = { version = "0.31.0", default-features = false, features = [
+    "default_fonts", 
+    "glow",          
+    "wayland",       
+] }
 ```  
 
 ## Usage  
-Example of sending a command from the UI:  
+Example of sending a command from the UI, inspired by the concept of Signals and Slots:
 ```rust
 if ui.button("First Task").clicked() {
-    mobius_send_command!(self.command_sender, Command::FirstTask);
+    Signal!(self.command_sender, Command::FirstTask);
 }
-```  
+```
+
+
 Example backend processing:  
 ```rust
 match command {

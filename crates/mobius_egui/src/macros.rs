@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! mobius_send_command {
+macro_rules! Signal {
     ($sender:expr, $command:expr) => {
         {
             let sender = $sender.clone();
