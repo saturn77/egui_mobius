@@ -1,12 +1,12 @@
 use eframe;
 use egui;
-use mobius_egui::types::{MobiusString, MobiusEnque}; 
+use mobius_egui::types::{Enqueue, Value}; 
 use mobius_egui::Signal;
 use crate::Command;
 
 pub struct App {
-    pub logger_text     : MobiusString,
-    pub command_sender  : MobiusEnque<Command>,
+    pub logger_text     : Value<String>,
+    pub command_sender  : Enqueue<Command>,
 }
 
 impl eframe::App for App {

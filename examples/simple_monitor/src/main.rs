@@ -8,6 +8,7 @@ mod ui_app;
 use ui_app::App;
 use mobius_egui::clear_logger;
 use mobius_egui::factory;
+use mobius_egui::types::Value;
 
 #[derive(Debug, Clone)]
 pub enum Command {
@@ -25,7 +26,7 @@ pub enum CommandResult {
 
 fn handle_command(
     command: Command,
-    logger_text: Arc<Mutex<String>>,
+    logger_text: Value<String>,
     local_index: &mut u32,
     shutdown_flag: Arc<AtomicBool>,
 ) {
@@ -83,7 +84,7 @@ fn main() {
     let shutdown_flag = Arc::new(AtomicBool::new(false));
 
     let app = App {
-        logger_text: Arc::new(Mutex::new(String::new())),
+        logger_text: Value::new(String::new()),
         command_sender: signal.sender.clone(),
     };
 
