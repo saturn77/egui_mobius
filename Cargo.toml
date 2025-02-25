@@ -4,7 +4,7 @@
 members = [
     "crates/mobius_egui",
     "examples/simple_monitor",
-    "examples/signals_slots",
+    "examples/signals_slots", "examples/serial_monitor",
 ]
 
 resolver = "3"
