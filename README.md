@@ -53,25 +53,20 @@ if ui.button("First Task").clicked() {
 
 Example of setting up a `Slot` to handle commands:
 ```rust
-use std::sync::mpsc::{self, Receiver, Sender};
+use egui_mobius::{factory, Command, CommandResult};
 
 fn main() {
-    let (command_sender, command_receiver): (Sender<Command>, Receiver<Command>) = mpsc::channel();
-    let signal = Signal::new(command_sender);
-    let slot = Slot::new(command_receiver);
+    // Create a signal-slot pair using the factory method
+    let (signal, slot) = factory::<Command, CommandResult>();
 
     // Define a handler function for the slot
     let handler = |command: Command| {
         match command {
             Command::FirstTask => {
-                println!("Processing FirstTask...");
-                // Process the command and send the result
-                result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
+                slot.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
             }
             Command::SecondTask => {
-                println!("Processing SecondTask...");
-                // Process the command and send the result
-                result_sender.send(CommandResult::Success("Second Task completed!".to_string())).unwrap();
+                slot.send(CommandResult::Success("Second Task completed!".to_string())).unwrap();
             }
         }
     };
