@@ -5,6 +5,10 @@ members = [
     "crates/mobius_egui",
     "examples/*",
 ]
+exclude = [
+    # this example has its own workspace
+    "examples/egui_crux_example"
+]
 
 resolver = "3"
 
