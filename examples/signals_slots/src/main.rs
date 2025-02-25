@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use mobius_egui::factory;
+use egui_mobius::factory;
 use std::thread;
 
 // General Notes:
@@ -16,7 +16,7 @@ use std::thread;
 
 
 fn main() {
-    // Create a signal and slot via the mobius_egui factory function
+    // Create a signal and slot via the egui_mobius factory function
     let (signal, slot) = factory::create_signal_slot::<String>();
 
     let shutdown_flag: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));

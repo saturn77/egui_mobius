@@ -6,9 +6,9 @@ mod ui_app;
 
 
 use ui_app::App;
-use mobius_egui::clear_logger;
-use mobius_egui::factory;
-use mobius_egui::types::Value;
+use egui_mobius::clear_logger;
+use egui_mobius::factory;
+use egui_mobius::types::Value;
 
 #[derive(Debug, Clone)]
 pub enum Command {

@@ -1,12 +1,12 @@
-# Mobius_Egui  
+# egui_mobius  
 Modular and ergonomic construction of egui applications. 
 
-![Mobius_Egui Logo](./assets/mobius_strip.png)  
+![egui_mobius Logo](./assets/mobius_strip.png)  
 
-**Mobius_Egui** is a Rust framework designed to modularize and separate front-end and back-end logic in Egui applications. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip.  
+**egui_mobius** is a Rust framework designed to modularize and separate front-end and back-end logic in Egui applications. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip.  
 
-## Why Mobius_Egui?  
-In traditional Egui applications, UI and backend logic are often tightly coupled. Mobius_Egui solves this by providing a structured approach to communication between layers, improving maintainability and scalability.  
+## Why egui_mobius?  
+In traditional Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability.  
 
 ## Features  
 - Clear separation of UI and business logic.  
@@ -20,18 +20,18 @@ One can test out an example by running these steps, in this
 case the simple_monitor, and just substitute an appropriate 
 example name.  
 ```bash
-git clone git@github.com:saturn77/mobius_egui.git 
-cd mobius_egui
+git clone git@github.com:saturn77/egui_mobius.git 
+cd egui_mobius
 cargo build
 cd examples
 cargo run -p simple_monitor
 ```
 
 ## Installation
-When using mobius_egui as a library, add the following to your `Cargo.toml`:  
+When using egui_mobius as a library, add the following to your `Cargo.toml`:  
 ```toml
 [dependencies]
-mobius_egui = "0.1.0"
+egui_mobius = "0.1.0"
 egui = "0.31.0"
 eframe = { version = "0.31.0", default-features = false, features = [
     "default_fonts", 
@@ -68,14 +68,22 @@ fn main() {
                 // Process the command and send the result
                 result_sender.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
             }
+            Command::SecondTask => {
+                println!("Processing SecondTask...");
+                // Process the command and send the result
+                result_sender.send(CommandResult::Success("Second Task completed!".to_string())).unwrap();
+            }
         }
     };
 
     // Start the slot with the handler
     slot.start(handler);
 
-    // Example of sending a command
+    // Example of sending commands
     if let Err(e) = signal.send(Command::FirstTask) {
+        eprintln!("Error sending command: {}", e);
+    }
+    if let Err(e) = signal.send(Command::SecondTask) {
         eprintln!("Error sending command: {}", e);
     }
 }
@@ -88,4 +96,4 @@ Contributions are welcome! Please fork the repository, create a feature branch, 
 This project is licensed under the MIT License.  
 
 ## Contact  
-For support or questions, open an issue or reach out on [GitHub Discussions](https://github.com/saturn77/mobius_egui/discussions).
+For support or questions, open an issue or reach out on [GitHub Discussions](https://github.com/saturn77/egui_mobius/discussions).

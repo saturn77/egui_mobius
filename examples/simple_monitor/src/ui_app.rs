@@ -1,7 +1,7 @@
 use eframe;
 use egui;
-use mobius_egui::types::{Enqueue, Value}; 
-use mobius_egui::Signal;
+use egui_mobius::types::{Enqueue, Value}; 
+use egui_mobius::Signal;
 use crate::Command;
 
 pub struct App {

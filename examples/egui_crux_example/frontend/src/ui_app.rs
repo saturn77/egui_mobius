@@ -1,7 +1,7 @@
 use eframe;
 use backend::ProjectOverview;
-use mobius_egui::types::{Enqueue, Value}; 
-use mobius_egui::Signal;
+use egui_mobius::types::{Enqueue, Value}; 
+use egui_mobius::Signal;
 use crate::ui_commands::UiCommand;
 
 #[derive(Default)]

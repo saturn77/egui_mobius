@@ -1,5 +1,5 @@
-use mobius_egui::factory;
-use mobius_egui::types::Value;
+use egui_mobius::factory;
+use egui_mobius::types::Value;
 use crate::ui_app::{UiApp, UiState};
 use crate::ui_commands::{handle_command, UiCommand};
 

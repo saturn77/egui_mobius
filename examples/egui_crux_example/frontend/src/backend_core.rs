@@ -2,7 +2,7 @@ use std::sync::Arc;
 use backend::{Effect, Event, ProjectApp, View};
 use log::debug;
 use backend::view_renderer::ViewRendererOperation;
-use mobius_egui::types::{Enqueue, Value};
+use egui_mobius::types::{Enqueue, Value};
 use crate::ui_app::UiState;
 use crate::ui_commands::UiCommand;
 

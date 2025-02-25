@@ -6,7 +6,7 @@ authors = ["Dominic Clifton <me@dominicclifton.name>"]
 
 [dependencies]
 backend = { workspace = true }
-mobius_egui = { workspace = true }
+egui_mobius = { workspace = true }
 
 egui = { workspace = true }
 eframe = { workspace = true, default-features = false, features = [

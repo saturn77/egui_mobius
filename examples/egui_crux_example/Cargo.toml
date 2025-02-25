@@ -12,7 +12,7 @@ crux_core = { version = "0.12.0" }
 log = "0.4.26"
 env_logger = "0.11"
 
-mobius_egui = { path = "../../crates/mobius_egui" }
+egui_mobius = { path = "../../crates/egui_mobius" }
 
 # sync the versions of these with the main workspace
 egui = "0.31.0"

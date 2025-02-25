@@ -1,6 +1,6 @@
 #cargo-features = ["edition2024"]
 [package]
-name = "mobius_egui"
+name = "egui_mobius"
 version = "0.1.0"
 edition = "2024"
 
@@ -17,5 +17,5 @@ winit = "0.30.9"
 crossbeam-channel = "0.5.14"
 
 [lib]
-name = "mobius_egui"
+name = "egui_mobius"
 crate-type = ["lib"]

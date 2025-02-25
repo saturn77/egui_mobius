@@ -1,6 +1,6 @@
 use log::debug;
 use backend::{CreateProjectArgs, Event, ViewRequest};
-use mobius_egui::types::{Enqueue, Value};
+use egui_mobius::types::{Enqueue, Value};
 use crate::backend_core::CoreService;
 
 #[derive(Debug, Clone)]
