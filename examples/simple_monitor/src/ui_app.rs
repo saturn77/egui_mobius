@@ -56,7 +56,7 @@ impl eframe::App for App {
                         .interactive(true)
                         .desired_rows(20)
                         .lock_focus(true)
-                        .desired_width(550.)
+                        .desired_width(600.)
                         .show(ui);
                 });
         });

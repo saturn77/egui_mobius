@@ -1,11 +1,13 @@
-use std::sync::{Arc, Mutex, mpsc, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::thread;
 use std::time::Duration;
 use eframe;
 mod ui_app;
+
+
 use ui_app::App;
-use mobius_egui::types::{MobiusString, MobiusDeque}; 
 use mobius_egui::clear_logger;
+use mobius_egui::factory;
 
 #[derive(Debug, Clone)]
 pub enum Command {
@@ -21,91 +23,97 @@ pub enum CommandResult {
     Failure(String),
 }
 
-pub fn process_commands(
-    logger_text       : MobiusString,
-    command_receiver  : MobiusDeque<Command>,
-    shutdown_flag     : Arc<AtomicBool>,
+fn handle_command(
+    command: Command,
+    logger_text: Arc<Mutex<String>>,
+    local_index: &mut u32,
+    shutdown_flag: Arc<AtomicBool>,
 ) {
-    let mut local_index: u32 = 0;
-    while !shutdown_flag.load(Ordering::Relaxed) {
-        match command_receiver.recv_timeout(Duration::from_millis(100)) {
-            Ok(command) => {
-                println!("Received command: {:?}", command);
+    match command {
+        Command::FirstTask => {
+            println!("Processing FirstTask...");
+            let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", local_index);
+            *local_index += 1;
+            logger_text.lock().unwrap().push_str(&banner_string);
 
-                match command {
-                    Command::FirstTask => {
-                        println!("Processing FirstTask...");
-                        let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", local_index);
-                        local_index += 1;
-                        logger_text.lock().unwrap().push_str(&banner_string);
-
-                        thread::sleep(Duration::from_millis(100)); // Simulate long task
-                        if rand::random::<bool>() {
-                            println!("FirstTask succeeded.");
-                            logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
-                        } else {
-                            println!("FirstTask failed.\n");
-                            logger_text.lock().unwrap().push_str("Processing FirstTask Command (failed).\n");
-                        }
-                    }
-                    Command::SecondTask => {
-                        println!("Processing SecondTask");
-                        logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
-                        thread::sleep(Duration::from_millis(100));
-                    }
-                    Command::ClearTerminal => {
-                        println!("Clearing Terminal...");
-                        clear_logger!(logger_text);
-                    }
-                    Command::About => {
-                        println!("Displaying About...");
-                        clear_logger!(logger_text); 
-                        let mut about_string : String = format!("\n\n*** About - a simple monitor app.\n"); 
-                        about_string += "This app demonstrates how to use Mobius with Egui. This app has : \n";
-                        about_string += " - Buttons to send commands to the backend.\n";
-                        about_string += " - Backend processes the commands and sends results back to the frontend.\n";
-                        about_string += " - A terminal window to display the results.\n";
-                        about_string += " - Terminal window can be cleared using the 'Clear Terminal' button.\n";
-                        about_string += " - The 'About' button displays this message.\n";
-                        logger_text.lock().unwrap().push_str(&about_string);
-                    }
-                }
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                // No command to process, continue the loop
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                println!("Command receiver disconnected");
-                break;
+            thread::sleep(Duration::from_millis(100)); // Simulate long task
+            if rand::random::<bool>() {
+                println!("FirstTask succeeded.");
+                logger_text.lock().unwrap().push_str("Processing FirstTask Command (success).\n");
+            } else {
+                println!("FirstTask failed.\n");
+                logger_text.lock().unwrap().push_str("Processing FirstTask Command (failed).\n");
             }
         }
+        Command::SecondTask => {
+            println!("Processing SecondTask");
+            logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
+            thread::sleep(Duration::from_millis(100));
+        }
+        Command::ClearTerminal => {
+            println!("Clearing Terminal...");
+            clear_logger!(logger_text);
+        }
+        Command::About => {
+            println!("Displaying About...");
+            clear_logger!(logger_text); 
+            let mut about_string : String = format!("\n\n*** About - a simple monitor app.\n"); 
+            about_string += "This app demonstrates how to use Mobius with Egui. This app has : \n";
+            about_string += " - Buttons to send commands to the backend.\n";
+            about_string += " - Backend processes the commands and sends results back to the frontend.\n";
+            about_string += " - A terminal window to display the results.\n";
+            about_string += " - Terminal window can be cleared using the 'Clear Terminal' button.\n";
+            about_string += " - The 'About' button displays this message.\n";
+            logger_text.lock().unwrap().push_str(&about_string);
+        }
     }
-    println!("Shutting down process_commands thread.");
+
+    // Check the shutdown flag
+    if shutdown_flag.load(Ordering::Relaxed) {
+        println!("Shutdown flag is set. Exiting handle_command.");
+        return;
+    }
 }
 
 //****************************************************************
 // Main Function - Synchronous Operation with Background Thread
 //**************************************************************** 
 fn main() {
-    let (command_sender, command_receiver) = mpsc::channel::<Command>();
+    let (signal, slot) = factory::create_signal_slot::<Command>();
     let shutdown_flag = Arc::new(AtomicBool::new(false));
 
     let app = App {
         logger_text: Arc::new(Mutex::new(String::new())),
-        command_sender: command_sender.clone(),
+        command_sender: signal.sender.clone(),
     };
 
     let logger_text = app.logger_text.clone();
+    let local_index = Arc::new(Mutex::new(0u32));
 
+    // Define a handler function for the slot
+    let handler = {
+        let shutdown_flag = shutdown_flag.clone();
+        let local_index = local_index.clone();
+        move |command: Command| {
+            let mut local_index = local_index.lock().unwrap();
+            handle_command(command, logger_text.clone(), &mut local_index, shutdown_flag.clone());
+        }
+    };
 
-    // Implement the backend task processor for the commands
-    let shutdown_flag_clone = shutdown_flag.clone();
-    thread::spawn(move || process_commands(logger_text, command_receiver, shutdown_flag_clone));
+    // Start the slot with the handler
+    slot.start(handler);
+
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size((650.0, 500.0)),
+        ..Default::default()
+    };
+
 
     // Run the app
     if let Err(e) = eframe::run_native(
-        "My App",
-        eframe::NativeOptions::default(),
+        "Simple Monitor Demo - Mobius with Egui",
+        options,
         Box::new(|_cc| Ok(Box::new(app))),
     ) {
         eprintln!("Failed to run eframe: {:?}", e);
@@ -113,6 +121,4 @@ fn main() {
 
     // Set the shutdown flag to true to signal the threads to stop
     shutdown_flag.store(true, Ordering::Relaxed);
-
-
 }
