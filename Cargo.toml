@@ -7,3 +7,13 @@ members = [
 ]
 
 resolver = "3"
+
+[workspace.dependencies]
+mobius_egui = { path = "crates/mobius_egui" }
+
+egui = "0.31.0"
+eframe = { version = "0.31.0", default-features = false }
+rand = "0.9.0"
+tokio = "1.43.0"
+winit = "0.30.9"
+crossbeam-channel = "0.5.14"
