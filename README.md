@@ -1,5 +1,5 @@
 # egui_mobius  
-Modular and ergonomic construction of egui applications. 
+One surface. Two sides. Infinite possibilities.
 
 ![egui_mobius Logo](./assets/mobius_strip.png)  
 
