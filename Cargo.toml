@@ -3,8 +3,7 @@
 [workspace]
 members = [
     "crates/mobius_egui",
-    "examples/simple_monitor",
-    "examples/signals_slots", "examples/serial_monitor",
+    "examples/*",
 ]
 
 resolver = "3"
