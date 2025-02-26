@@ -24,10 +24,8 @@ macro_rules! Signal {
     };
 }
 
-/// Generate command buttons
-/// Emphasize a consistent pattern for creating command buttons with 
-/// their associated commands. This macro is a utility function
-/// that becomes integral to the egui_mobius library.
+/// Programmatically generate buttons that send commands to the command sender
+/// The command sender is an egui_mobius Enqueue object
 ///
 /// # Arguments
 /// * `$ui` - The Egui UI object
