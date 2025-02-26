@@ -1,7 +1,7 @@
 use eframe;
 use egui;
 use egui_mobius::types::{Enqueue, Value}; 
-use egui_mobius::Signal;
+use egui_mobius::{Signal, GENERATE_COMMAND_BUTTONS};
 use crate::Command;
 
 pub struct App {
@@ -13,36 +13,20 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
 
-            // buttons to send commands
             ui.horizontal(|ui| {
-                if ui.button("First Task").clicked() {
-                    println!("First Task button clicked.");
-                    Signal!(self.command_sender, Command::FirstTask);
-                }
-                if ui.button("Second Task").clicked() {
-                    println!("Second Task button clicked.");
-                    Signal!(self.command_sender, Command::SecondTask);
-                }
-                if ui.button("Clear Terminal").clicked() {
-                    println!("Clear Terminal button clicked.");
-                    Signal!(self.command_sender, Command::ClearTerminal);
-                }
-                if ui.button("Send Multiple Commands").clicked() {
-                    println!("Send Multiple Commands button clicked.");
-                    let commands = vec![Command::FirstTask, Command::SecondTask];
-                    Signal!(self.command_sender, commands, multiple);
-                }
-                if ui.button("About").clicked() {
-                    println!("About button clicked.");
-                    Signal!(self.command_sender, Command::About);
-                }
+                let cascade_commands = vec![Command::FirstTask, Command::SecondTask];
+                let cascade_first_second = {
+                    let commands = cascade_commands.clone();
+                    Command::CascadeFirstSecond(commands)
+                };
+                GENERATE_COMMAND_BUTTONS!(ui, self.command_sender, [
+                    ("First Task", Command::FirstTask),
+                    ("Second Task", Command::SecondTask),
+                    ("Clear Terminal", Command::ClearTerminal),
+                    ("About", Command::About), 
+                    ("Cascade First Second", cascade_first_second.clone()),
+                ]);
             });
-
-            //*******************************************************************
-            // Main Scroller for Terminal Window
-            //*******************************************************************
-
-            let scroller_text_color: egui::Color32 = egui::Color32::GREEN;
 
             let mut _scroller = egui::ScrollArea::vertical()
                 .id_salt("terminal_scroller")
@@ -51,7 +35,7 @@ impl eframe::App for App {
                 .show(ui, |ui| {
                     egui::TextEdit::multiline(&mut *self.logger_text.lock().unwrap())
                         .id(egui::Id::new("terminal"))
-                        .text_color(scroller_text_color)
+                        .text_color(egui::Color32::GREEN)
                         .font(egui::TextStyle::Monospace) // for cursor height
                         .interactive(true)
                         .desired_rows(20)

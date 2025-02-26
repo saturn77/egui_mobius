@@ -1,7 +1,7 @@
 #cargo-features = ["edition2024"]
 
 [workspace]
-members = [
+members = [ "crates/as_any_derive",
     "crates/egui_mobius",
     "examples/*",
 ]
@@ -13,11 +13,22 @@ exclude = [
 resolver = "3"
 
 [workspace.dependencies]
-egui_mobius = { path = "crates/egui_mobius" }
+# egui mobius related crates
+egui_mobius   = { path = "crates/egui_mobius" }
+as_any_derive = { path = "crates/as_any_derive" }
 
+# egui and eframe
 egui = "0.31.0"
 eframe = { version = "0.31.0", default-features = false }
+
+# random number generation, useful for testing and examples
 rand = "0.9.0"
+
+# async support
 tokio = "1.43.0"
+
+# windowing
 winit = "0.30.9"
+
+# alternative to std::sync::mpsc
 crossbeam-channel = "0.5.14"

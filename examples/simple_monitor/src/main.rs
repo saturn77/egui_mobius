@@ -10,12 +10,16 @@ use egui_mobius::clear_logger;
 use egui_mobius::factory;
 use egui_mobius::types::Value;
 
-#[derive(Debug, Clone)]
+use as_any_derive::AsAny;
+
+
+#[derive(AsAny, Clone)]
 pub enum Command {
     FirstTask,
     SecondTask,
     ClearTerminal,
     About,
+    CascadeFirstSecond(Vec<Command>),
 }
 
 #[derive(Debug)]
@@ -66,6 +70,12 @@ fn handle_command(
             about_string += " - Terminal window can be cleared using the 'Clear Terminal' button.\n";
             about_string += " - The 'About' button displays this message.\n";
             logger_text.lock().unwrap().push_str(&about_string);
+        }
+        Command::CascadeFirstSecond(commands) => {
+            println!("Processing Multiple Commands...");
+            for command in commands {
+                handle_command(command, logger_text.clone(), local_index, shutdown_flag.clone());
+            }
         }
     }
 
