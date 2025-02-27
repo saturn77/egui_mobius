@@ -28,9 +28,6 @@ case the simple_monitor, and just substitute an appropriate
 example name.  
 ```bash
 git clone git@github.com:saturn77/egui_mobius.git 
-cd egui_mobius
-cargo build
-cd examples
 cargo run -p simple_monitor
 ```
 
