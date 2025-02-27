@@ -7,6 +7,7 @@ pub type Dequeue<T> = std::sync::mpsc::Receiver<T>;
 pub type EventEnqueue<T> = tokio::sync::mpsc::Sender<T>;
 pub type EventDequeue<T> = tokio::sync::mpsc::Receiver<T>;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Value<T>(Arc<Mutex<T>>);
 
 impl<T: Default> Default for Value<T> {
