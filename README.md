@@ -1,17 +1,24 @@
 # egui_mobius  
-One surface. Two sides. Infinite possibilities.
+*Because GUI software design is a two sided problem operating on a single surface.*
+
+
+![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Latest Version](https://img.shields.io/badge/version-0.1.0-green.svg)
+
 
 ![egui_mobius Logo](./assets/mobius_strip.png)  
 
-**egui_mobius** is a Rust framework designed to modularize and separate front-end and back-end logic in Egui applications. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip.  
+**egui_mobius** is a Rust framework to modularize and separate front-end and back-end logic in Egui applications, with a top level feature of future proofing the core of a design. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip. It is meant to be part of the egui ecosystem of helper crates, but also has other possible front ends, as the crux crate is progressively introduced into the library.  
 
-## Why egui_mobius?  
-In traditional Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability.  
+## Motivation 
+In traditional Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability. Having core elements of a gui that a portable and maintainble is the ultimate goal.  
 
 ## Features  
 - Clear separation of UI and business logic.  
-- Flexible command and event processing using `std::mpsc`.  
-- Modular design for cleaner, more maintainable code.  
+- Flexible command and event processing using `std::mpsc`.
+- Employ the signals and slots paradigm.   
+- Modular design for cleaner, more maintainable code. 
+- Portable containers via crux for core backend logic.  
 
 ## Quick Start
 There are multiple crates in the repository, and each example

@@ -1,3 +1,42 @@
+
+/// A macro to send a command to the command sender
+/// The command sender is an egui_mobius Enqueue object
+/// This can be called with the Signal! syntax
+/// 
+/// # Arguments
+/// * `$sender` - The command sender object
+/// * `$command` - The command to be sent
+/// 
+/// Note that the command can be a single command or a vector of commands
+/// 
+/// # Example
+/// ```
+/// use std::sync::mpsc;
+/// use egui_mobius::Signal;
+/// 
+/// #[derive(Clone)]
+/// enum Command {
+///     FirstTask,
+///     SecondTask,
+/// }
+/// 
+/// let (command_sender, command_receiver) = mpsc::channel();
+/// Signal!(command_sender, Command::FirstTask);
+/// ```
+/// For a vector of commands:
+/// ```
+/// use std::sync::mpsc;
+/// use egui_mobius::Signal;
+/// 
+/// #[derive(Clone)]
+/// enum Command {
+///     FirstTask,
+///     SecondTask,
+/// }
+/// 
+/// let (command_sender, command_receiver) = mpsc::channel();
+/// Signal!(command_sender, vec![Command::FirstTask, Command::SecondTask], multiple);
+/// ```
 #[macro_export]
 macro_rules! Signal {
     ($sender:expr, $command:expr) => {
@@ -24,14 +63,35 @@ macro_rules! Signal {
     };
 }
 
-/// Programmatically generate buttons that send commands to the command sender
-/// The command sender is an egui_mobius Enqueue object
+
+
+/// A macro to generate command buttons
+/// This macro is used to generate buttons in the egui window
+/// The buttons are used to send commands to the command sender
 ///
 /// # Arguments
-/// * `$ui` - The Egui UI object
+/// * `$ui` - The egui ui object
 /// * `$command_sender` - The command sender object
-/// * `[$($label:expr, $command:expr),*]` - A list of tuples containing the button label and the command to be sent
+/// * `$commands` - A list of tuples containing the button label and the command to be sent
 ///
+/// # Example
+/// ```
+/// use std::sync::mpsc;
+/// use egui_mobius::GENERATE_COMMAND_BUTTONS;
+///
+/// #[derive(Clone)]
+/// enum Command {
+///     FirstTask,
+///     SecondTask,
+/// }
+///
+/// let (command_sender, command_receiver) = mpsc::channel();
+/// GENERATE_COMMAND_BUTTONS!(ui, command_sender, [
+///     ("First Task", Command::FirstTask),
+///     ("Second Task", Command::SecondTask),
+/// ]);
+/// ```
+/// 
 
 #[macro_export]
 macro_rules! GENERATE_COMMAND_BUTTONS {
@@ -59,3 +119,5 @@ macro_rules! clear_logger {
         }
     };
 }
+
+
