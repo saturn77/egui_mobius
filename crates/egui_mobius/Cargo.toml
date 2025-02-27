@@ -16,7 +16,11 @@ tokio = {version = "1.43.0", features = ["full"]}
 winit = "0.30.9"
 crossbeam-channel = "0.5.14"
 as_any_derive = { path = "../as_any_derive" }
+serde = { version = "1.0.218", optional = true }
 
+
+[features]
+serde = ["serde/derive"]
 
 
 [lib]
