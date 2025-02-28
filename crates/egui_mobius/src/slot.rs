@@ -16,9 +16,9 @@ where
         }
     }
 
-    pub fn start<F>(&self, handler: F)
+    pub fn start<F>(&self, mut handler: F)
     where
-        F: Fn(T) + Send + 'static,
+        F: FnMut(T) + Send + 'static,
     {
         let receiver = Arc::clone(&self.receiver);
         thread::spawn(move || {
