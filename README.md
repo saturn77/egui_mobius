@@ -11,7 +11,7 @@
 **egui_mobius** is a Rust framework to modularize and separate front-end and back-end logic in Egui applications, with a top level feature of future proofing the core of a design. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip. It is meant to be part of the egui ecosystem of helper crates, but also has other possible front ends, as the crux crate is progressively introduced into the library.  
 
 ## Motivation 
-In traditional Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability. Having core elements of a gui that a portable and maintainble is the ultimate goal.  
+In traditional Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability. Having core elements of a gui that are portable and maintainble is the ultimate goal.  
 
 ## Features  
 - Clear separation of UI and business logic.  
