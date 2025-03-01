@@ -1,7 +1,7 @@
 #cargo-features = ["edition2024"]
 
 [workspace]
-members = [ "crates/as_any_derive",
+members = [ "crates/as_command_derive",
     "crates/egui_mobius",
     "examples/*",
 ]
@@ -15,7 +15,7 @@ resolver = "3"
 [workspace.dependencies]
 # egui mobius related crates
 egui_mobius   = { path = "crates/egui_mobius" }
-as_any_derive = { path = "crates/as_any_derive" }
+as_command_derive = { path = "crates/as_command_derive" }
 
 # egui and eframe
 egui = "0.31.0"

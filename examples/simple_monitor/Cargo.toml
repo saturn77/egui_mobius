@@ -6,7 +6,7 @@ edition = "2024"
 
 [dependencies]
 egui_mobius = { workspace = true }
-as_any_derive = { workspace = true }
+as_command_derive = { workspace = true }
 egui = { workspace = true }
 eframe = { workspace = true, default-features = false, features = [
     "default_fonts",

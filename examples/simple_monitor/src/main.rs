@@ -10,10 +10,10 @@ use egui_mobius::clear_logger;
 use egui_mobius::factory;
 use egui_mobius::types::Value;
 
-use as_any_derive::AsAny;
+use as_command_derive::AsCommand;
+use egui_mobius::Signal; 
 
-
-#[derive(AsAny, Clone)]
+#[derive(AsCommand, Clone)]
 pub enum Command {
     FirstTask,
     SecondTask,
