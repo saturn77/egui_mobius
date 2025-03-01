@@ -1,4 +1,5 @@
 
+
 /// A macro to send a command to the command sender
 /// The command sender is an egui_mobius Enqueue object
 /// This can be called with the Signal! syntax
@@ -60,54 +61,6 @@ macro_rules! Signal {
                 }
             });
         }
-    };
-}
-
-
-
-/// A macro to generate command buttons
-/// This macro is used to generate buttons in the egui window
-/// The buttons are used to send commands to the command sender
-///
-/// # Arguments
-/// * `$ui` - The egui ui object
-/// * `$command_sender` - The command sender object
-/// * `$commands` - A list of tuples containing the button label and the command to be sent
-///
-/// # Example
-/// ```
-/// use std::sync::mpsc;
-/// use egui_mobius::GENERATE_COMMAND_BUTTONS;
-///
-/// #[derive(Clone)]
-/// enum Command {
-///     FirstTask,
-///     SecondTask,
-/// }
-///
-/// let (command_sender, command_receiver) = mpsc::channel();
-/// GENERATE_COMMAND_BUTTONS!(ui, command_sender, [
-///     ("First Task", Command::FirstTask),
-///     ("Second Task", Command::SecondTask),
-/// ]);
-/// ```
-/// 
-
-#[macro_export]
-macro_rules! GENERATE_COMMAND_BUTTONS {
-    ($ui:expr, $command_sender:expr, [$(($label:expr, $command:expr)),* $(,)?]) => {
-        $(
-            if $ui.button($label).clicked() {
-                println!("{} button clicked.", $label);
-                let command = $command.clone();
-                if let Some(commands) = command.as_any().downcast_ref::<Vec<Command>>() {
-                    let commands_clone = commands.clone();
-                    Signal!($command_sender, commands_clone, multiple);
-                } else {
-                    Signal!($command_sender, command);
-                }
-            }
-        )*
     };
 }
 

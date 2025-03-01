@@ -1,11 +1,12 @@
 use eframe;
 use egui;
 use egui_mobius::types::{Enqueue, Value}; 
-use crate::Command;
+use crate::UiCommand;
+
 
 pub struct App {
     pub logger_text     : Value<String>,
-    pub command_sender  : Enqueue<Command>,
+    pub command_sender  : Enqueue<UiCommand>,
 }
 
 impl eframe::App for App {
@@ -13,16 +14,16 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
 
             ui.horizontal(|ui| {
-                let cascade_commands = vec![Command::FirstTask, Command::SecondTask];
+                let cascade_commands = vec![UiCommand::FirstTask, UiCommand::SecondTask];
                 let cascade_first_second = {
                     let commands = cascade_commands.clone();
-                    Command::CascadeFirstSecond(commands)
+                    UiCommand::CascadeFirstSecond(commands)
                 };
-                Command::generate_buttons(ui, &self.command_sender, vec![
-                    ("First Task", Command::FirstTask),
-                    ("Second Task", Command::SecondTask),
-                    ("Clear Terminal", Command::ClearTerminal),
-                    ("About", Command::About), 
+                UiCommand::generate_buttons(ui, &self.command_sender, vec![
+                    ("First Task", UiCommand::FirstTask),
+                    ("Second Task", UiCommand::SecondTask),
+                    ("Clear Terminal", UiCommand::ClearTerminal),
+                    ("About", UiCommand::About), 
                     ("Cascade First Second", cascade_first_second.clone()),
                 ]);
             });
@@ -34,7 +35,7 @@ impl eframe::App for App {
                 .show(ui, |ui| {
                     egui::TextEdit::multiline(&mut *self.logger_text.lock().unwrap())
                         .id(egui::Id::new("terminal"))
-                        .text_color(egui::Color32::GREEN)
+                        .text_color(egui::Color32::YELLOW)
                         .font(egui::TextStyle::Monospace) // for cursor height
                         .interactive(true)
                         .desired_rows(20)

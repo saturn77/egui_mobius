@@ -4,6 +4,7 @@ use std::time::Duration;
 use eframe;
 mod ui_app;
 
+
 use ui_app::App;
 use egui_mobius::clear_logger;
 use egui_mobius::factory;
@@ -13,12 +14,12 @@ use as_command_derive::AsCommand;
 use egui_mobius::Signal; 
 
 #[derive(AsCommand, Clone)]
-pub enum Command {
+pub enum UiCommand {
     FirstTask,
     SecondTask,
     ClearTerminal,
     About,
-    CascadeFirstSecond(Vec<Command>),
+    CascadeFirstSecond(Vec<UiCommand>),
 }
 
 
@@ -29,13 +30,13 @@ pub enum CommandResult {
 }
 
 fn handle_command(
-    command: Command,
+    command: UiCommand,
     logger_text: Value<String>,
     local_index: &mut u32,
     shutdown_flag: Arc<AtomicBool>,
 ) {
     match command {
-        Command::FirstTask => {
+        UiCommand::FirstTask => {
             println!("Processing FirstTask...");
             let banner_string = format!("\n**** Processing Iteration {} of GUI Commands.\n", local_index);
             *local_index += 1;
@@ -50,16 +51,16 @@ fn handle_command(
                 logger_text.lock().unwrap().push_str("Processing FirstTask Command (failed).\n");
             }
         }
-        Command::SecondTask => {
+        UiCommand::SecondTask => {
             println!("Processing SecondTask");
             logger_text.lock().unwrap().push_str("Processing SecondTask Command (success).\n");
             thread::sleep(Duration::from_millis(100));
         }
-        Command::ClearTerminal => {
+        UiCommand::ClearTerminal => {
             println!("Clearing Terminal...");
             clear_logger!(logger_text);
         }
-        Command::About => {
+        UiCommand::About => {
             println!("Displaying About...");
             clear_logger!(logger_text); 
             let mut about_string : String = format!("\n\n*** About - a simple monitor app.\n"); 
@@ -71,7 +72,7 @@ fn handle_command(
             about_string += " - The 'About' button displays this message.\n";
             logger_text.lock().unwrap().push_str(&about_string);
         }
-        Command::CascadeFirstSecond(commands) => {
+        UiCommand::CascadeFirstSecond(commands) => {
             println!("Processing Multiple Commands...");
             for command in commands {
                 handle_command(command, logger_text.clone(), local_index, shutdown_flag.clone());
@@ -90,7 +91,7 @@ fn handle_command(
 // Main Function - Synchronous Operation with Background Thread
 //**************************************************************** 
 fn main() {
-    let (signal, slot) = factory::create_signal_slot::<Command>();
+    let (signal, slot) = factory::create_signal_slot::<UiCommand>();
     let shutdown_flag = Arc::new(AtomicBool::new(false));
 
     let app = App {
@@ -105,7 +106,7 @@ fn main() {
     let handler = {
         let shutdown_flag = shutdown_flag.clone();
         let local_index = local_index.clone();
-        move |command: Command| {
+        move |command: UiCommand| {
             let mut local_index = local_index.lock().unwrap();
             handle_command(command, logger_text.clone(), &mut local_index, shutdown_flag.clone());
         }
@@ -123,7 +124,7 @@ fn main() {
 
     // Run the app
     if let Err(e) = eframe::run_native(
-        "Simple Monitor Demo - Mobius with Egui",
+        "Simple Monitor 2 Demo - Mobius with Egui",
         options,
         Box::new(|_cc| Ok(Box::new(app))),
     ) {
