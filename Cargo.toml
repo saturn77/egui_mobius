@@ -32,3 +32,8 @@ winit = "0.30.9"
 
 # alternative to std::sync::mpsc
 crossbeam-channel = "0.5.14"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

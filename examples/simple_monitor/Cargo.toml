@@ -3,6 +3,19 @@
 name = "simple_monitor"
 version = "0.2.0"
 edition = "2024"
+repository  = "https://github.com/saturn77/egui_mobius"
+authors     = ["James Bonanno <atlantix-eda@proton.me>"]
+description = "A Mobius strip in egui"
+license     = "MIT"
+keywords    = ["egui", "eframe", "mobius", "framework", "gui", "ui", "graphics"]
+categories  = ["graphics", "ui", "framework", "gui"]
+readme      = "README.md"
+
+[package.metadata.wix]
+upgrade-guid = "990DAC82-8759-4D92-8012-8FE0AE4882B4"
+path-guid = "896DD0DD-78AB-4EFB-B8D7-885F83B264D3"
+license = false
+eula = false
 
 [dependencies]
 egui_mobius = { workspace = true }
