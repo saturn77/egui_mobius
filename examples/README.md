@@ -18,6 +18,14 @@ To run the `simple_monitor` example, use the following command:
 cargo run -p simple_monitor
 ```
 
+To run the `simple_monitor_2` example, illustrating the utiliy 
+of the AsCommand procedural macro, use the following command:
+
+```bash
+cargo run -p simple_monitor_2
+```
+
+
 To run the `signals_slots` example, use the following command:
 
 ```sh
