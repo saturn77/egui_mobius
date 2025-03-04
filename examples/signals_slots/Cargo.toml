@@ -11,12 +11,6 @@ keywords    = ["egui", "eframe", "mobius", "framework", "gui", "ui", "graphics"]
 categories  = ["graphics", "ui", "framework", "gui"]
 readme      = "README.md"
 
-[package.metadata.wix]
-upgrade-guid = "1C193D9C-2DB0-488B-B7F0-E494FF27B694"
-path-guid = "39E04D77-92CF-467E-9B97-EFA78BE39177"
-license = false
-eula = false
-
 [dependencies]
 egui_mobius = { workspace = true }
 
