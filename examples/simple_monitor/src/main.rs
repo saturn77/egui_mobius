@@ -12,7 +12,10 @@ use egui_mobius::types::Value;
 use as_command_derive::AsCommand;
 use egui_mobius::Signal; 
 
-#[derive(AsCommand, Clone)]
+
+use std::fmt;
+
+#[derive(AsCommand, Clone, Debug)]
 pub enum Command {
     FirstTask,
     SecondTask,
@@ -20,6 +23,14 @@ pub enum Command {
     About,
     CascadeFirstSecond(Vec<Command>),
 }
+
+impl fmt::Display for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+
 
 
 #[derive(Debug)]

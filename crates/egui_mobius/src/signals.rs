@@ -7,6 +7,7 @@
 use std::sync::mpsc::Sender;
 use std::thread;
 
+#[derive(Clone)]
 pub struct Signal<T> {
     pub sender: Sender<T>,
 }

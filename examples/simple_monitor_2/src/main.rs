@@ -3,7 +3,7 @@ use std::thread;
 use std::time::Duration;
 use eframe;
 mod ui_app;
-
+use std::fmt::Display; 
 
 use ui_app::App;
 use egui_mobius::clear_logger;
@@ -12,14 +12,21 @@ use egui_mobius::types::Value;
 
 use as_command_derive::AsCommand;
 use egui_mobius::Signal; 
+use std::fmt; 
 
-#[derive(AsCommand, Clone)]
+#[derive(AsCommand, Clone, Debug)]
 pub enum UiCommand {
     FirstTask,
     SecondTask,
     ClearTerminal,
     About,
     CascadeFirstSecond(Vec<UiCommand>),
+}
+
+impl Display for UiCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 

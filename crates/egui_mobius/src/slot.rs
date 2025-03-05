@@ -15,10 +15,10 @@ impl<T> Slot<T>
 where
     T: Send + 'static + Display + Clone,
 {
-    pub fn new(receiver: Receiver<T>) -> Self {
+    pub fn new(receiver: Receiver<T>, id_sequence : Option<usize>) -> Self {
         Slot {
             receiver: Arc::new(Mutex::new(receiver)),
-            sequence: 0,
+            sequence: id_sequence.unwrap_or(0),
         }
     }
 
