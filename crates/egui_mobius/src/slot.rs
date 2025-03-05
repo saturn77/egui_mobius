@@ -1,18 +1,24 @@
 use std::sync::{Arc, Mutex};
+use std::fmt::Display;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
+
+#[derive(Debug, Clone)]
 pub struct Slot<T> {
     pub receiver: Arc<Mutex<Receiver<T>>>,
+    pub sequence: usize,
 }
+
 
 impl<T> Slot<T>
 where
-    T: Send + 'static,
+    T: Send + 'static + Display + Clone,
 {
     pub fn new(receiver: Receiver<T>) -> Self {
         Slot {
             receiver: Arc::new(Mutex::new(receiver)),
+            sequence: 0,
         }
     }
 
