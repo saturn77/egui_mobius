@@ -71,11 +71,11 @@ The logs are **visible both in the console and an `egui` panel**.
 ## **🔧 How to Run**
 Make sure you have `egui_mobius` installed, then run the example with:
 ```sh
-RUST_LOG=info cargo run --example ui_refresh_events
+RUST_LOG=info cargo run -p ui_refresh_events
 ```
 For **verbose debugging**, use:
 ```sh
-RUST_LOG=debug cargo run --example ui_refresh_events
+RUST_LOG=debug cargo run -p ui_refresh_events
 ```
 
 ---
