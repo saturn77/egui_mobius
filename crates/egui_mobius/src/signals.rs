@@ -5,7 +5,6 @@
 // Signal struct is used to send commands to the MobiusEnque<Command> sender
 
 use std::sync::mpsc::Sender;
-use std::thread;
 
 #[derive(Clone)]
 pub struct Signal<T> {
@@ -21,24 +20,20 @@ where
     }
 
     pub fn send(&self, command: T) -> Result<(), String> {
-        let sender = self.sender.clone();
-        thread::spawn(move || {
-            if let Err(e) = sender.send(command) {
-                eprintln!("\n***** Failed to send command: {:?}", e);
-            }
-        });
+        if let Err(e) = self.sender.send(command) {
+            eprintln!("\n***** Failed to send command: {:?}", e);
+            return Err(format!("Failed to send command: {:?}", e));
+        }
         Ok(())
     }
 
     pub fn send_multiple(&self, commands: Vec<T>) -> Result<(), String> {
-        let sender = self.sender.clone();
-        thread::spawn(move || {
-            for command in commands {
-                if let Err(e) = sender.send(command) {
-                    eprintln!("\n***** Failed to send command: {:?}", e);
-                }
+        for command in commands {
+            if let Err(e) = self.sender.send(command) {
+                eprintln!("\n***** Failed to send command: {:?}", e);
+                return Err(format!("Failed to send command: {:?}", e));
             }
-        });
+        }
         Ok(())
     }
 }
