@@ -121,9 +121,19 @@ mod tests {
     use std::sync::{mpsc, Arc, Mutex};
     use std::time::Duration;
     use std::thread;
+    
+    use egui_mobius_macros::EventMacro;
+
+        /// Test with basic unit variants
+        #[derive(EventMacro, PartialEq, Clone, Debug)]
+        enum EventSimple {
+            RefreshUI,
+            CloseApp,
+        }
+
 
     /// Define an enum for testing event processing
-    #[derive(Debug, PartialEq, Clone)]
+    #[derive(EventMacro, PartialEq, Clone, Debug)]
     enum Event {
         RefreshUI,
         UpdateData(String),
@@ -134,6 +144,12 @@ mod tests {
     enum EventStateful {
         Increment,
         Decrement,
+    }
+
+    /// Define an enum for testing the EventMacro derive
+    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    enum MyEventMacro {
+        UpdateData(String),
     }
 
     #[test]
@@ -240,6 +256,70 @@ mod tests {
         let final_count = *counter.lock().unwrap();
         assert_eq!(final_count, 1);
     }
+
+    /// test the EventMacro derive
+    #[test]
+    fn test_event_macro_derive() {
+
+        let event = MyEventMacro::UpdateData("Hello!".to_string());
+
+        println!("Event name: {}", event.event_name()); // Should print: UpdateData
+    }
+
+    /// Test with unit variants
+    #[test]
+    fn test_event_macro_unit_variants() {
+        let event = EventSimple::RefreshUI;
+        assert_eq!(event.event_name(), "RefreshUI");
+
+        let event = EventSimple::CloseApp;
+        assert_eq!(event.event_name(), "CloseApp");
+    }
+
+    /// Test with tuple variants
+    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    enum EventTuple {
+        UpdateData(String),
+        ResizeWindow(u32, u32),
+    }
+
+    #[test]
+    fn test_event_macro_tuple_variants() {
+        let event = EventTuple::UpdateData("Hello".to_string());
+        assert_eq!(event.event_name(), "UpdateData");
+
+        let event = EventTuple::ResizeWindow(800, 600);
+        assert_eq!(event.event_name(), "ResizeWindow");
+    }
+
+    /// Test with struct-like variants
+    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    enum EventStruct {
+        Custom { id: u32, name: String },
+    }
+
+    #[test]
+    fn test_event_macro_struct_variants() {
+        let event = EventStruct::Custom { id: 1, name: "Test".to_string() };
+        assert_eq!(event.event_name(), "Custom");
+    }
+
+    /// Test multiple event types together
+    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    enum EventMixed {
+        Ping,
+        Pong(u32),
+        Data { key: String, value: i32 },
+    }
+
+    #[test]
+    fn test_event_macro_mixed_variants() {
+        assert_eq!(EventMixed::Ping.event_name(), "Ping");
+        assert_eq!(EventMixed::Pong(42).event_name(), "Pong");
+        assert_eq!(EventMixed::Data { key: "A".to_string(), value: 10 }.event_name(), "Data");
+    }
+
+
 }
 
 

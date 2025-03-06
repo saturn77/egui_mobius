@@ -26,7 +26,7 @@ winit = "0.30.9"
 crossbeam-channel = "0.5.14"
 as_command_derive = { path = "../as_command_derive" }
 serde = { version = "1.0.218", optional = true }
-
+egui_mobius_macros = {workspace = true} # Add the correct version of the crate
 
 [features]
 serde = ["serde/derive"]
