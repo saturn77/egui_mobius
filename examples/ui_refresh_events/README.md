@@ -21,7 +21,7 @@ This extends the previous `ui_refresh` example by introducing a **structured eve
 ---
 
 ## **🌜 How It Works**
-### **1️⃣ Defining a Dynamic Event System**
+### **Defining a Dynamic Event System**
 Instead of using raw `String` messages, this example introduces an **`enum EventType`**:
 ```rust
 enum EventType {
@@ -32,7 +32,7 @@ enum EventType {
 ```
 This allows **structured event handling**, making the system **scalable and flexible**.
 
-### **2️⃣ Sending Events from the UI**
+### **Sending Events from the UI**
 Button clicks trigger different event types, which are **sent through a signal**:
 ```rust
 if ui.button("Send Foo Event").clicked() {
@@ -40,8 +40,8 @@ if ui.button("Send Foo Event").clicked() {
 }
 ```
 
-### **3️⃣ Processing Events in a Separate Thread**
-A **producer thread listens for events** and processes them based on type:
+### **Processing Events in a Separate Thread**
+A **consumer thread listens for events** and processes them based on type:
 ```rust
 slot.start(move |event| {
     match event {
