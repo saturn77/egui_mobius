@@ -28,7 +28,9 @@ use std::time::Duration;
 use log::{info, warn}; // Logging framework
 use env_logger; // Logger initialization
 
-// Define a dynamic event type
+// Define a dynamic event type - these could be any type of event
+// These are important for the producer thread to send messages to the UI
+// in an comppact, ergonomic way.
 #[derive(Debug, Clone)]
 enum EventType {
     Foo { id: usize, message: String },
@@ -55,7 +57,9 @@ impl MyApp {
         }
     }
 }
-
+//----------------------------------------------------------------------------
+// This would normally be "ui_app.rs" but for the sake of the example, it's here
+//----------------------------------------------------------------------------
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut should_repaint = false;
@@ -95,7 +99,11 @@ impl eframe::App for MyApp {
     }
 }
 
-// Separate function for the consumer thread
+//-------------------------------------------------------------------------
+// Normally this would be backend.rs, but for the sake of the example, it's here
+//-------------------------------------------------------------------------
+// Consumer thread that processes events and logs them - this could also be 
+// called something like "event_handler" or "event_processor".
 fn consumer_thread(messages: Arc<Mutex<VecDeque<String>>>, update_needed: Arc<Mutex<bool>>, mut slot: Slot<EventType>) {
     let thread_name = "consumer_thread";
     thread::Builder::new()
@@ -136,6 +144,9 @@ fn consumer_thread(messages: Arc<Mutex<VecDeque<String>>>, update_needed: Arc<Mu
         .expect("Failed to spawn consumer thread");
 }
 
+//-------------------------------------------------------------------------
+// Main function, which would normally be by itself in main.rs
+//-------------------------------------------------------------------------
 fn main() {
     // Initialize logging
     env_logger::init();
