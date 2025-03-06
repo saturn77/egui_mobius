@@ -12,9 +12,10 @@
 //
 // The example shows how to create a dynamic event type that can be used to
 // send different types of messages to the UI thread. The UI thread updates
-// the UI based on the received messages. The producer thread sends messages
-// to two different slots, which then update the UI. The UI thread only
-// repaints when a new message is received.
+// the UI based on the received messages. The producer thread (effectivelye
+// the code where "ui_app.rs" would be, sends messages across a single 
+// Signal/Slot pair, which then the consumer thread consumes and then 
+// updates the UI. The UI thread only repaints when a new message is received.
 //
 //-------------------------------------------------------------------------
 use eframe::egui;
