@@ -112,3 +112,91 @@ where
         });
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{mpsc, Arc, Mutex};
+    use std::time::Duration;
+    use std::thread;
+
+    #[derive(Debug, PartialEq, Clone)]
+    enum Event {
+        RefreshUI,
+        UpdateData(String),
+    }
+
+    #[test]
+    /// Test the Slot signal across threads.
+    /// Create a channel (Signal/Slot pair), create a slot with the receiver, and start the slot in a separate thread.
+    /// Send a test message and check if the message was received and processed.
+    /// This demonstrates fundamental functionality of the Slot struct.
+    fn test_slot_signal_across_thread() {
+        // Create a channel (Signal/Slot pair)
+        let (sender, receiver) = mpsc::channel();
+
+        // Create a slot with the receiver
+        let mut slot = Slot::new(receiver, Some(1));
+
+        // Shared storage to collect processed messages
+        let received_messages = Arc::new(Mutex::new(Vec::new()));
+        let received_messages_clone = Arc::clone(&received_messages);
+
+        // Start the slot in a separate thread
+        slot.start(move |msg: String| {
+            let mut storage = received_messages_clone.lock().unwrap();
+            storage.push(msg);
+        });
+
+        // Send a test message
+        sender.send("Hello from the other thread!".to_string()).unwrap();
+
+        // Allow some time for the thread to process
+        thread::sleep(Duration::from_millis(100));
+
+        // Check if the message was received and processed
+        let messages = received_messages.lock().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0], "Hello from the other thread!");
+    }
+
+    #[test]
+    /// Test the event handling functionality of the Slot struct.
+    /// Create a channel for events, create a slot with the receiver, and start the slot in a separate thread.
+    /// Send events and check if the events were processed correctly.
+    /// This demonstrates the event handling functionality of the Slot struct.
+    /// Also demonstrates how to use a single Signal/Slot pair to handle multiple types of events.
+    fn test_event_handling() {
+        // Create a channel for events.
+        let (sender, mut receiver) = mpsc::channel();
+
+        // Create a slot with the receiver.
+        let mut slot = Slot::new(receiver, Some(1));
+
+        // Shared storage to collect processed events.
+        let processed_events = Arc::new(Mutex::new(Vec::new()));
+        let processed_events_clone = Arc::clone(&processed_events);
+
+        // Start the slot with an event handler.
+        slot.start(move |event: Event| {
+            let mut storage = processed_events_clone.lock().unwrap();
+            storage.push(event);
+        });
+
+        // Send events.
+        sender.send(Event::RefreshUI).unwrap();
+        sender.send(Event::UpdateData("New data".to_string())).unwrap();
+
+        // Allow some time for the events to be processed.
+        thread::sleep(Duration::from_millis(100));
+
+        // Verify that the events were processed correctly.
+        let events = processed_events.lock().unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0], Event::RefreshUI);
+        assert_eq!(events[1], Event::UpdateData("New data".to_string()));
+    }
+}
+
+
