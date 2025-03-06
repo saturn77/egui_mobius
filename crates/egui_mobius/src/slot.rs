@@ -98,19 +98,20 @@ where
     }
 
     /// Start the slot in a separate thread.
-    pub fn start<F>(&mut self, handler: F)
+    pub fn start<F>(&mut self, mut handler: F)
     where
-        F: Fn(T) + Send + Sync + 'static,
+        F: FnMut(T) + Send + 'static,
     {
         let receiver = Arc::clone(&self.receiver);
         thread::spawn(move || {
-            let handler = handler;
             let receiver = receiver.lock().unwrap();
-            for command in receiver.iter() {
-                handler(command);
+            for event in receiver.iter() {
+                handler(event);
             }
         });
     }
+    
+
 }
 
 
@@ -121,10 +122,18 @@ mod tests {
     use std::time::Duration;
     use std::thread;
 
+    /// Define an enum for testing event processing
     #[derive(Debug, PartialEq, Clone)]
     enum Event {
         RefreshUI,
         UpdateData(String),
+    }
+
+    /// Define an enum for testing stateful event processing with FnMut 
+    #[derive(Debug, PartialEq, Clone)]
+    enum EventStateful {
+        Increment,
+        Decrement,
     }
 
     #[test]
@@ -169,7 +178,7 @@ mod tests {
     /// Also demonstrates how to use a single Signal/Slot pair to handle multiple types of events.
     fn test_event_handling() {
         // Create a channel for events.
-        let (sender, mut receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
 
         // Create a slot with the receiver.
         let mut slot = Slot::new(receiver, Some(1));
@@ -196,6 +205,40 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0], Event::RefreshUI);
         assert_eq!(events[1], Event::UpdateData("New data".to_string()));
+    }
+
+    #[test]
+    fn test_stateful_event_processing() {
+        // Create a channel for events.
+        let (sender, receiver) = mpsc::channel();
+
+        // Create a slot with the receiver.
+        let mut slot = Slot::new(receiver, Some(1));
+
+        // Shared counter state.
+        let counter = Arc::new(Mutex::new(0));
+        let counter_clone = Arc::clone(&counter);
+
+        // Start the slot with a stateful handler.
+        slot.start(move |event: EventStateful| {
+            let mut count = counter_clone.lock().unwrap();
+            match event {
+                EventStateful::Increment => *count += 1,
+                EventStateful::Decrement => *count -= 1,
+            }
+        });
+
+        // Send events.
+        sender.send(EventStateful::Increment).unwrap();
+        sender.send(EventStateful::Increment).unwrap();
+        sender.send(EventStateful::Decrement).unwrap();
+
+        // Allow some time for the events to be processed.
+        thread::sleep(Duration::from_millis(100));
+
+        // Verify that the state has been updated correctly.
+        let final_count = *counter.lock().unwrap();
+        assert_eq!(final_count, 1);
     }
 }
 
