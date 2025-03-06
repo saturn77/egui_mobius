@@ -12,6 +12,7 @@ categories  = ["graphics", "ui", "framework", "gui"]
 readme      = "README.md"
 
 [dependencies]
+#crossbeam = {version = "0.8.4", features= ["crossbeam-channel"]}
 egui_mobius = { workspace = true }
 
 [[bin]]

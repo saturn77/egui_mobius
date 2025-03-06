@@ -2,15 +2,15 @@ use std::sync::mpsc::{self, Sender, Receiver};
 use crate::signals::Signal;
 use crate::slot::Slot;
 
-use std::fmt::Display; // for Slot<T> where T: Display
-
-
+use priority_queue::PriorityQueue;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, Condvar};
+use std::fmt::Debug;
 
-
-pub fn create_signal_slot<T>(id_sequence : usize) -> (Signal<T>, Slot<T>)
+/// Creates a new signal-slot pair with the given sequence ID.
+pub fn create_signal_slot<T>(id_sequence: usize) -> (Signal<T>, Slot<T>)
 where
-    T: Send + Clone + Display + 'static,
+    T: Send + Clone + 'static,
 {
     let (tx, rx): (Sender<T>, Receiver<T>) = mpsc::channel();
     let signal = Signal::new(tx);
@@ -18,35 +18,40 @@ where
     (signal, slot)
 }
 
-/// A "dispatcher" thread spins up a vector of Slots, each of which is a receiver of messages.
-/// It then sends a single message at a time to the main thread in order of sequence number.
-/// Features : 
-/// 1. Each producer has its own sequence number that is used to order messages
-/// 2. Waits for messages to arrive in the rx_queue
-/// 3. Sorts the messages by sequence number
-/// 4. Forwards messages to the main thread in order
-/// 5. Notifies the main thread when a message is forwarded
-/// 6. Runs forever, i.e. it is "static" to the application
-
-
+/// A dispatcher that manages multiple slots and forwards messages to the main thread in order of sequence number.
 pub struct Dispatcher<T> {
-    slots: HashMap<String, Slot<T>>,  // Map slot names to slots
+    /// A map of slot names to slots.
+    slots: HashMap<String, Slot<T>>,
+    /// A priority queue to handle slots in order.
+    rx_queue: Arc<(Mutex<PriorityQueue<Slot<T>, usize>>, Condvar)>,
+    /// The current sequence number.
+    sequence: usize,
+    /// A sender to the main thread.
+    dispatcher_tx: Sender<T>,
 }
 
 impl<T> Dispatcher<T>
 where
-    T: Send + 'static,
+    T: Send + Debug + Clone + 'static,
 {
-    pub fn new() -> Self {
+    /// Creates a new dispatcher with the given sender to the main thread and a shutdown flag.
+    pub fn new(dispatcher_tx: Sender<T>) -> Self {
         Self {
             slots: HashMap::new(),
+            rx_queue: Arc::new((Mutex::new(PriorityQueue::new()), Condvar::new())),
+            sequence: 0,
+            dispatcher_tx,
         }
     }
 
+    /// Adds a slot to the dispatcher with the given name.
     pub fn add_slot(&mut self, name: &str, slot: Slot<T>) {
         self.slots.insert(name.to_string(), slot);
     }
 
+    /// Sets a handler for the slot with the given name.
+    ///
+    /// The handler is a function that will be called with the message received by the slot.
     pub fn set_handler<F>(&mut self, slot_name: &str, handler: F)
     where
         F: Fn(T) + Send + Sync + 'static,
@@ -57,66 +62,31 @@ where
             println!("Error: Slot '{}' not found!", slot_name);
         }
     }
+
+    /// Runs the dispatcher, processing messages from the slots in order of their sequence numbers.
+    ///
+    /// This method runs indefinitely, waiting for messages to arrive in the queue and forwarding them to the main thread.
+    pub fn run(&mut self) {
+        loop {
+
+            let (lock, cvar) = &*self.rx_queue;
+            let mut q = lock.lock().unwrap();
+            while q.is_empty() {
+                q = cvar.wait(q).unwrap();
+            }
+            while let Some((slot, priority)) = q.peek() {
+                if *priority == self.sequence {
+                    let msg = slot.receiver.lock().unwrap().recv().unwrap();
+                    println!("[Dispatcher] Forwarding: {:?}", msg);
+                    if let Err(e) = self.dispatcher_tx.send(msg) {
+                        println!("***** Failed to send command: {:?}", e);
+                    }
+                    q.pop();
+                    self.sequence += 1;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
 }
-
-
-
-
-
-
-// pub struct Dispatcher<T: 'static> {
-//     timeout       : Duration,
-//     rx_queue      : Arc<(Mutex<Vec<Slot<T>>>, Condvar)>,  // note that each Slot is an Arc<Mutex<Receiver<T>>>
-//     sequence      : usize,
-//     dispatcher_tx : Sender<T>,  // this is the channel to send messages to the main thread
-// }
-
-// impl<T: Send + std::fmt::Debug + 'static> Dispatcher<T> {
-//     /// Create a new Dispatcher
-//     pub fn new(dispatcher_tx: Sender<T>) -> Self {
-//         Dispatcher {
-//             timeout   : Duration::from_millis(100),
-//             rx_queue  : Arc::new((Mutex::new(Vec::new()), Condvar::new())),
-//             sequence  : 0,
-//             dispatcher_tx,
-//         }
-//     }
-
-//     /// Add a Slot to the dispatcher; a Slot may be driven by multiple Signals 
-//     pub fn add_slot(&mut self, slot: Slot<T>) {
-//         let (lock, _cvar) = &*self.rx_queue;
-//         let mut q = lock.lock().unwrap();
-//         q.push(slot);
-//     }
-
-//     /// Run the dispatcher thread, for the entire life time of the application
-//     pub fn run(&mut self) {
-//         loop {
-//             let (lock, cvar) = &*self.rx_queue;
-//             let mut q = lock.lock().unwrap();
-//             while q.is_empty() {
-//                 let (new_q, timeout_result) = cvar.wait_timeout(q, self.timeout).unwrap();
-//                 q = new_q;
-
-//                 if timeout_result.timed_out() {
-//                     println!("[Dispatcher] Timeout occurred while waiting for messages.");
-//                     // Handle timeout case here (e.g., log a message, take other actions)
-//                 }
-//             }
-//             q.sort_by_key(|slot| slot.sequence);
-//             while let Some(slot) = q.first() {
-//                 if slot.sequence == self.sequence {
-//                     let msg = slot.receiver.lock().unwrap().recv().unwrap();
-//                     println!("[Dispatcher] Forwarding: {:?}", msg);
-//                     if let Err(e) = self.dispatcher_tx.send(msg) {
-//                         println!("***** Failed to send command: {:?}", e);
-//                     }
-//                     q.remove(0);
-//                     self.sequence += 1;
-//                 } else {
-//                     break;
-//                 }
-//             }
-//         }
-//     }
-// }
