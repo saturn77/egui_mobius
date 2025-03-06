@@ -24,7 +24,7 @@ where
 
     pub fn start<F>(&self, mut handler: F)
     where
-        F: FnMut(T) + Send + 'static,
+        F: FnMut(T) + Send + 'static + Clone + Display,
     {
         let receiver = Arc::clone(&self.receiver);
         thread::spawn(move || {
@@ -33,5 +33,23 @@ where
                 handler(command);
             }
         });
+    }
+}
+
+impl Display for Slot<String> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Slot: {}", self.sequence)
+    }
+}
+
+impl Display for Slot<i32> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Slot: {}", self.sequence)
+    }
+}
+
+impl Display for Slot<f32> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Slot: {}", self.sequence)
     }
 }
