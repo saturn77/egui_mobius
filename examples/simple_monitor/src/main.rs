@@ -101,7 +101,7 @@ fn handle_command(
 // Main Function - Synchronous Operation with Background Thread
 //**************************************************************** 
 fn main() {
-    let (signal, slot) = factory::create_signal_slot::<Command>();
+    let (signal, mut slot) = factory::create_signal_slot::<Command>(1);
     let shutdown_flag = Arc::new(AtomicBool::new(false));
 
     let app = App {
