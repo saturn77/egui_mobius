@@ -30,7 +30,7 @@ use env_logger; // Logger initialization
 
 // Define a dynamic event type - these could be any type of event
 // These are important for the producer thread to send messages to the UI
-// in an comppact, ergonomic way.
+// in an compact, ergonomic way.
 #[derive(Debug, Clone)]
 enum EventType {
     Foo { id: usize, message: String },
