@@ -20,6 +20,7 @@
 use eframe::egui;
 use egui_mobius::factory;
 use egui_mobius::signals::Signal;
+use egui_mobius::slot::Slot;
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 use std::thread;
@@ -94,6 +95,47 @@ impl eframe::App for MyApp {
     }
 }
 
+// Separate function for the consumer thread
+fn consumer_thread(messages: Arc<Mutex<VecDeque<String>>>, update_needed: Arc<Mutex<bool>>, mut slot: Slot<EventType>) {
+    let thread_name = "consumer_thread";
+    thread::Builder::new()
+        .name(thread_name.to_string())
+        .spawn(move || {
+            slot.start({
+                let messages_clone = Arc::clone(&messages);
+                let update_needed_clone = Arc::clone(&update_needed);
+                move |event| {
+                    let mut queue = messages_clone.lock().unwrap();
+                    
+                    match event {
+                        EventType::Foo { id, message } => {
+                            let log_msg = format!("Handler {} processed Foo event: {}", id, message);
+                            queue.push_back(log_msg.clone());
+                            info!("{}", log_msg); // Log the event
+                        }
+                        EventType::Bar { id, message } => {
+                            let log_msg = format!("Handler {} processed Bar event: {}", id, message);
+                            queue.push_back(log_msg.clone());
+                            warn!("{}", log_msg); // Log with a warning level
+                        }
+                        EventType::Custom(msg) => {
+                            let log_msg = format!("Custom event processed: {}", msg);
+                            queue.push_back(log_msg.clone());
+                            info!("{}", log_msg);
+                        }
+                    }
+
+                    *update_needed_clone.lock().unwrap() = true; // Mark UI update required
+                }
+            });
+
+            loop {
+                thread::sleep(Duration::from_millis(100)); // Simulate processing delay
+            }
+        })
+        .expect("Failed to spawn consumer thread");
+}
+
 fn main() {
     // Initialize logging
     env_logger::init();
@@ -101,53 +143,17 @@ fn main() {
     let messages = Arc::new(Mutex::new(VecDeque::new()));
     let update_needed = Arc::new(Mutex::new(false)); // Shared flag for UI updates
 
-    let messages_clone = Arc::clone(&messages);
-    let update_needed_clone = Arc::clone(&update_needed);
+    let (signal, slot) = factory::create_signal_slot::<EventType>(1);
 
-    // Create a single signal to handle all event types
-    let (signal, mut slot) = factory::create_signal_slot::<EventType>(1);
-
-    // Producer thread: logs events & updates UI
-    thread::spawn(move || {
-        slot.start({
-            let messages_clone = Arc::clone(&messages_clone);
-            let update_needed_clone = Arc::clone(&update_needed_clone);
-            move |event| {
-                let mut queue = messages_clone.lock().unwrap();
-                
-                match event {
-                    EventType::Foo { id, message } => {
-                        let log_msg = format!("Handler {} processed Foo event: {}", id, message);
-                        queue.push_back(log_msg.clone());
-                        info!("{}", log_msg); // Log the event
-                    }
-                    EventType::Bar { id, message } => {
-                        let log_msg = format!("Handler {} processed Bar event: {}", id, message);
-                        queue.push_back(log_msg.clone());
-                        warn!("{}", log_msg); // Log with a warning level
-                    }
-                    EventType::Custom(msg) => {
-                        let log_msg = format!("Custom event processed: {}", msg);
-                        queue.push_back(log_msg.clone());
-                        info!("{}", log_msg);
-                    }
-                }
-
-                *update_needed_clone.lock().unwrap() = true; // Mark UI update required
-            }
-        });
-
-        loop {
-            thread::sleep(Duration::from_millis(100)); // Simulate processing delay
-        }
-    });
+    // Start the consumer thread
+    consumer_thread(Arc::clone(&messages), Arc::clone(&update_needed), slot);
 
     // Run the UI with egui
     let options = eframe::NativeOptions::default();
 
     // Run the app
     if let Err(e) = eframe::run_native(
-        "egui_mobius - Dynamic Events (extending ui_refresh) with Logging ! ",
+        "egui_mobius - Dynamic Events (extending ui_refresh) with Logging!",
         options,
         Box::new(|_cc| Ok(Box::new(MyApp::new(signal, messages, update_needed)))),
     ) {
