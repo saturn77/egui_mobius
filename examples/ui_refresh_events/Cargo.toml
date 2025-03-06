@@ -21,6 +21,8 @@ eframe = { workspace = true, default-features = false, features = [
     "wayland",
 ] }
 rand = { workspace = true }
+log = "0.4"
+env_logger = "0.9"
 
 [[bin]]
 name = "ui_refresh_events"

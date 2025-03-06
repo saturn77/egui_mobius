@@ -17,7 +17,6 @@
 // repaints when a new message is received.
 //
 //-------------------------------------------------------------------------
-
 use eframe::egui;
 use egui_mobius::factory;
 use egui_mobius::signals::Signal;
@@ -25,13 +24,15 @@ use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 use std::thread;
 use std::time::Duration;
+use log::{info, warn}; // Logging framework
+use env_logger; // Logger initialization
 
 // Define a dynamic event type
 #[derive(Debug, Clone)]
 enum EventType {
     Foo { id: usize, message: String },
     Bar { id: usize, message: String },
-    Custom(String), // Allows user-defined events
+    Custom(String),
 }
 
 struct MyApp {
@@ -59,7 +60,7 @@ impl eframe::App for MyApp {
         let mut should_repaint = false;
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("egui_mobius - Dynamic Event System");
+            ui.heading("egui_mobius - Logging System");
 
             if ui.button("Send Foo Event").clicked() {
                 self.signal.send(EventType::Foo { id: 1, message: "Foo - Egui".to_string() }).unwrap();
@@ -77,7 +78,6 @@ impl eframe::App for MyApp {
             }
 
             ui.separator();
-
             ui.label("Received Messages:");
             let messages = self.messages.lock().unwrap();
             for msg in messages.iter() {
@@ -95,6 +95,9 @@ impl eframe::App for MyApp {
 }
 
 fn main() {
+    // Initialize logging
+    env_logger::init();
+
     let messages = Arc::new(Mutex::new(VecDeque::new()));
     let update_needed = Arc::new(Mutex::new(false)); // Shared flag for UI updates
 
@@ -104,7 +107,7 @@ fn main() {
     // Create a single signal to handle all event types
     let (signal, mut slot) = factory::create_signal_slot::<EventType>(1);
 
-    // Producer thread: updates messages & triggers UI repaint based on event type
+    // Producer thread: logs events & updates UI
     thread::spawn(move || {
         slot.start({
             let messages_clone = Arc::clone(&messages_clone);
@@ -114,13 +117,19 @@ fn main() {
                 
                 match event {
                     EventType::Foo { id, message } => {
-                        queue.push_back(format!("Handler {} received Foo event: {}", id, message));
+                        let log_msg = format!("Handler {} processed Foo event: {}", id, message);
+                        queue.push_back(log_msg.clone());
+                        info!("{}", log_msg); // Log the event
                     }
                     EventType::Bar { id, message } => {
-                        queue.push_back(format!("Handler {} received Bar event: {}", id, message));
+                        let log_msg = format!("Handler {} processed Bar event: {}", id, message);
+                        queue.push_back(log_msg.clone());
+                        warn!("{}", log_msg); // Log with a warning level
                     }
                     EventType::Custom(msg) => {
-                        queue.push_back(format!("Custom event received: {}", msg));
+                        let log_msg = format!("Custom event processed: {}", msg);
+                        queue.push_back(log_msg.clone());
+                        info!("{}", log_msg);
                     }
                 }
 
@@ -138,7 +147,7 @@ fn main() {
 
     // Run the app
     if let Err(e) = eframe::run_native(
-        "egui_mobius - Dynamic Events (Extending the ui_refresh example)",
+        "egui_mobius - Dynamic Events (extending ui_refresh) with Logging ! ",
         options,
         Box::new(|_cc| Ok(Box::new(MyApp::new(signal, messages, update_needed)))),
     ) {
