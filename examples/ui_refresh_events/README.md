@@ -7,7 +7,9 @@ The `ui_refresh_events` example demonstrates how to:
 - **Optimize UI updates**, ensuring efficient repainting **only when new events arrive**.
 - **Log event processing using `env_logger`**, displaying logs in **both the console and UI**.
 
-This extends the previous `ui_refresh` example by introducing a **structured event system** and **real-time logging**, making it a powerful demonstration of `egui_mobius`'s capabilities.
+This extends the previous `ui_refresh` example by introducing a **structured event system** and **real-time logging**, making it a powerful demonstration of `egui_mobius`'s capabilities. The **dispatcher_signals_slots** example is also a key contributor to
+this example, where an ordered priority queue is demonstrated for
+keeping message order.  
 
 ---
 
@@ -53,18 +55,6 @@ slot.start(move |event| {
 ```
 The processed events are **stored and displayed in the UI log panel**.
 
-### **4️⃣ Displaying Logs in the UI**
-Instead of keeping a separate queue for logs, this example **uses `env_logger` to capture logs dynamically**.  
-The logs are **visible both in the console and an `egui` panel**.
-
----
-
-## **📺 UI Layout**
-| UI Element | Description |
-|------------|-------------|
-| **Left Panel** | Buttons to trigger different event types (`Foo`, `Bar`, `Custom`) |
-| **Center Panel** | Displays the received messages dynamically |
-| **Right Panel** | Displays event logs in real-time using `env_logger` |
 
 ---
 
