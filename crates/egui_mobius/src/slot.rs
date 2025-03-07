@@ -5,6 +5,10 @@ use std::thread;
 use std::cmp::Ordering;
 
 /// Slot struct with receiver and sequence number.
+/// Slot is a primary component of the egui_mobius library, 
+/// and slots are used to received events from the ui. The
+/// Slot is generally contained within a thread in a 
+/// background command processing function. 
 pub struct Slot<T> {
     pub receiver: Arc<Mutex<Receiver<T>>>,
     pub sequence: usize,
