@@ -17,7 +17,7 @@ use std::thread;
 
 fn main() {
     // Create a signal and slot via the egui_mobius factory function
-    let (signal, slot) = factory::create_signal_slot::<String>();
+    let (signal, mut slot) = factory::create_signal_slot::<String>(1);
 
     let shutdown_flag: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     
