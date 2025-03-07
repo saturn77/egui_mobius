@@ -4,8 +4,7 @@
 
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Latest Version](https://img.shields.io/badge/version-0.2.0-green.svg)
-![Rust](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml/badge.svg?branch=main&event=push)
-
+[![Rust](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml/badge.svg)](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml)
 
 ![egui_mobius Logo](./assets/mobius_strip.png)  
 
