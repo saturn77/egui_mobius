@@ -7,20 +7,6 @@ use syn::{DeriveInput, parse_macro_input};
 /// This macro generates a trait implementation for a command enum,
 /// while also providing a as_any method for downcasting to a trait object.
 /// The trait object can be used to send commands to the backend.
-///
-/// # Example
-/// ```
-/// use as_command_derive::AsCommand;
-///
-/// #[derive(AsCommand, Clone)]
-/// pub enum Command {
-///   FirstTask,
-///   SecondTask,
-///   ClearTerminal,
-///   About,
-///   CascadeFirstSecond(Vec<Command>),
-/// }
-/// ```
 #[proc_macro_derive(AsCommand)]
 pub fn as_command_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
