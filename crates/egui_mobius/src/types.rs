@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -13,6 +14,14 @@ pub struct Value<T>(Arc<Mutex<T>>);
 impl<T: Default> Default for Value<T> {
     fn default() -> Self {
         Self(Arc::new(Mutex::new(T::default())))
+    }
+}
+
+impl<T: Debug> Debug for Value<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Value")
+            .field(&self.0)
+            .finish()
     }
 }
 
