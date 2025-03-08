@@ -1,4 +1,3 @@
-
 //-------------------------------------------------------------------------
 // Filename : examples/ui_refresh_events/src/main.rs
 // Project  : egui_mobius
@@ -22,10 +21,9 @@ use eframe::egui;
 use egui_mobius::factory;
 use egui_mobius::signals::Signal;
 use egui_mobius::slot::Slot;
+use egui_mobius::types::Value; 
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
-use std::thread;
-use std::time::Duration;
 use log::{info, warn}; // Logging framework
 use env_logger; // Logger initialization
 
@@ -40,16 +38,16 @@ enum EventType {
 }
 
 struct MyApp {
-    signal: Signal<EventType>,
-    messages: Arc<Mutex<VecDeque<String>>>,
-    update_needed: Arc<Mutex<bool>>, // Tracks if the UI needs refreshing
+    signal        : Signal<EventType>,
+    messages      : Value<VecDeque<String>>,
+    update_needed : Value<bool>, // Tracks if the UI needs refreshing
 }
 
 impl MyApp {
     fn new(
-        signal: Signal<EventType>,
-        messages: Arc<Mutex<VecDeque<String>>>,
-        update_needed: Arc<Mutex<bool>>,
+        signal        : Signal<EventType>,
+        messages      : Value<VecDeque<String>>,
+        update_needed : Value<bool>,
     ) -> Self {
         Self {
             signal,
@@ -105,44 +103,36 @@ impl eframe::App for MyApp {
 //-------------------------------------------------------------------------
 // Consumer thread that processes events and logs them - this could also be 
 // called something like "event_handler" or "event_processor".
+// Note that Slot's create their own thread, so this function is effectively
+// running in a separate thread.
 fn consumer_thread(messages: Arc<Mutex<VecDeque<String>>>, update_needed: Arc<Mutex<bool>>, mut slot: Slot<EventType>) {
-    let thread_name = "consumer_thread";
-    thread::Builder::new()
-        .name(thread_name.to_string())
-        .spawn(move || {
-            slot.start({
-                let messages_clone = Arc::clone(&messages);
-                let update_needed_clone = Arc::clone(&update_needed);
-                move |event| {
-                    let mut queue = messages_clone.lock().unwrap();
-                    
-                    match event {
-                        EventType::Foo { id, message } => {
-                            let log_msg = format!("Handler {} processed Foo event: {}", id, message);
-                            queue.push_back(log_msg.clone());
-                            info!("{}", log_msg); // Log the event
-                        }
-                        EventType::Bar { id, message } => {
-                            let log_msg = format!("Handler {} processed Bar event: {}", id, message);
-                            queue.push_back(log_msg.clone());
-                            warn!("{}", log_msg); // Log with a warning level
-                        }
-                        EventType::Custom(msg) => {
-                            let log_msg = format!("Custom event processed: {}", msg);
-                            queue.push_back(log_msg.clone());
-                            info!("{}", log_msg);
-                        }
-                    }
-
-                    *update_needed_clone.lock().unwrap() = true; // Mark UI update required
+    slot.start({
+        let messages_clone = Arc::clone(&messages);
+        let update_needed_clone = Arc::clone(&update_needed);
+        move |event| {
+            let mut queue = messages_clone.lock().unwrap();
+            
+            match event {
+                EventType::Foo { id, message } => {
+                    let log_msg = format!("Handler {} processed Foo event: {}", id, message);
+                    queue.push_back(log_msg.clone());
+                    info!("{}", log_msg); // Log the event
                 }
-            });
-
-            loop {
-                thread::sleep(Duration::from_millis(100)); // Simulate processing delay
+                EventType::Bar { id, message } => {
+                    let log_msg = format!("Handler {} processed Bar event: {}", id, message);
+                    queue.push_back(log_msg.clone());
+                    warn!("{}", log_msg); // Log with a warning level
+                }
+                EventType::Custom(msg) => {
+                    let log_msg = format!("Custom event processed: {}", msg);
+                    queue.push_back(log_msg.clone());
+                    info!("{}", log_msg);
+                }
             }
-        })
-        .expect("Failed to spawn consumer thread");
+
+            *update_needed_clone.lock().unwrap() = true; // Mark UI update required
+        }
+    });
 }
 
 //-------------------------------------------------------------------------
