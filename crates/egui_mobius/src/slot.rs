@@ -109,8 +109,8 @@ where
         let receiver = Arc::clone(&self.receiver);
         thread::spawn(move || {
             let receiver = receiver.lock().unwrap();
-            for event in receiver.iter() {
-                handler(event);
+            for msg_or_event in receiver.iter() {
+                handler(msg_or_event);
             }
         });
     }
