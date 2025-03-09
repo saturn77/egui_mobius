@@ -49,6 +49,7 @@ enum Event {
 // The UiApp struct containes the shared data or "state" that is used to
 // update the Ui.
 //----------------------------------------------------------------------------
+#[allow(dead_code)]
 struct UiApp {
     fabric_data : Fabric,
     ui_signal   : Signal<Event>,
