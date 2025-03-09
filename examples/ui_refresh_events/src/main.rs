@@ -373,7 +373,6 @@ fn backend_consumer_thread(
 // Overall the main function is where the shared data is created, the 
 // signal/slot pair is created, and the consumer thread is started. The 
 // UI is then initialized and run using eframe.
-// Also note that the main function is less than twenty lines of code.
 // The compactness of the code is due to the use of egui_mobius to manage
 // the shared data and the signal/slot pair.
 //-------------------------------------------------------------------------
