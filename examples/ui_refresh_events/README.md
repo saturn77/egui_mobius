@@ -3,7 +3,7 @@
 ## 🛠️ Running the Example
 Ensure you have **Rust and Cargo installed**, then run:
 ```sh
-cargo run --p ui_refresh_events
+cargo run -p ui_refresh_events
 ```
 ## 🚀 Why This Example Matters
 This is currently the **primary example** for `egui_mobius`, showcasing:
