@@ -1,3 +1,15 @@
+//! The Slot struct is a self-thread channel receiver. 
+//! 
+//! Slot is a primary component of the egui_mobius library.
+//! Slot receive messages that may be of an Event, Command, 
+//! Response, or any other type that implments a Rust type of 
+//! ```T : Send + 'static + Clone```.
+//! 
+//! It is noteworthy that the Slot struct is a self-thread channel receiver, 
+//! meaning that it can process messages in a separate thread from the main application.
+//! A "handler" function is passed to the Slot struct to process the messages.
+//!
+
 use std::sync::{Arc, Mutex};
 use std::fmt::{Debug, Display};
 use std::sync::mpsc::Receiver;
@@ -5,20 +17,19 @@ use std::thread;
 use std::cmp::Ordering;
 
 /// Slot struct with receiver and sequence number.
+/// 
+
 /// Slot is a primary component of the egui_mobius library, 
-/// and slots are used to received events from the ui. The
-/// Slot is generally contained within a thread in a 
-/// background command processing function. 
+/// and slots are used to receive messages that may be of
+/// an Event, Command, Response, or any other type.
 pub struct Slot<T> {
     pub receiver: Arc<Mutex<Receiver<T>>>,
     pub sequence: usize,
 }
 
-
-
 //-----------------Rust Trait Implementations ---------------------//
 
-/// Impelmentations for Slot<T> of the following traits:
+/// Impelmentations for ```Slot<T>``` of the following traits:
 /// - Clone
 /// - Hash
 /// - PartialEq
@@ -38,45 +49,45 @@ impl<T : Clone> Clone for Slot<T> {
     }
 }
 
-/// Hash
+/// Hash method implementation for ```Slot<T>```
 impl<T> std::hash::Hash for Slot<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.sequence.hash(state);
     }
 }
 
-/// PartialEq, Eq, PartialOrd, Ord
+/// PartialEq implementation for ```Slot<T>```
 impl<T> PartialEq for Slot<T> {
     fn eq(&self, other: &Self) -> bool {
         self.sequence == other.sequence
     }
 }
 
-/// Eq
+/// Eq implementation for ```Slot<T>```
 impl<T> Eq for Slot<T> {}
 
-/// PartialOrd
+/// PartialOrd for ```Slot<T>```
 impl<T> PartialOrd for Slot<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-/// Ord
+/// Ord for ```Slot<T>```
 impl<T> Ord for Slot<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.sequence.cmp(&other.sequence)
     }
 }
 
-/// Display 
+/// Display for ```Slot<T>```
 impl<T: Display> Display for Slot<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Slot: {}", self.sequence)
     }
 }
 
-/// Debug
+/// Debug for ```Slot<T>```
 impl <T: Debug> Debug for Slot<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Slot: {}", self.sequence)
@@ -85,10 +96,8 @@ impl <T: Debug> Debug for Slot<T> {
 
 //------------------ Slot Implementations ---------------------//
 
-/// Slot implementation. The Slot struct is used to receive commands from the MobiusEnque<Command> sender.
-/// The start method is used to start the slot in a separate thread.
-/// Integration of Slots with the Dispatcher is done in the Dispatcher implementation.
-/// The Dispatcher will manage multiple slots and forward messages to the main thread in order of sequence number.
+/// Slot implementation. Note that Slot implements new for a 
+/// type T that is Send, 'static, and Clone.
 impl<T> Slot<T>
 where
     T: Send + 'static + Clone,
@@ -101,7 +110,9 @@ where
         }
     }
 
-    /// Start the slot in a separate thread.
+    /// Start the slot, which means giving the Slot its own thread to process messages.
+    /// This is a key component of egui_mobius, as it allows for the Slot to process messages
+    /// in a separate thread from the main application.
     pub fn start<F>(&mut self, mut handler: F)
     where
         F: FnMut(T) + Send + 'static,

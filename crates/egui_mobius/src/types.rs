@@ -1,3 +1,24 @@
+//! The types module contains useful and powerful types for ipmlementing the general design
+//! patterns and framework of egui_mobius. 
+//! 
+//! The types module contains the following types:
+//! - Value
+//! - ValueGuard
+//! - Edge
+//!
+//! The **Value** type is a heap allocated and thread safe type that can be used to store
+//! a value that can be shared across multiple threads, useful for shared state or for
+//! Signal and Slot types. This is particularly useful for not having to refer to 
+//! the `Arc<Mutex<T>>` type directly in the code, as this often clutters the code.
+//! 
+//! The **ValueGuard** type is a guard type that is used to lock the `Value` type and
+//! provides a way to read and write the value.
+//!
+//! The **Edge** type is used to detect edges in the input signal. It is used to detect
+//! rising and falling edges in the input signal. 
+//! 
+
+
 use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -8,7 +29,7 @@ pub type Dequeue<T> = std::sync::mpsc::Receiver<T>;
 pub type EventEnqueue<T> = tokio::sync::mpsc::Sender<T>;
 pub type EventDequeue<T> = tokio::sync::mpsc::Receiver<T>;
 
-/// The Value Type
+/// The Value Type - heap allocated and thread safe.
 /// 
 /// The Value type is heap allocated and thread safe type that can be used to store
 /// a value that can be shared across multiple threads, useful for shared state or for
@@ -19,7 +40,7 @@ pub type EventDequeue<T> = tokio::sync::mpsc::Receiver<T>;
 /// to read and write the value.
 /// 
 /// Example Usage:
-/// ```rs
+/// ```rust
 /// pub struct UiApp {
 ///     state        : Value<AppState>,
 ///     event_signal : Signal<Event>,
@@ -55,15 +76,18 @@ impl<T> Value<T> {
         result
     }
 
+    /// Create a new Value instance with the given value of type T.
     pub fn new(value: T) -> Value<T> {
         Self(Arc::new(Mutex::new(value)))
     }
 
+    /// Write a value of type T to the Value instance.
     pub fn write (&self, value: T) {
         let mut guard = self.lock().unwrap();
         *guard = value;
     }
 
+    /// Read a value of type T from the Value instance.
     pub fn read(&self) -> T
     where
         T: Clone,
@@ -72,14 +96,14 @@ impl<T> Value<T> {
         guard.clone()
     }
 
-    // make aliases of get (read) and set (write) for additional ergonomics
-    // such that devs don't complain about the API not being what they are used to
+    /// Make aliases of get (read) and set (write) for additional ergonomics
     pub fn get(&self) -> T 
     where T: Clone 
     {
         self.read()
     }
 
+    /// Make aliases of get (read) and set (write) for additional ergonomics
     pub fn set(&self, value: T) {
         self.write(value);
     }
@@ -88,6 +112,10 @@ impl<T> Value<T> {
 
 impl<T: Send> Value<T> {}
 
+/// ValueGuard type - Mutex Guard for the Value type.
+///
+/// The ValueGuard type is a guard type that is used to lock the `Value` type and
+/// provides a way to deref the value either mutably or immutably.
 pub struct ValueGuard<'a, T>(MutexGuard<'a, T>);
 
 impl<T> Deref for ValueGuard<'_, T> {
@@ -115,28 +143,27 @@ impl<T> Value<VecDeque<T>> {
     }
 }
 
-//-------------------------------------------------------------------------
-// ** Edge Type **
-//-------------------------------------------------------------------------
-// This type is used to detect edges in the input signal.
-// It is used to detect rising and falling edges in the input signal.
-// The type T should implement the following traits:
-// - Clone
-// - Debug
-// - Display
-// - PartialEq
-// - PartialOrd
-// - Send
-// - 'static
-// The type T is the type of the input signal.
-// The Edge type is used to detect edges in the input signal, particularly
-// since egui is an immediate mode GUI library, it is important to detect
-// when the input signal changes so that the UI can be updated accordingly.
-// The goal is to reduce clutter within the App struct and to make the
-// code more readable and maintainable.
-//-------------------------------------------------------------------------
-// Unit Tests : provided 
-//-------------------------------------------------------------------------
+///
+/// Edge Type
+///
+/// This type is used to detect edges in the input signal.
+/// It is used to detect rising and falling edges in the input signal.
+/// The type T should implement the following traits:
+/// - Clone
+/// - Debug
+/// - Display
+/// - PartialEq
+/// - PartialOrd
+/// - Send
+/// - 'static
+/// The type T is the type of the input signal.
+/// 
+/// The Edge type is used to detect edges in the input signal, particularly
+/// since egui is an immediate mode GUI library, it is important to detect
+/// when the input signal changes so that the UI can be updated accordingly.
+/// 
+/// The goal is to reduce clutter within the App struct and to make the
+/// code more readable and maintainable.
 #[derive(Clone, Debug)]
 pub struct Edge<T>
 where
@@ -160,29 +187,35 @@ impl PartialEq for Edge<String> {
     }
 }
 
+
 impl<T> Edge<T>
 where
     T: Clone + Debug + Display + PartialEq + PartialOrd + Send + 'static,
 {
+    /// Create a new Edge instance with the given value of type T.
     pub fn new(value: T) -> Self {
         Self {
             values: vec![value.clone(), value],
         }
     }
 
+    /// Add a new value to the Edge instance.
     pub fn add_value(&mut self, new_value: T) {
         self.values[1] = self.values[0].clone();
         self.values[0] = new_value;
     }
 
+    /// Check if the values are equal.
     pub fn are_values_equal(&self) -> bool {
         self.values[0] == self.values[1]
     }
 
+    /// Check if a positive edge is detected.
     pub fn positive_edge_detect(&self) -> bool {
         self.values[0] != self.values[1] && self.values[0] > self.values[1]
     }
 
+    /// Check if a negative edge is detected.
     pub fn negative_edge_detect(&self) -> bool {
         self.values[0] != self.values[1] && self.values[0] < self.values[1]
     }
@@ -245,7 +278,7 @@ mod tests {
         let value = Value::new("hello".to_string());
         value.set("world".to_string());
         assert_eq!(value.get(), "world".to_string());
-        
+
     }
 
     //---------------------------------------------------------------------

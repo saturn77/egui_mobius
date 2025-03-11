@@ -64,6 +64,7 @@ macro_rules! Signal {
     };
 }
 
+/// A convenience macro to clear the logger text, often used in egui applications.
 #[macro_export]
 macro_rules! clear_logger {
     ($logger_text:expr) => {
