@@ -41,10 +41,48 @@ pub type EventDequeue<T> = tokio::sync::mpsc::Receiver<T>;
 /// 
 /// Example Usage:
 /// ```rust
+/// use egui_mobius::types::Value;
+/// use egui_mobius::signals::Signal;
+/// use std::fmt::Debug;
+/// 
+/// #[derive(Debug, Clone)]
+/// pub enum Event {
+///     IncrementCounter,
+///     ResetCounter,
+///     Custom(String), 
+/// }
+/// 
+/// #[derive(Default, Clone)]
+/// pub struct DashboardState {
+///     pub counter: usize,
+/// }
+/// #[derive(Debug, Clone)]
+///pub enum Response {
+///    CounterUpdated(usize),
+///    Message(String), // For general-purpose backend messages
+///}
+///
+/// impl DashboardState {
+///     pub fn handle_response(&mut self, response: Response) {
+///         if let Response::CounterUpdated(value) = response {
+///             self.counter = value;
+///         }
+///     }
+/// }
+///
+/// #[derive(Clone)]
+/// pub struct AppState {
+///     pub dashboard: DashboardState,
+///     pub event_signal: Signal<Event>,
+///     pub logs: Vec<String>,
+///     pub log_filter: String,
+/// }
+/// 
 /// pub struct UiApp {
 ///     state        : Value<AppState>,
 ///     event_signal : Signal<Event>,
 /// }
+/// 
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Value<T>(Arc<Mutex<T>>);
