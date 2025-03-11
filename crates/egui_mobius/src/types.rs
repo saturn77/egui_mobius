@@ -8,6 +8,23 @@ pub type Dequeue<T> = std::sync::mpsc::Receiver<T>;
 pub type EventEnqueue<T> = tokio::sync::mpsc::Sender<T>;
 pub type EventDequeue<T> = tokio::sync::mpsc::Receiver<T>;
 
+/// The Value Type
+/// 
+/// The Value type is heap allocated and thread safe type that can be used to store
+/// a value that can be shared across multiple threads, useful for shared state or for
+/// Signal and Slot types.  
+///
+/// The value can be read and written using the `read` and `write` methods. The value 
+/// can be locked using the `lock` method which returns a `ValueGuard` that can be used 
+/// to read and write the value.
+/// 
+/// Example Usage:
+/// ```rs
+/// pub struct UiApp {
+///     state        : Value<AppState>,
+///     event_signal : Signal<Event>,
+/// }
+/// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Value<T>(Arc<Mutex<T>>);
 
@@ -41,6 +58,32 @@ impl<T> Value<T> {
     pub fn new(value: T) -> Value<T> {
         Self(Arc::new(Mutex::new(value)))
     }
+
+    pub fn write (&self, value: T) {
+        let mut guard = self.lock().unwrap();
+        *guard = value;
+    }
+
+    pub fn read(&self) -> T
+    where
+        T: Clone,
+    {
+        let guard = self.lock().unwrap();
+        guard.clone()
+    }
+
+    // make aliases of get (read) and set (write) for additional ergonomics
+    // such that devs don't complain about the API not being what they are used to
+    pub fn get(&self) -> T 
+    where T: Clone 
+    {
+        self.read()
+    }
+
+    pub fn set(&self, value: T) {
+        self.write(value);
+    }
+
 }
 
 impl<T: Send> Value<T> {}
@@ -145,10 +188,69 @@ where
     }
 }
 
+
+//-------------------------------------------------------------------------
+// ** Tests **
+//-------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
     use super::*;
+    //---------------------------------------------------------------------
+    // Unit tests for the Value Type
+    //---------------------------------------------------------------------
+    #[test]
+    fn test_value() {
+        let value = Value::new(0);
+        assert_eq!(*value.lock().unwrap(), 0);
 
+        *value.lock().unwrap() = 1;
+        assert_eq!(*value.lock().unwrap(), 1);
+
+        assert_eq!(value.read(), 1);
+        value.write(2);
+        assert_eq!(value.read(), 2);
+
+        assert_eq!(value.get(), 2);
+        value.set(3);
+        assert_eq!(value.get(), 3);
+
+        let value = Value::new("hello".to_string());
+        assert_eq!(*value.lock().unwrap(), "hello".to_string());
+
+        *value.lock().unwrap() = "world".to_string();
+        assert_eq!(*value.lock().unwrap(), "world".to_string());
+
+        assert_eq!(value.read(), "world".to_string());
+        value.write("world".to_string());
+        assert_eq!(value.read(), "world".to_string());
+
+        assert_eq!(value.get(), "world".to_string());
+        value.set("hello".to_string());
+        assert_eq!(value.get(), "hello".to_string());
+
+        // also test write / set for Value 
+        let value = Value::new(0);
+        value.write(1);
+        assert_eq!(value.read(), 1);
+
+        let value = Value::new("hello".to_string());
+        value.write("world".to_string());
+        assert_eq!(value.read(), "world".to_string());
+
+        // also test the alias for get and set
+        let value = Value::new(0);
+        value.set(1);
+        assert_eq!(value.get(), 1);
+
+        let value = Value::new("hello".to_string());
+        value.set("world".to_string());
+        assert_eq!(value.get(), "world".to_string());
+        
+    }
+
+    //---------------------------------------------------------------------
+    // Unit tests for the Value Type
+    //---------------------------------------------------------------------
     #[test]
     fn test_edge() {
         let mut edge = Edge::new(0);
@@ -179,3 +281,4 @@ mod tests {
 
     }
 }
+
