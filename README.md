@@ -21,7 +21,7 @@ In Egui applications, UI and backend logic are often tightly coupled. egui_mobiu
 - Flexible command and event processing using `std::mpsc`.
 - Employ the signals and slots paradigm.   
 - Modular design for cleaner, more maintainable code. 
-- Portable containers via crux for core backend logic.  
+- Portable code for backend processes. 
 
 
 
