@@ -8,10 +8,13 @@
 
 ![egui_mobius Logo](./assets/mobius_strip.png)  
 
-**egui_mobius** is a Rust framework to modularize and separate front-end and back-end logic in Egui applications, with a top level feature of future proofing the core of a design. It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip. It is meant to be part of the egui ecosystem of helper crates, but also has other possible front ends, as the crux crate is progressively introduced into the library.  
+**egui_mobius** is a Rust framework designed to facilitate modular
+egui applications enabling maintainability and scalability.  
+
+It emphasizes clean architecture with seamless communication between UI and business logic, inspired by the continuous, one-sided nature of the Möbius strip. It is meant to be part of the egui ecosystem of helper crates, but also has other possible front ends.
 
 ## Motivation 
-In traditional Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability. Having core elements of a gui that are portable and maintainble is the ultimate goal.  
+In Egui applications, UI and backend logic are often tightly coupled. egui_mobius solves this by providing a structured approach to communication between layers, improving maintainability and scalability. Having core elements of a gui that are portable and maintainble is the ultimate goal.  
 
 ## Features  
 - Clear separation of UI and business logic.  
@@ -20,73 +23,59 @@ In traditional Egui applications, UI and backend logic are often tightly coupled
 - Modular design for cleaner, more maintainable code. 
 - Portable containers via crux for core backend logic.  
 
+
+
+
 ## Quick Start
 There are multiple crates in the repository, and each example
-is a crate. 
-One can test out an example by running these steps, in this
-case the simple_monitor, and just substitute an appropriate 
-example name.  
+is a crate. Each example has it's own documentation. 
+
+For an example that illustrates the core functionality of 
+egui_mobius, it is recommended to check out the ui_refresh_events
+example:
+
 ```bash
 git clone git@github.com:saturn77/egui_mobius.git 
-cargo run -p simple_monitor
+cargo run -p ui_refresh_events
 ```
 
-## Installation
-When using egui_mobius as a library, add the following to your `Cargo.toml`:  
-```toml
-[dependencies]
-egui_mobius = "0.1.0"
-egui = "0.31.0"
-eframe = { version = "0.31.0", default-features = false, features = [
-    "default_fonts", 
-    "glow",          
-    "wayland",       
-] }
-```  
+## 🧠 Architecture Overview
 
-## Usage  
-Example of sending a command from the UI using the `Signal` struct:
-```rust
-if ui.button("First Task").clicked() {
-    let signal = Signal::new(self.command_sender.clone());
-    if let Err(e) = signal.send(Command::FirstTask) {
-        eprintln!("Error sending command: {}", e);
-    }
-}
+The core of `egui_mobius` is built around a **bi-directional message flow** between the UI thread and backend logic, using a **signal-slot pattern**. Additionally, various data types support construction of this flow, so that building out an application seems very natural. 
+
+The diagram below shows how `EventType` messages are emitted by the UI and processed in a background thread, which then sends `ProcessedType` results back to the UI:
+
+![Signal-Slot Architecture](./assets/signals_slots_mobius.drawio.png)
+
+**Signal<T> / Slot<T>**  pairs are created with a clean API:
+
+```rs
+    factory::create_signal_slot::<EventType>(1);
+    factory::create_signal_slot::<ProcessedType>(1);
 ```
+These form a thread-safe bridge between the UiApp (**eframe::App for UiApp**) and the backend (**backend_consumer_thread**).
 
-Example of setting up a `Slot` to handle commands:
-```rust
-use egui_mobius::{factory, Command, CommandResult};
+The eframe::App::update() must run on the main/UI thread. Attempting to use async or tokio::main on the main() function of an egui application is problematic. That is why message passing shines as it avoids these issues. 
 
-fn main() {
-    // Create a signal-slot pair using the factory method
-    let (signal, slot) = factory::<Command, CommandResult>();
+### UiApp Thread
 
-    // Define a handler function for the slot
-    let handler = |command: Command| {
-        match command {
-            Command::FirstTask => {
-                slot.send(CommandResult::Success("First Task completed!".to_string())).unwrap();
-            }
-            Command::SecondTask => {
-                slot.send(CommandResult::Success("Second Task completed!".to_string())).unwrap();
-            }
-        }
-    };
+The eframe::App (fn update) handles UI interactions and emits EventType into the signal. It also listens for ProcessedType results via the corresponding slot. Slots run in their own thread, as indicated in the
+diagram. 
 
-    // Start the slot with the handler
-    slot.start(handler);
+### Backend Thread
 
-    // Example of sending commands
-    if let Err(e) = signal.send(Command::FirstTask) {
-        eprintln!("Error sending command: {}", e);
-    }
-    if let Err(e) = signal.send(Command::SecondTask) {
-        eprintln!("Error sending command: {}", e);
-    }
-}
-```
+Consumes EventType from the slot.
+Processes events and emits ProcessedType into the signal for the UI to consume.
+Threaded Handlers
+Both UI and backend run independently, communicating only through signals/slots.
+
+This architecture allows clean separation of concerns, responsive UI, and background processing — *all without needing async runtimes or complex synchronization.*
+
+### Core Type Portability
+
+The **backend_consumer_thread(s)** can be constructed to be portable
+and reusable across applications, providing another level of design
+reuse by approaching a design with egui_mobius.
 
 ## Contributing  
 Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request.  
