@@ -10,15 +10,13 @@ use egui_mobius::factory;
 use egui_mobius::signals::Signal;
 use egui_mobius::slot::Slot;
 use egui_mobius::types::Value; 
-
-      
+ 
 use std::fmt::Debug; 
 use std::fs::OpenOptions;
 use std::io::Write;
 use chrono::Local;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
-// src/event.rs
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -28,7 +26,6 @@ pub enum Event {
 }
 
 // src/response.rs
-
 #[derive(Debug, Clone)]
 pub enum Response {
     CounterUpdated(usize),
@@ -87,8 +84,6 @@ fn main() {
     }
 }
 // src/app.rs
-
-
 
 pub struct UiApp {
     state: Value<AppState>,
@@ -171,20 +166,10 @@ impl eframe::App for UiApp {
     }
 }
 
-
-
-
-// src/response.rs
-
-
-
-// src/state/mod.rs
-
 #[derive(Default, Clone)]
 pub struct DashboardState {
     pub counter: usize,
 }
-
 
 impl DashboardState {
     pub fn handle_response(&mut self, response: Response) {
@@ -193,10 +178,6 @@ impl DashboardState {
         }
     }
 }
-
-
-
-
 
 #[derive(Clone)]
 pub struct AppState {
@@ -237,32 +218,11 @@ pub fn handle_response(&mut self, response: Response) {
         }
     }
 }
-
-
-
-
-
 }
 
 // src/backend/processor.rs
-
 lazy_static! {
     static ref COUNTER: Mutex<usize> = Mutex::new(0);
-}
-
-// provide a fn to "hook" to events to log the various ui events 
-pub fn hook_to_events(event: Event) -> String {
-    match event {
-        Event::IncrementCounter => {
-            return format!("Clicked Increment button");
-        }
-        Event::ResetCounter => {
-            return format!("Clicked Reset button");
-        }
-        Event::Custom(msg) => {
-            return format!("Custom event: {}", msg);
-        }
-    }
 }
 
 pub fn process(event: Event) -> Response {
@@ -282,9 +242,6 @@ pub fn process(event: Event) -> Response {
         }
     }
 }
-
-
-
 
 pub fn view(
     state: &mut DashboardState,
