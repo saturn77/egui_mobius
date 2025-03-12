@@ -14,7 +14,7 @@ use egui_mobius::types::Value;
 use std::fmt::Debug; 
 use std::fs::OpenOptions;
 use std::io::Write;
-use chrono::Local;
+use chrono::{DateTime, Local};
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
@@ -102,6 +102,11 @@ impl UiApp {
 
         Self { state, event_signal }
     }
+    
+    pub fn log(&self, message: String) {
+        let mut app_state = self.state.lock().unwrap();
+        app_state.log("ui", message);
+    }
 }
 
 impl eframe::App for UiApp {
@@ -117,23 +122,28 @@ impl eframe::App for UiApp {
                 ui.horizontal(|ui| {
                     ui.label("Source filter:");
                     for source in [&"ui", &"backend"] {
-                        let selected = *source == app_state.log_filter;
-                        if ui.selectable_label(selected, *source).clicked() {
-                            app_state.log_filter = source.to_string();
+                        let source = source.to_string();
+                        let selected = app_state.log_filters.contains(&source);
+                        if ui.selectable_label(selected, &source).clicked() {
+                            println!("selected: {}", selected);
+                            match !selected {
+                                true => app_state.log_filters.push(source),
+                                false => app_state.log_filters.retain(|it|!it.eq(&source)),
+                            }
                         }
                     }
                 });
 
                 ui.separator();
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    let filter_pattern = format!("[{}]", app_state.log_filter);
                     let logs_text: String = app_state
                         .logs
                         .iter()
                         .rev()
-                        .filter(|entry| entry.contains(&filter_pattern))
+                        .filter(|entry| app_state.log_filters.contains(&entry.source))
                         .take(1000)
                         .cloned()
+                        .map(|entry|entry.formatted())
                         .collect::<Vec<_>>()
                         .join("\n");
 
@@ -149,22 +159,22 @@ impl eframe::App for UiApp {
             });
         }
 
-        {
-            let app_state = self.state.lock().unwrap();
-            egui::CentralPanel::default().show(ctx, |ui| {
-                ui.label(format!("Counter: {}", app_state.dashboard.counter));
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let counter = self.state.lock().unwrap().dashboard.counter;
+            ui.label(format!("Counter: {}", counter));
 
-                if ui.button("Increment").clicked() {
-                    let _ = self.event_signal.send(Event::IncrementCounter);
-                    let _ = self.event_signal.send(Event::Custom("Clicked Increment button".into()));
-                }
+            if ui.button("Increment").clicked() {
+                self.log("clicked increment button".to_string());
+                let _ = self.event_signal.send(Event::IncrementCounter);
+                let _ = self.event_signal.send(Event::Custom("Clicked Increment button".into()));
+            }
 
-                if ui.button("Reset").clicked() {
-                    let _ = self.event_signal.send(Event::ResetCounter);
-                    let _ = self.event_signal.send(Event::Custom("Clicked Reset button".into()));
-                }
-            });
-        }
+            if ui.button("Reset").clicked() {
+                self.log("clicked reset button".to_string());
+                let _ = self.event_signal.send(Event::ResetCounter);
+                let _ = self.event_signal.send(Event::Custom("Clicked Reset button".into()));
+            }
+        });
     }
 }
 
@@ -181,12 +191,11 @@ impl DashboardState {
     }
 }
 
-#[derive(Clone)]
 pub struct AppState {
     pub dashboard: DashboardState,
     pub event_signal: Signal<Event>,
-    pub logs: Vec<String>,
-    pub log_filter: String,
+    pub logs: Vec<LogEntry>,
+    pub log_filters: Vec<String>,
 }
 
 impl AppState {
@@ -195,31 +204,39 @@ impl AppState {
             dashboard: DashboardState::default(),
             event_signal,
             logs: Vec::new(),
-            log_filter: "ui".into(),
+            log_filters: vec!["ui".to_string()],
         }
     }
-    pub fn log(&mut self, source: &str, msg: String) {
-        let timestamped = format!("[{}] [{}] {}", Local::now().format("%Y-%m-%d %H:%M:%S"), source, msg);
-        self.logs.push(timestamped.clone());
+    
+    pub fn log(&mut self, source: &str, message: String) {
+        let entry = LogEntry {
+            timestamp: Local::now(),
+            source: source.to_string(),
+            message,
+        };
+        
+        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("ui_session_log.txt") {
+            let _ = writeln!(file, "{}", entry.formatted());
+        }
+
+        self.logs.push(entry);
         if self.logs.len() > 1000 {
             self.logs.drain(0..self.logs.len() - 1000);
         }
 
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("ui_session_log.txt") {
-            let _ = writeln!(file, "{}", timestamped);
+    }
+    
+    pub fn handle_response(&mut self, response: Response) {
+        match response {
+            Response::CounterUpdated(value) => {
+                self.dashboard.counter = value;
+                self.log("backend", format!("Counter updated to {}", value));
+            }
+            Response::Message(msg) => {
+                self.log("backend", msg);
+            }
         }
     }
-pub fn handle_response(&mut self, response: Response) {
-    match response {
-        Response::CounterUpdated(value) => {
-            self.dashboard.counter = value;
-            self.log("backend", format!("Counter updated to {}", value));
-        }
-        Response::Message(msg) => {
-            self.log("backend", msg);
-        }
-    }
-}
 }
 
 // src/backend/processor.rs
@@ -239,8 +256,8 @@ pub fn process(event: Event) -> Response {
             *count = 0;
             Response::CounterUpdated(*count)
         }
-        Event::Custom(msg) => {
-            Response::Message(format!("[ui] {}", msg))
+        Event::Custom(message) => {
+            Response::Message(format!("processed message: {}", message))
         }
     }
 }
@@ -262,3 +279,15 @@ pub fn view(
     }
 }
 
+#[derive(Clone)]
+pub struct LogEntry {
+    timestamp: DateTime<Local>,
+    source: String,
+    message: String,
+}
+
+impl LogEntry {
+    pub fn formatted(&self) -> String {
+        format!("[{}] [{}] {}", self.timestamp.format("%Y-%m-%d %H:%M:%S"), self.source, self.message).to_string()
+    }
+}
