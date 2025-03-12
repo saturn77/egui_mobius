@@ -114,6 +114,8 @@ impl eframe::App for UiApp {
         {
             let mut app_state = self.state.lock().unwrap();
 
+            //let mut app_state = self.state.get(); 
+
             egui::TopBottomPanel::bottom("log_panel")
                 .resizable(true)
                 .show(ctx, |ui| {
@@ -191,6 +193,7 @@ impl DashboardState {
     }
 }
 
+#[derive(Clone)]
 pub struct AppState {
     pub dashboard: DashboardState,
     pub event_signal: Signal<Event>,
