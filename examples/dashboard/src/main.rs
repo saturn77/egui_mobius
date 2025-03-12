@@ -232,12 +232,12 @@ pub fn process(event: Event) -> Response {
         Event::IncrementCounter => {
             let mut count = COUNTER.lock().unwrap();
             *count += 1;
-            Response::Message(format!("[backend] Counter incremented to {}", *count))
+            Response::CounterUpdated(*count)
         }
         Event::ResetCounter => {
             let mut count = COUNTER.lock().unwrap();
             *count = 0;
-            Response::Message("[backend] Counter reset to 0".into())
+            Response::CounterUpdated(*count)
         }
         Event::Custom(msg) => {
             Response::Message(format!("[ui] {}", msg))
