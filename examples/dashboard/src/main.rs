@@ -109,7 +109,9 @@ impl eframe::App for UiApp {
         {
             let mut app_state = self.state.lock().unwrap();
 
-            egui::SidePanel::left("log_panel").show(ctx, |ui| {
+            egui::TopBottomPanel::bottom("log_panel")
+                .resizable(true)
+                .show(ctx, |ui| {
                 ui.heading("Logs");
 
                 ui.horizontal(|ui| {
