@@ -1,0 +1,36 @@
+[package]
+name = "dashboard_async"
+version = "0.1.0"
+edition = "2024"
+repository  = "https://github.com/saturn77/egui_mobius"
+authors     = ["James Bonanno <atlantix-eda@proton.me>"]
+description = "A Mobius strip in egui"
+license     = "MIT"
+keywords    = ["egui", "eframe", "mobius", "framework", "gui", "ui", "graphics"]
+categories  = ["graphics", "ui", "framework", "gui"]
+readme      = "README.md"
+
+[dependencies]
+egui_mobius = { workspace = true }
+as_command_derive = { workspace = true }
+egui = { workspace = true }
+eframe = { workspace = true, default-features = false, features = [
+    "default_fonts",
+    "glow",
+    "wayland",
+] }
+rand = { workspace = true }
+log = "0.4"
+env_logger = "0.9"
+chrono = "0.4.40"
+lazy_static = "1.5.0"
+tokio = { version = "1.36", features = ["rt", "rt-multi-thread", "macros"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+egui_extras = "0.31.1"
+image = "0.25.5"
+
+[[bin]]
+name = "dashboard_async"
+path = "src/main.rs"
