@@ -1,7 +1,7 @@
 # egui_mobius  
 *Because GUI software design is a two sided problem operating on a single surface.*
 
-
+[![egui_version](https://img.shields.io/badge/egui-0.31-blue)](https://github.com/emilk/egui)
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Latest Version](https://img.shields.io/badge/version-0.3.0alpha-green.svg)
 [![Rust](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml/badge.svg)](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml)
