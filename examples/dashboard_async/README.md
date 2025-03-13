@@ -25,16 +25,17 @@ that there is no tokio::main decoration applied to the main function !
 
 ## Architecture
 
-- **UI Layer (`UiApp`)**
-  - Receives events from user interaction
-  - Displays current price data and a scrollable log
+- **UI Layer (`UiMainWindow`)**
+  - Sends EventType messages to the Dispatcher via Signal<Event>
+  - Runs a Slot<Processed> to receive messages from Dispatcher
 - **State (`AppState`)**
   - Holds the most recent coin prices
-  - Tracks loading state and logs all updates
+  - Handles the Signal<Processed> type messages
+  - Tracks loading state and logs all updates 
 - **Dispatcher**
-  - Listens for events from UI via `Slot<Event>`
+  - Listens for incoming event messages from UiMainWindow via `Slot<Event>`
   - Spawns tasks on a shared `tokio::Runtime`
-  - Sends price updates back via `Signal<Processed>`
+  - Sends price updates back to UiMainWindow Slot via `Signal<Processed>`
 
 
 ## Screenshot
