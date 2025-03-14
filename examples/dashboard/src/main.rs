@@ -1,10 +1,3 @@
-// src/main.rs
-// mod app;
-// mod backend;
-// mod event;
-// mod messaging;
-// mod state;
-
 use eframe::egui;
 use egui_mobius::dispatching::{Dispatcher, SignalDispatcher};
 use egui_mobius::factory;
@@ -59,8 +52,8 @@ fn main() {
     let (response_signal, response_slot) = factory::create_signal_slot::<Response>(64);
 
     let dispatcher = Dispatcher::<Event>::new();
-    // Use the dispatcher passed into `new`, do not re-create it
-    // // dispatcher is already passed in, no need to recreate it
+
+    // Register external_log handler on dispatcher
     dispatcher.register_slot("external_log", move |event| {
         let response = process(event);
         if let Err(e) = response_signal.send(response) {
