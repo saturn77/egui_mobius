@@ -3,3 +3,4 @@ pub mod slot;
 pub mod factory;
 pub mod macros; 
 pub mod types; 
+pub mod dispatching;

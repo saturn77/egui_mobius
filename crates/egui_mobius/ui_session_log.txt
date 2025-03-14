@@ -1,0 +1,229 @@
+[2025-03-12 09:31:30] [backend] [backend] Counter incremented to 1
+[2025-03-12 09:31:30] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:31] [backend] [backend] Counter incremented to 2
+[2025-03-12 09:31:31] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:31] [backend] [backend] Counter incremented to 3
+[2025-03-12 09:31:31] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:31] [backend] [backend] Counter incremented to 4
+[2025-03-12 09:31:31] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:31] [backend] [backend] Counter incremented to 5
+[2025-03-12 09:31:31] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:32] [backend] [backend] Counter incremented to 6
+[2025-03-12 09:31:32] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:42] [backend] [backend] Counter incremented to 7
+[2025-03-12 09:31:42] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:43] [backend] [backend] Counter incremented to 8
+[2025-03-12 09:31:43] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:43] [backend] [backend] Counter incremented to 9
+[2025-03-12 09:31:43] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:43] [backend] [backend] Counter incremented to 10
+[2025-03-12 09:31:43] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:43] [backend] [backend] Counter incremented to 11
+[2025-03-12 09:31:43] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:43] [backend] [backend] Counter incremented to 12
+[2025-03-12 09:31:43] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:44] [backend] [backend] Counter incremented to 13
+[2025-03-12 09:31:44] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:44] [backend] [backend] Counter incremented to 14
+[2025-03-12 09:31:44] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:44] [backend] [backend] Counter incremented to 15
+[2025-03-12 09:31:44] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:44] [backend] [backend] Counter incremented to 16
+[2025-03-12 09:31:44] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:44] [backend] [backend] Counter incremented to 17
+[2025-03-12 09:31:44] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:45] [backend] [backend] Counter incremented to 18
+[2025-03-12 09:31:45] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:47] [backend] [backend] Counter reset to 0
+[2025-03-12 09:31:47] [backend] [ui] Clicked Reset button
+[2025-03-12 09:31:49] [backend] [backend] Counter incremented to 1
+[2025-03-12 09:31:49] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:50] [backend] [backend] Counter incremented to 2
+[2025-03-12 09:31:50] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:50] [backend] [backend] Counter incremented to 3
+[2025-03-12 09:31:50] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:50] [backend] [backend] Counter incremented to 4
+[2025-03-12 09:31:50] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:50] [backend] [backend] Counter incremented to 5
+[2025-03-12 09:31:50] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:50] [backend] [backend] Counter incremented to 6
+[2025-03-12 09:31:50] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:51] [backend] [backend] Counter incremented to 7
+[2025-03-12 09:31:51] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:51] [backend] [backend] Counter incremented to 8
+[2025-03-12 09:31:51] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:51] [backend] [backend] Counter incremented to 9
+[2025-03-12 09:31:51] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:51] [backend] [backend] Counter incremented to 10
+[2025-03-12 09:31:51] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:51] [backend] [backend] Counter incremented to 11
+[2025-03-12 09:31:51] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:52] [backend] [backend] Counter incremented to 12
+[2025-03-12 09:31:52] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:52] [backend] [backend] Counter incremented to 13
+[2025-03-12 09:31:52] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:52] [backend] [backend] Counter incremented to 14
+[2025-03-12 09:31:52] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:52] [backend] [backend] Counter incremented to 15
+[2025-03-12 09:31:52] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:56] [backend] [backend] Counter incremented to 16
+[2025-03-12 09:31:56] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:56] [backend] [backend] Counter incremented to 17
+[2025-03-12 09:31:56] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:56] [backend] [backend] Counter incremented to 18
+[2025-03-12 09:31:56] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:56] [backend] [backend] Counter incremented to 19
+[2025-03-12 09:31:56] [backend] [ui] Clicked Increment button
+[2025-03-12 09:31:56] [backend] [backend] Counter incremented to 20
+[2025-03-12 09:31:56] [backend] [ui] Clicked Increment button
+[2025-03-12 09:32:00] [backend] [backend] Counter incremented to 21
+[2025-03-12 09:32:00] [backend] [ui] Clicked Increment button
+[2025-03-12 09:32:01] [backend] [backend] Counter incremented to 22
+[2025-03-12 09:32:01] [backend] [ui] Clicked Increment button
+[2025-03-12 09:51:48] [ui] clicked increment button
+[2025-03-12 09:51:48] [backend] Counter updated to 1
+[2025-03-12 09:51:48] [backend] processed message: Clicked Increment button
+[2025-03-12 09:51:49] [ui] clicked increment button
+[2025-03-12 09:51:49] [backend] Counter updated to 2
+[2025-03-12 09:51:49] [backend] processed message: Clicked Increment button
+[2025-03-12 09:51:50] [ui] clicked increment button
+[2025-03-12 09:51:50] [backend] Counter updated to 3
+[2025-03-12 09:51:50] [backend] processed message: Clicked Increment button
+[2025-03-12 09:51:50] [ui] clicked increment button
+[2025-03-12 09:51:50] [backend] Counter updated to 4
+[2025-03-12 09:51:50] [backend] processed message: Clicked Increment button
+[2025-03-12 09:51:50] [ui] clicked increment button
+[2025-03-12 09:51:50] [backend] Counter updated to 5
+[2025-03-12 09:51:50] [backend] processed message: Clicked Increment button
+[2025-03-12 09:51:55] [ui] clicked increment button
+[2025-03-12 09:51:55] [backend] Counter updated to 6
+[2025-03-12 09:51:55] [backend] processed message: Clicked Increment button
+[2025-03-12 09:51:56] [ui] clicked increment button
+[2025-03-12 09:51:56] [backend] Counter updated to 7
+[2025-03-12 09:51:56] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:24] [ui] clicked increment button
+[2025-03-12 09:52:24] [backend] Counter updated to 8
+[2025-03-12 09:52:24] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:38] [ui] clicked increment button
+[2025-03-12 09:52:38] [backend] Counter updated to 9
+[2025-03-12 09:52:38] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:38] [ui] clicked increment button
+[2025-03-12 09:52:38] [backend] Counter updated to 10
+[2025-03-12 09:52:38] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:41] [ui] clicked increment button
+[2025-03-12 09:52:41] [backend] Counter updated to 11
+[2025-03-12 09:52:41] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:41] [ui] clicked increment button
+[2025-03-12 09:52:41] [backend] Counter updated to 12
+[2025-03-12 09:52:41] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:41] [ui] clicked increment button
+[2025-03-12 09:52:41] [backend] Counter updated to 13
+[2025-03-12 09:52:41] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:42] [ui] clicked increment button
+[2025-03-12 09:52:42] [backend] Counter updated to 14
+[2025-03-12 09:52:42] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:42] [ui] clicked increment button
+[2025-03-12 09:52:42] [backend] Counter updated to 15
+[2025-03-12 09:52:42] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:42] [ui] clicked increment button
+[2025-03-12 09:52:42] [backend] Counter updated to 16
+[2025-03-12 09:52:42] [backend] processed message: Clicked Increment button
+[2025-03-12 09:52:42] [ui] clicked increment button
+[2025-03-12 09:52:42] [backend] Counter updated to 17
+[2025-03-12 09:52:42] [backend] processed message: Clicked Increment button
+[2025-03-12 10:02:59] [ui] clicked increment button
+[2025-03-12 10:02:59] [backend] Counter updated to 18
+[2025-03-12 10:02:59] [backend] processed message: Clicked Increment button
+[2025-03-12 10:02:59] [ui] clicked increment button
+[2025-03-12 10:02:59] [backend] Counter updated to 19
+[2025-03-12 10:02:59] [backend] processed message: Clicked Increment button
+[2025-03-12 10:02:59] [ui] clicked increment button
+[2025-03-12 10:02:59] [backend] Counter updated to 20
+[2025-03-12 10:02:59] [backend] processed message: Clicked Increment button
+[2025-03-12 10:02:59] [ui] clicked increment button
+[2025-03-12 10:02:59] [backend] Counter updated to 21
+[2025-03-12 10:02:59] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:00] [ui] clicked increment button
+[2025-03-12 10:03:00] [backend] Counter updated to 22
+[2025-03-12 10:03:00] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:00] [ui] clicked reset button
+[2025-03-12 10:03:00] [backend] Counter updated to 0
+[2025-03-12 10:03:00] [backend] processed message: Clicked Reset button
+[2025-03-12 10:03:23] [ui] clicked increment button
+[2025-03-12 10:03:23] [backend] Counter updated to 1
+[2025-03-12 10:03:23] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:25] [ui] clicked reset button
+[2025-03-12 10:03:25] [backend] Counter updated to 0
+[2025-03-12 10:03:25] [backend] processed message: Clicked Reset button
+[2025-03-12 10:03:25] [ui] clicked increment button
+[2025-03-12 10:03:25] [backend] Counter updated to 1
+[2025-03-12 10:03:25] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:25] [ui] clicked increment button
+[2025-03-12 10:03:25] [backend] Counter updated to 2
+[2025-03-12 10:03:25] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:26] [ui] clicked increment button
+[2025-03-12 10:03:26] [backend] Counter updated to 3
+[2025-03-12 10:03:26] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:26] [ui] clicked increment button
+[2025-03-12 10:03:26] [backend] Counter updated to 4
+[2025-03-12 10:03:26] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:26] [ui] clicked increment button
+[2025-03-12 10:03:26] [backend] Counter updated to 5
+[2025-03-12 10:03:26] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:26] [ui] clicked increment button
+[2025-03-12 10:03:26] [backend] Counter updated to 6
+[2025-03-12 10:03:26] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:26] [ui] clicked increment button
+[2025-03-12 10:03:26] [backend] Counter updated to 7
+[2025-03-12 10:03:26] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:27] [ui] clicked increment button
+[2025-03-12 10:03:27] [backend] Counter updated to 8
+[2025-03-12 10:03:27] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:27] [ui] clicked increment button
+[2025-03-12 10:03:27] [backend] Counter updated to 9
+[2025-03-12 10:03:27] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:27] [ui] clicked increment button
+[2025-03-12 10:03:27] [backend] Counter updated to 10
+[2025-03-12 10:03:27] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:27] [ui] clicked increment button
+[2025-03-12 10:03:27] [backend] Counter updated to 11
+[2025-03-12 10:03:27] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:27] [ui] clicked increment button
+[2025-03-12 10:03:27] [backend] Counter updated to 12
+[2025-03-12 10:03:27] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:28] [ui] clicked increment button
+[2025-03-12 10:03:28] [backend] Counter updated to 13
+[2025-03-12 10:03:28] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:28] [ui] clicked increment button
+[2025-03-12 10:03:28] [backend] Counter updated to 14
+[2025-03-12 10:03:28] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:28] [ui] clicked increment button
+[2025-03-12 10:03:28] [backend] Counter updated to 15
+[2025-03-12 10:03:28] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:28] [ui] clicked increment button
+[2025-03-12 10:03:28] [backend] Counter updated to 16
+[2025-03-12 10:03:28] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:28] [ui] clicked increment button
+[2025-03-12 10:03:28] [backend] Counter updated to 17
+[2025-03-12 10:03:28] [backend] processed message: Clicked Increment button
+[2025-03-12 10:03:29] [ui] clicked increment button
+[2025-03-12 10:03:29] [backend] Counter updated to 18
+[2025-03-12 10:03:29] [backend] processed message: Clicked Increment button
+[2025-03-12 10:04:01] [ui] clicked increment button
+[2025-03-12 10:04:01] [backend] Counter updated to 19
+[2025-03-12 10:04:01] [backend] processed message: Clicked Increment button
+[2025-03-12 10:04:01] [ui] clicked increment button
+[2025-03-12 10:04:01] [backend] Counter updated to 20
+[2025-03-12 10:04:01] [backend] processed message: Clicked Increment button
+[2025-03-12 10:04:02] [ui] clicked increment button
+[2025-03-12 10:04:02] [backend] Counter updated to 21
+[2025-03-12 10:04:02] [backend] processed message: Clicked Increment button
+[2025-03-12 10:04:02] [ui] clicked increment button
+[2025-03-12 10:04:02] [backend] Counter updated to 22
+[2025-03-12 10:04:02] [backend] processed message: Clicked Increment button
+[2025-03-12 10:04:02] [ui] clicked increment button
+[2025-03-12 10:04:02] [backend] Counter updated to 23
+[2025-03-12 10:04:02] [backend] processed message: Clicked Increment button
+[2025-03-12 10:04:02] [ui] clicked increment button
+[2025-03-12 10:04:02] [backend] Counter updated to 24
+[2025-03-12 10:04:02] [backend] processed message: Clicked Increment button
