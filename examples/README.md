@@ -4,6 +4,8 @@ The highlighted examples are the core projects that are actively maintained and 
 
 These examples remain in the `main` branch and serve as reference implementations for different patterns such as async integration, real-time UI updates, and the message/event system.
 
+There are several original and older examples in this `deprecated` branch. 
+
 ---
 
 ## ✅ Highlighted Examples

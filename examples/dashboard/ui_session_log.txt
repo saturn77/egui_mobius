@@ -1,0 +1,2241 @@
+[2025-03-11 12:12:35] [ui] Clicked Increment button
+[2025-03-11 12:12:37] [ui] Clicked Increment button
+[2025-03-11 12:12:38] [ui] Clicked Reset button
+[2025-03-11 12:12:40] [ui] Clicked Increment button
+[2025-03-11 12:12:41] [ui] Clicked Increment button
+[2025-03-11 12:12:42] [ui] Clicked Increment button
+[2025-03-11 12:12:51] [ui] Clicked Increment button
+[2025-03-11 12:12:52] [ui] Clicked Reset button
+[2025-03-11 12:12:53] [ui] Clicked Increment button
+[2025-03-11 12:12:53] [ui] Clicked Reset button
+[2025-03-11 12:12:56] [ui] Clicked Reset button
+[2025-03-11 12:12:56] [ui] Clicked Reset button
+[2025-03-11 12:12:57] [ui] Clicked Reset button
+[2025-03-11 12:13:08] [ui] Clicked Increment button
+[2025-03-11 12:13:10] [ui] Clicked Increment button
+[2025-03-11 12:13:10] [ui] Clicked Increment button
+[2025-03-11 12:13:10] [ui] Clicked Increment button
+[2025-03-11 12:13:13] [ui] Clicked Reset button
+[2025-03-11 12:13:14] [ui] Clicked Reset button
+[2025-03-11 12:13:14] [ui] Clicked Reset button
+[2025-03-11 12:13:14] [ui] Clicked Increment button
+[2025-03-11 12:13:15] [ui] Clicked Increment button
+[2025-03-11 12:13:15] [ui] Clicked Reset button
+[2025-03-11 12:13:15] [ui] Clicked Reset button
+[2025-03-11 12:13:16] [ui] Clicked Increment button
+[2025-03-11 12:13:16] [ui] Clicked Increment button
+[2025-03-11 12:14:15] [ui] Clicked Increment button
+[2025-03-11 12:14:15] [ui] Clicked Increment button
+[2025-03-11 12:14:15] [ui] Clicked Increment button
+[2025-03-11 12:14:15] [ui] Clicked Increment button
+[2025-03-11 12:14:15] [ui] Clicked Increment button
+[2025-03-11 12:14:16] [ui] Clicked Reset button
+[2025-03-11 12:14:17] [ui] Clicked Reset button
+[2025-03-11 12:14:23] [ui] Clicked Increment button
+[2025-03-11 12:14:23] [ui] Clicked Increment button
+[2025-03-11 12:14:24] [ui] Clicked Reset button
+[2025-03-11 12:14:25] [ui] Clicked Increment button
+[2025-03-11 12:14:26] [ui] Clicked Reset button
+[2025-03-11 12:14:26] [ui] Clicked Increment button
+[2025-03-11 12:14:27] [ui] Clicked Increment button
+[2025-03-11 12:14:27] [ui] Clicked Increment button
+[2025-03-11 12:14:27] [ui] Clicked Increment button
+[2025-03-11 12:14:28] [ui] Clicked Increment button
+[2025-03-11 12:14:29] [ui] Clicked Increment button
+[2025-03-11 12:14:29] [ui] Clicked Increment button
+[2025-03-11 12:14:29] [ui] Clicked Increment button
+[2025-03-11 12:14:30] [ui] Clicked Increment button
+[2025-03-11 12:14:30] [ui] Clicked Increment button
+[2025-03-11 12:14:34] [ui] Clicked Increment button
+[2025-03-11 12:14:34] [ui] Clicked Increment button
+[2025-03-11 12:14:34] [ui] Clicked Increment button
+[2025-03-11 12:14:34] [ui] Clicked Increment button
+[2025-03-11 12:14:35] [ui] Clicked Increment button
+[2025-03-11 12:14:35] [ui] Clicked Increment button
+[2025-03-11 12:14:35] [ui] Clicked Increment button
+[2025-03-11 12:14:35] [ui] Clicked Increment button
+[2025-03-11 12:14:35] [ui] Clicked Increment button
+[2025-03-11 12:14:36] [ui] Clicked Increment button
+[2025-03-11 12:14:36] [ui] Clicked Increment button
+[2025-03-11 12:14:36] [ui] Clicked Increment button
+[2025-03-11 12:14:36] [ui] Clicked Increment button
+[2025-03-11 12:14:36] [ui] Clicked Increment button
+[2025-03-11 12:14:37] [ui] Clicked Increment button
+[2025-03-11 12:14:37] [ui] Clicked Increment button
+[2025-03-11 12:14:37] [ui] Clicked Increment button
+[2025-03-11 12:14:37] [ui] Clicked Increment button
+[2025-03-11 12:43:20] [ui] Clicked Increment button
+[2025-03-11 12:43:20] [ui] Clicked Increment button
+[2025-03-11 12:43:21] [ui] Clicked Increment button
+[2025-03-11 12:43:21] [ui] Clicked Increment button
+[2025-03-11 12:43:23] [ui] Clicked Reset button
+[2025-03-11 12:43:23] [ui] Clicked Reset button
+[2025-03-11 12:43:24] [ui] Clicked Reset button
+[2025-03-11 12:43:24] [ui] Clicked Increment button
+[2025-03-11 12:43:24] [ui] Clicked Increment button
+[2025-03-11 12:43:24] [ui] Clicked Increment button
+[2025-03-11 12:43:25] [ui] Clicked Increment button
+[2025-03-11 12:43:25] [ui] Clicked Increment button
+[2025-03-11 12:43:25] [ui] Clicked Increment button
+[2025-03-11 12:43:27] [ui] Clicked Reset button
+[2025-03-11 12:43:27] [ui] Clicked Reset button
+[2025-03-11 12:43:27] [ui] Clicked Reset button
+[2025-03-11 12:43:28] [ui] Clicked Increment button
+[2025-03-11 12:43:28] [ui] Clicked Increment button
+[2025-03-11 12:43:28] [ui] Clicked Increment button
+[2025-03-11 12:43:29] [ui] Clicked Reset button
+[2025-03-11 12:43:29] [ui] Clicked Reset button
+[2025-03-11 12:43:29] [ui] Clicked Reset button
+[2025-03-11 12:43:29] [ui] Clicked Reset button
+[2025-03-11 12:43:30] [ui] Clicked Increment button
+[2025-03-11 12:43:30] [ui] Clicked Increment button
+[2025-03-11 12:43:30] [ui] Clicked Increment button
+[2025-03-11 12:43:30] [ui] Clicked Increment button
+[2025-03-11 12:43:31] [ui] Clicked Increment button
+[2025-03-11 12:43:31] [ui] Clicked Increment button
+[2025-03-11 12:43:31] [ui] Clicked Increment button
+[2025-03-11 12:43:31] [ui] Clicked Increment button
+[2025-03-11 12:43:31] [ui] Clicked Increment button
+[2025-03-11 12:43:32] [ui] Clicked Increment button
+[2025-03-11 12:43:32] [ui] Clicked Increment button
+[2025-03-11 12:43:32] [ui] Clicked Increment button
+[2025-03-11 12:43:32] [ui] Clicked Increment button
+[2025-03-11 12:43:32] [ui] Clicked Increment button
+[2025-03-11 12:43:33] [ui] Clicked Reset button
+[2025-03-11 12:43:33] [ui] Clicked Reset button
+[2025-03-11 12:43:33] [ui] Clicked Reset button
+[2025-03-11 12:43:34] [ui] Clicked Reset button
+[2025-03-11 12:43:34] [ui] Clicked Reset button
+[2025-03-11 12:43:34] [ui] Clicked Increment button
+[2025-03-11 12:43:35] [ui] Clicked Increment button
+[2025-03-11 12:43:35] [ui] Clicked Increment button
+[2025-03-11 12:43:35] [ui] Clicked Increment button
+[2025-03-11 12:43:35] [ui] Clicked Increment button
+[2025-03-11 12:43:35] [ui] Clicked Increment button
+[2025-03-11 12:43:36] [ui] Clicked Increment button
+[2025-03-11 12:43:36] [ui] Clicked Increment button
+[2025-03-11 12:43:36] [ui] Clicked Increment button
+[2025-03-11 12:43:36] [ui] Clicked Increment button
+[2025-03-11 12:43:36] [ui] Clicked Increment button
+[2025-03-11 12:43:37] [ui] Clicked Increment button
+[2025-03-11 12:43:37] [ui] Clicked Increment button
+[2025-03-11 12:43:37] [ui] Clicked Increment button
+[2025-03-11 12:43:37] [ui] Clicked Increment button
+[2025-03-11 12:43:38] [ui] Clicked Reset button
+[2025-03-11 12:43:40] [ui] Clicked Increment button
+[2025-03-11 12:43:40] [ui] Clicked Increment button
+[2025-03-11 12:43:40] [ui] Clicked Increment button
+[2025-03-11 12:43:41] [ui] Clicked Reset button
+[2025-03-11 12:43:41] [ui] Clicked Reset button
+[2025-03-11 12:43:41] [ui] Clicked Reset button
+[2025-03-11 12:43:42] [ui] Clicked Increment button
+[2025-03-11 12:43:42] [ui] Clicked Increment button
+[2025-03-11 12:43:42] [ui] Clicked Reset button
+[2025-03-11 12:43:42] [ui] Clicked Reset button
+[2025-03-11 12:55:02] [ui] Clicked Increment button
+[2025-03-11 12:55:03] [ui] Clicked Increment button
+[2025-03-11 12:55:03] [ui] Clicked Increment button
+[2025-03-11 12:55:03] [ui] Clicked Increment button
+[2025-03-11 12:55:03] [ui] Clicked Increment button
+[2025-03-11 12:55:04] [ui] Clicked Reset button
+[2025-03-11 12:55:04] [ui] Clicked Reset button
+[2025-03-11 12:55:04] [ui] Clicked Reset button
+[2025-03-11 12:55:04] [ui] Clicked Reset button
+[2025-03-11 12:55:05] [ui] Clicked Reset button
+[2025-03-11 12:55:05] [ui] Clicked Increment button
+[2025-03-11 12:55:05] [ui] Clicked Increment button
+[2025-03-11 12:55:05] [ui] Clicked Increment button
+[2025-03-11 12:55:06] [ui] Clicked Increment button
+[2025-03-11 12:55:07] [ui] Clicked Increment button
+[2025-03-11 12:55:07] [ui] Clicked Increment button
+[2025-03-11 12:55:08] [ui] Clicked Increment button
+[2025-03-11 12:55:08] [ui] Clicked Reset button
+[2025-03-11 12:55:08] [ui] Clicked Reset button
+[2025-03-11 12:55:09] [ui] Clicked Reset button
+[2025-03-11 12:55:09] [ui] Clicked Increment button
+[2025-03-11 12:55:09] [ui] Clicked Increment button
+[2025-03-11 12:55:09] [ui] Clicked Increment button
+[2025-03-11 12:57:50] [ui] Clicked Increment button
+[2025-03-11 12:57:50] [backend] Counter updated to 1
+[2025-03-11 12:57:51] [ui] Clicked Increment button
+[2025-03-11 12:57:51] [backend] Counter updated to 2
+[2025-03-11 12:57:51] [ui] Clicked Increment button
+[2025-03-11 12:57:51] [backend] Counter updated to 3
+[2025-03-11 12:57:51] [ui] Clicked Increment button
+[2025-03-11 12:57:51] [backend] Counter updated to 4
+[2025-03-11 12:57:51] [ui] Clicked Increment button
+[2025-03-11 12:57:51] [backend] Counter updated to 5
+[2025-03-11 12:57:56] [ui] Clicked Increment button
+[2025-03-11 12:57:56] [backend] Counter updated to 6
+[2025-03-11 12:57:56] [ui] Clicked Increment button
+[2025-03-11 12:57:56] [backend] Counter updated to 7
+[2025-03-11 12:57:56] [ui] Clicked Increment button
+[2025-03-11 12:57:56] [backend] Counter updated to 8
+[2025-03-11 12:57:56] [ui] Clicked Increment button
+[2025-03-11 12:57:56] [backend] Counter updated to 9
+[2025-03-11 12:57:58] [ui] Clicked Increment button
+[2025-03-11 12:57:58] [backend] Counter updated to 10
+[2025-03-11 12:57:59] [ui] Clicked Increment button
+[2025-03-11 12:57:59] [backend] Counter updated to 11
+[2025-03-11 12:57:59] [ui] Clicked Increment button
+[2025-03-11 12:57:59] [backend] Counter updated to 12
+[2025-03-11 12:57:59] [ui] Clicked Increment button
+[2025-03-11 12:57:59] [backend] Counter updated to 13
+[2025-03-11 12:58:00] [ui] Clicked Reset button
+[2025-03-11 12:58:00] [backend] Counter updated to 0
+[2025-03-11 12:58:00] [ui] Clicked Increment button
+[2025-03-11 12:58:00] [backend] Counter updated to 1
+[2025-03-11 12:58:03] [ui] Clicked Increment button
+[2025-03-11 12:58:03] [backend] Counter updated to 2
+[2025-03-11 12:58:03] [ui] Clicked Increment button
+[2025-03-11 12:58:03] [backend] Counter updated to 3
+[2025-03-11 12:58:04] [ui] Clicked Increment button
+[2025-03-11 12:58:04] [backend] Counter updated to 4
+[2025-03-11 12:58:04] [ui] Clicked Increment button
+[2025-03-11 12:58:04] [backend] Counter updated to 5
+[2025-03-11 12:58:04] [ui] Clicked Increment button
+[2025-03-11 12:58:04] [backend] Counter updated to 6
+[2025-03-11 12:58:11] [ui] Clicked Increment button
+[2025-03-11 12:58:11] [backend] Counter updated to 7
+[2025-03-11 12:58:11] [ui] Clicked Increment button
+[2025-03-11 12:58:11] [backend] Counter updated to 8
+[2025-03-11 12:58:11] [ui] Clicked Increment button
+[2025-03-11 12:58:11] [backend] Counter updated to 9
+[2025-03-11 12:58:12] [ui] Clicked Increment button
+[2025-03-11 12:58:12] [backend] Counter updated to 10
+[2025-03-11 12:58:12] [ui] Clicked Increment button
+[2025-03-11 12:58:12] [backend] Counter updated to 11
+[2025-03-11 12:58:12] [ui] Clicked Increment button
+[2025-03-11 12:58:12] [backend] Counter updated to 12
+[2025-03-11 12:58:12] [ui] Clicked Increment button
+[2025-03-11 12:58:12] [backend] Counter updated to 13
+[2025-03-11 12:58:12] [ui] Clicked Increment button
+[2025-03-11 12:58:12] [backend] Counter updated to 14
+[2025-03-11 12:58:13] [ui] Clicked Increment button
+[2025-03-11 12:58:13] [backend] Counter updated to 15
+[2025-03-11 12:58:13] [ui] Clicked Increment button
+[2025-03-11 12:58:13] [backend] Counter updated to 16
+[2025-03-11 12:58:13] [ui] Clicked Increment button
+[2025-03-11 12:58:13] [backend] Counter updated to 17
+[2025-03-11 12:58:13] [ui] Clicked Increment button
+[2025-03-11 12:58:13] [backend] Counter updated to 18
+[2025-03-11 12:58:13] [ui] Clicked Increment button
+[2025-03-11 12:58:13] [backend] Counter updated to 19
+[2025-03-11 12:58:14] [ui] Clicked Increment button
+[2025-03-11 12:58:14] [backend] Counter updated to 20
+[2025-03-11 12:58:14] [ui] Clicked Increment button
+[2025-03-11 12:58:14] [backend] Counter updated to 21
+[2025-03-11 12:58:14] [ui] Clicked Increment button
+[2025-03-11 12:58:14] [backend] Counter updated to 22
+[2025-03-11 12:58:14] [ui] Clicked Increment button
+[2025-03-11 12:58:14] [backend] Counter updated to 23
+[2025-03-11 12:58:14] [ui] Clicked Increment button
+[2025-03-11 12:58:14] [backend] Counter updated to 24
+[2025-03-11 12:58:15] [ui] Clicked Increment button
+[2025-03-11 12:58:15] [backend] Counter updated to 25
+[2025-03-11 12:58:15] [ui] Clicked Increment button
+[2025-03-11 12:58:15] [backend] Counter updated to 26
+[2025-03-11 12:58:15] [ui] Clicked Increment button
+[2025-03-11 12:58:15] [backend] Counter updated to 27
+[2025-03-11 12:58:16] [ui] Clicked Increment button
+[2025-03-11 12:58:16] [backend] Counter updated to 28
+[2025-03-11 12:58:16] [ui] Clicked Increment button
+[2025-03-11 12:58:16] [backend] Counter updated to 29
+[2025-03-11 12:58:16] [ui] Clicked Increment button
+[2025-03-11 12:58:16] [backend] Counter updated to 30
+[2025-03-11 12:58:16] [ui] Clicked Increment button
+[2025-03-11 12:58:16] [backend] Counter updated to 31
+[2025-03-11 12:58:16] [ui] Clicked Increment button
+[2025-03-11 12:58:16] [backend] Counter updated to 32
+[2025-03-11 12:58:17] [ui] Clicked Increment button
+[2025-03-11 12:58:17] [backend] Counter updated to 33
+[2025-03-11 12:58:17] [ui] Clicked Increment button
+[2025-03-11 12:58:17] [backend] Counter updated to 34
+[2025-03-11 12:58:17] [ui] Clicked Increment button
+[2025-03-11 12:58:17] [backend] Counter updated to 35
+[2025-03-11 12:58:17] [ui] Clicked Increment button
+[2025-03-11 12:58:17] [backend] Counter updated to 36
+[2025-03-11 12:58:17] [ui] Clicked Increment button
+[2025-03-11 12:58:17] [backend] Counter updated to 37
+[2025-03-11 12:58:18] [ui] Clicked Increment button
+[2025-03-11 12:58:18] [backend] Counter updated to 38
+[2025-03-11 12:58:18] [ui] Clicked Increment button
+[2025-03-11 12:58:18] [backend] Counter updated to 39
+[2025-03-11 12:58:18] [ui] Clicked Increment button
+[2025-03-11 12:58:18] [backend] Counter updated to 40
+[2025-03-11 12:58:18] [ui] Clicked Increment button
+[2025-03-11 12:58:18] [backend] Counter updated to 41
+[2025-03-11 12:58:18] [ui] Clicked Increment button
+[2025-03-11 12:58:18] [backend] Counter updated to 42
+[2025-03-11 12:58:19] [ui] Clicked Increment button
+[2025-03-11 12:58:19] [backend] Counter updated to 43
+[2025-03-11 12:58:19] [ui] Clicked Increment button
+[2025-03-11 12:58:19] [backend] Counter updated to 44
+[2025-03-11 12:58:19] [ui] Clicked Increment button
+[2025-03-11 12:58:19] [backend] Counter updated to 45
+[2025-03-11 12:58:19] [ui] Clicked Increment button
+[2025-03-11 12:58:19] [backend] Counter updated to 46
+[2025-03-11 12:58:19] [ui] Clicked Increment button
+[2025-03-11 12:58:19] [backend] Counter updated to 47
+[2025-03-11 12:58:20] [ui] Clicked Increment button
+[2025-03-11 12:58:20] [backend] Counter updated to 48
+[2025-03-11 12:58:20] [ui] Clicked Increment button
+[2025-03-11 12:58:20] [backend] Counter updated to 49
+[2025-03-11 12:58:20] [ui] Clicked Increment button
+[2025-03-11 12:58:20] [backend] Counter updated to 50
+[2025-03-11 12:58:20] [ui] Clicked Increment button
+[2025-03-11 12:58:20] [backend] Counter updated to 51
+[2025-03-11 12:58:20] [ui] Clicked Increment button
+[2025-03-11 12:58:20] [backend] Counter updated to 52
+[2025-03-11 12:58:21] [ui] Clicked Reset button
+[2025-03-11 12:58:21] [backend] Counter updated to 0
+[2025-03-11 12:58:23] [ui] Clicked Increment button
+[2025-03-11 12:58:23] [backend] Counter updated to 1
+[2025-03-11 12:58:23] [ui] Clicked Increment button
+[2025-03-11 12:58:23] [backend] Counter updated to 2
+[2025-03-11 12:58:24] [ui] Clicked Increment button
+[2025-03-11 12:58:24] [backend] Counter updated to 3
+[2025-03-11 12:58:24] [ui] Clicked Increment button
+[2025-03-11 12:58:24] [backend] Counter updated to 4
+[2025-03-11 12:58:24] [ui] Clicked Increment button
+[2025-03-11 12:58:24] [backend] Counter updated to 5
+[2025-03-11 12:58:24] [ui] Clicked Increment button
+[2025-03-11 12:58:24] [backend] Counter updated to 6
+[2025-03-11 12:58:24] [ui] Clicked Increment button
+[2025-03-11 12:58:24] [backend] Counter updated to 7
+[2025-03-11 12:58:25] [ui] Clicked Increment button
+[2025-03-11 12:58:25] [backend] Counter updated to 8
+[2025-03-11 12:58:25] [ui] Clicked Increment button
+[2025-03-11 12:58:25] [backend] Counter updated to 9
+[2025-03-11 12:58:25] [ui] Clicked Increment button
+[2025-03-11 12:58:25] [backend] Counter updated to 10
+[2025-03-11 12:58:25] [ui] Clicked Increment button
+[2025-03-11 12:58:25] [backend] Counter updated to 11
+[2025-03-11 12:58:26] [ui] Clicked Increment button
+[2025-03-11 12:58:26] [backend] Counter updated to 12
+[2025-03-11 12:58:26] [ui] Clicked Increment button
+[2025-03-11 12:58:26] [backend] Counter updated to 13
+[2025-03-11 12:58:26] [ui] Clicked Increment button
+[2025-03-11 12:58:26] [backend] Counter updated to 14
+[2025-03-11 12:58:26] [ui] Clicked Increment button
+[2025-03-11 12:58:26] [backend] Counter updated to 15
+[2025-03-11 12:58:26] [ui] Clicked Increment button
+[2025-03-11 12:58:26] [backend] Counter updated to 16
+[2025-03-11 12:58:27] [ui] Clicked Increment button
+[2025-03-11 12:58:27] [backend] Counter updated to 17
+[2025-03-11 12:58:27] [ui] Clicked Increment button
+[2025-03-11 12:58:27] [backend] Counter updated to 18
+[2025-03-11 12:58:27] [ui] Clicked Increment button
+[2025-03-11 12:58:27] [backend] Counter updated to 19
+[2025-03-11 12:58:27] [ui] Clicked Increment button
+[2025-03-11 12:58:27] [backend] Counter updated to 20
+[2025-03-11 12:58:27] [ui] Clicked Increment button
+[2025-03-11 12:58:27] [backend] Counter updated to 21
+[2025-03-11 12:58:28] [ui] Clicked Increment button
+[2025-03-11 12:58:28] [backend] Counter updated to 22
+[2025-03-11 12:58:28] [ui] Clicked Increment button
+[2025-03-11 12:58:28] [backend] Counter updated to 23
+[2025-03-11 12:58:28] [ui] Clicked Increment button
+[2025-03-11 12:58:28] [backend] Counter updated to 24
+[2025-03-11 12:58:28] [ui] Clicked Increment button
+[2025-03-11 12:58:28] [backend] Counter updated to 25
+[2025-03-11 12:58:28] [ui] Clicked Increment button
+[2025-03-11 12:58:28] [backend] Counter updated to 26
+[2025-03-11 12:58:29] [ui] Clicked Increment button
+[2025-03-11 12:58:29] [backend] Counter updated to 27
+[2025-03-11 12:58:29] [ui] Clicked Increment button
+[2025-03-11 12:58:29] [backend] Counter updated to 28
+[2025-03-11 12:58:29] [ui] Clicked Increment button
+[2025-03-11 12:58:29] [backend] Counter updated to 29
+[2025-03-11 12:58:29] [ui] Clicked Increment button
+[2025-03-11 12:58:29] [backend] Counter updated to 30
+[2025-03-11 12:58:29] [ui] Clicked Increment button
+[2025-03-11 12:58:29] [backend] Counter updated to 31
+[2025-03-11 12:58:30] [ui] Clicked Increment button
+[2025-03-11 12:58:30] [backend] Counter updated to 32
+[2025-03-11 12:58:30] [ui] Clicked Increment button
+[2025-03-11 12:58:30] [backend] Counter updated to 33
+[2025-03-11 12:58:30] [ui] Clicked Increment button
+[2025-03-11 12:58:30] [backend] Counter updated to 34
+[2025-03-11 12:58:30] [ui] Clicked Increment button
+[2025-03-11 12:58:30] [backend] Counter updated to 35
+[2025-03-11 12:58:30] [ui] Clicked Increment button
+[2025-03-11 12:58:30] [backend] Counter updated to 36
+[2025-03-11 12:58:31] [ui] Clicked Increment button
+[2025-03-11 12:58:31] [backend] Counter updated to 37
+[2025-03-11 12:58:31] [ui] Clicked Increment button
+[2025-03-11 12:58:31] [backend] Counter updated to 38
+[2025-03-11 12:58:31] [ui] Clicked Increment button
+[2025-03-11 12:58:31] [backend] Counter updated to 39
+[2025-03-11 12:58:31] [ui] Clicked Increment button
+[2025-03-11 12:58:31] [backend] Counter updated to 40
+[2025-03-11 12:58:31] [ui] Clicked Increment button
+[2025-03-11 12:58:31] [backend] Counter updated to 41
+[2025-03-11 12:58:32] [ui] Clicked Increment button
+[2025-03-11 12:58:32] [backend] Counter updated to 42
+[2025-03-11 12:58:32] [ui] Clicked Increment button
+[2025-03-11 12:58:32] [backend] Counter updated to 43
+[2025-03-11 12:58:32] [ui] Clicked Increment button
+[2025-03-11 12:58:32] [backend] Counter updated to 44
+[2025-03-11 12:58:33] [ui] Clicked Increment button
+[2025-03-11 12:58:33] [backend] Counter updated to 45
+[2025-03-11 12:58:33] [ui] Clicked Reset button
+[2025-03-11 12:58:33] [backend] Counter updated to 0
+[2025-03-11 13:04:30] [ui] Clicked Increment button
+[2025-03-11 13:04:30] [backend] Counter updated to 1
+[2025-03-11 13:04:30] [ui] Clicked Increment button
+[2025-03-11 13:04:30] [backend] Counter updated to 2
+[2025-03-11 13:04:31] [ui] Clicked Increment button
+[2025-03-11 13:04:31] [backend] Counter updated to 3
+[2025-03-11 13:04:31] [ui] Clicked Increment button
+[2025-03-11 13:04:31] [backend] Counter updated to 4
+[2025-03-11 13:04:33] [ui] Clicked Increment button
+[2025-03-11 13:04:33] [backend] Counter updated to 5
+[2025-03-11 13:04:33] [ui] Clicked Increment button
+[2025-03-11 13:04:33] [backend] Counter updated to 6
+[2025-03-11 13:04:33] [ui] Clicked Increment button
+[2025-03-11 13:04:33] [backend] Counter updated to 7
+[2025-03-11 13:04:33] [ui] Clicked Increment button
+[2025-03-11 13:04:33] [backend] Counter updated to 8
+[2025-03-11 13:04:34] [ui] Clicked Increment button
+[2025-03-11 13:04:34] [backend] Counter updated to 9
+[2025-03-11 13:04:34] [ui] Clicked Increment button
+[2025-03-11 13:04:34] [backend] Counter updated to 10
+[2025-03-11 13:04:35] [ui] Clicked Reset button
+[2025-03-11 13:04:35] [backend] Counter updated to 0
+[2025-03-11 13:04:35] [ui] Clicked Reset button
+[2025-03-11 13:04:35] [backend] Counter updated to 0
+[2025-03-11 13:04:35] [ui] Clicked Reset button
+[2025-03-11 13:04:35] [backend] Counter updated to 0
+[2025-03-11 13:04:35] [ui] Clicked Increment button
+[2025-03-11 13:04:35] [backend] Counter updated to 1
+[2025-03-11 13:04:36] [ui] Clicked Increment button
+[2025-03-11 13:04:36] [backend] Counter updated to 2
+[2025-03-11 13:04:36] [ui] Clicked Increment button
+[2025-03-11 13:04:36] [backend] Counter updated to 3
+[2025-03-11 13:04:36] [ui] Clicked Increment button
+[2025-03-11 13:04:36] [backend] Counter updated to 4
+[2025-03-11 13:05:15] [ui] Clicked Increment button
+[2025-03-11 13:05:15] [backend] Counter updated to 1
+[2025-03-11 13:05:16] [ui] Clicked Increment button
+[2025-03-11 13:05:16] [backend] Counter updated to 2
+[2025-03-11 13:05:16] [ui] Clicked Increment button
+[2025-03-11 13:05:16] [backend] Counter updated to 3
+[2025-03-11 13:05:16] [ui] Clicked Increment button
+[2025-03-11 13:05:16] [backend] Counter updated to 4
+[2025-03-11 13:05:17] [ui] Clicked Increment button
+[2025-03-11 13:05:17] [backend] Counter updated to 5
+[2025-03-11 13:05:17] [ui] Clicked Increment button
+[2025-03-11 13:05:17] [backend] Counter updated to 6
+[2025-03-11 13:05:18] [ui] Clicked Increment button
+[2025-03-11 13:05:18] [backend] Counter updated to 7
+[2025-03-11 13:05:18] [ui] Clicked Increment button
+[2025-03-11 13:05:18] [backend] Counter updated to 8
+[2025-03-11 13:05:23] [ui] Clicked Increment button
+[2025-03-11 13:05:23] [backend] Counter updated to 9
+[2025-03-11 13:05:23] [ui] Clicked Increment button
+[2025-03-11 13:05:23] [backend] Counter updated to 10
+[2025-03-11 13:05:23] [ui] Clicked Increment button
+[2025-03-11 13:05:23] [backend] Counter updated to 11
+[2025-03-11 13:05:24] [ui] Clicked Increment button
+[2025-03-11 13:05:24] [backend] Counter updated to 12
+[2025-03-11 13:05:24] [ui] Clicked Increment button
+[2025-03-11 13:05:24] [backend] Counter updated to 13
+[2025-03-11 13:05:24] [ui] Clicked Increment button
+[2025-03-11 13:05:24] [backend] Counter updated to 14
+[2025-03-11 13:05:24] [ui] Clicked Increment button
+[2025-03-11 13:05:24] [backend] Counter updated to 15
+[2025-03-11 13:05:25] [ui] Clicked Reset button
+[2025-03-11 13:05:25] [backend] Counter updated to 0
+[2025-03-11 13:05:26] [ui] Clicked Reset button
+[2025-03-11 13:05:26] [backend] Counter updated to 0
+[2025-03-11 13:05:26] [ui] Clicked Reset button
+[2025-03-11 13:05:26] [backend] Counter updated to 0
+[2025-03-11 13:05:26] [ui] Clicked Reset button
+[2025-03-11 13:05:26] [backend] Counter updated to 0
+[2025-03-11 13:05:27] [ui] Clicked Increment button
+[2025-03-11 13:05:27] [backend] Counter updated to 1
+[2025-03-11 13:05:27] [ui] Clicked Increment button
+[2025-03-11 13:05:27] [backend] Counter updated to 2
+[2025-03-11 13:05:27] [ui] Clicked Increment button
+[2025-03-11 13:05:27] [backend] Counter updated to 3
+[2025-03-11 13:05:27] [ui] Clicked Increment button
+[2025-03-11 13:05:27] [backend] Counter updated to 4
+[2025-03-11 13:05:28] [ui] Clicked Increment button
+[2025-03-11 13:05:28] [backend] Counter updated to 5
+[2025-03-11 13:05:28] [ui] Clicked Increment button
+[2025-03-11 13:05:28] [backend] Counter updated to 6
+[2025-03-11 13:05:28] [ui] Clicked Reset button
+[2025-03-11 13:05:28] [backend] Counter updated to 0
+[2025-03-11 13:05:29] [ui] Clicked Reset button
+[2025-03-11 13:05:29] [backend] Counter updated to 0
+[2025-03-11 13:05:29] [ui] Clicked Reset button
+[2025-03-11 13:05:29] [backend] Counter updated to 0
+[2025-03-11 13:05:29] [ui] Clicked Reset button
+[2025-03-11 13:05:29] [backend] Counter updated to 0
+[2025-03-11 13:05:38] [ui] Clicked Increment button
+[2025-03-11 13:05:38] [backend] Counter updated to 1
+[2025-03-11 13:05:39] [ui] Clicked Increment button
+[2025-03-11 13:05:39] [backend] Counter updated to 2
+[2025-03-11 13:05:39] [ui] Clicked Increment button
+[2025-03-11 13:05:39] [backend] Counter updated to 3
+[2025-03-11 13:05:39] [ui] Clicked Increment button
+[2025-03-11 13:05:39] [backend] Counter updated to 4
+[2025-03-11 13:05:39] [ui] Clicked Increment button
+[2025-03-11 13:05:39] [backend] Counter updated to 5
+[2025-03-11 13:05:39] [ui] Clicked Increment button
+[2025-03-11 13:05:39] [backend] Counter updated to 6
+[2025-03-11 13:05:40] [ui] Clicked Increment button
+[2025-03-11 13:05:40] [backend] Counter updated to 7
+[2025-03-11 13:05:40] [ui] Clicked Increment button
+[2025-03-11 13:05:40] [backend] Counter updated to 8
+[2025-03-11 13:05:40] [ui] Clicked Increment button
+[2025-03-11 13:05:40] [backend] Counter updated to 9
+[2025-03-11 13:05:40] [ui] Clicked Increment button
+[2025-03-11 13:05:40] [backend] Counter updated to 10
+[2025-03-11 13:05:40] [ui] Clicked Increment button
+[2025-03-11 13:05:40] [backend] Counter updated to 11
+[2025-03-11 13:05:41] [ui] Clicked Increment button
+[2025-03-11 13:05:41] [backend] Counter updated to 12
+[2025-03-11 13:05:41] [ui] Clicked Increment button
+[2025-03-11 13:05:41] [backend] Counter updated to 13
+[2025-03-11 13:05:41] [ui] Clicked Increment button
+[2025-03-11 13:05:41] [backend] Counter updated to 14
+[2025-03-11 13:05:41] [ui] Clicked Increment button
+[2025-03-11 13:05:41] [backend] Counter updated to 15
+[2025-03-11 13:05:41] [ui] Clicked Increment button
+[2025-03-11 13:05:41] [backend] Counter updated to 16
+[2025-03-11 13:05:42] [ui] Clicked Increment button
+[2025-03-11 13:05:42] [backend] Counter updated to 17
+[2025-03-11 13:05:42] [ui] Clicked Increment button
+[2025-03-11 13:05:42] [backend] Counter updated to 18
+[2025-03-11 13:05:42] [ui] Clicked Increment button
+[2025-03-11 13:05:42] [backend] Counter updated to 19
+[2025-03-11 13:05:43] [ui] Clicked Increment button
+[2025-03-11 13:05:43] [backend] Counter updated to 20
+[2025-03-11 13:05:43] [ui] Clicked Increment button
+[2025-03-11 13:05:43] [backend] Counter updated to 21
+[2025-03-11 13:05:43] [ui] Clicked Increment button
+[2025-03-11 13:05:43] [backend] Counter updated to 22
+[2025-03-11 13:05:43] [ui] Clicked Increment button
+[2025-03-11 13:05:43] [backend] Counter updated to 23
+[2025-03-11 13:05:44] [ui] Clicked Increment button
+[2025-03-11 13:05:44] [backend] Counter updated to 24
+[2025-03-11 13:05:44] [ui] Clicked Increment button
+[2025-03-11 13:05:44] [backend] Counter updated to 25
+[2025-03-11 13:05:45] [ui] Clicked Increment button
+[2025-03-11 13:05:45] [backend] Counter updated to 26
+[2025-03-11 13:05:45] [ui] Clicked Increment button
+[2025-03-11 13:05:45] [backend] Counter updated to 27
+[2025-03-11 13:05:45] [ui] Clicked Increment button
+[2025-03-11 13:05:45] [backend] Counter updated to 28
+[2025-03-11 13:05:46] [ui] Clicked Increment button
+[2025-03-11 13:05:46] [backend] Counter updated to 29
+[2025-03-11 13:05:46] [ui] Clicked Increment button
+[2025-03-11 13:05:46] [backend] Counter updated to 30
+[2025-03-11 13:05:46] [ui] Clicked Increment button
+[2025-03-11 13:05:46] [backend] Counter updated to 31
+[2025-03-11 13:05:46] [ui] Clicked Increment button
+[2025-03-11 13:05:46] [backend] Counter updated to 32
+[2025-03-11 13:12:46] [ui] Clicked Increment button
+[2025-03-11 13:12:46] [backend] Counter updated to 1
+[2025-03-11 13:12:47] [ui] Clicked Increment button
+[2025-03-11 13:12:47] [backend] Counter updated to 2
+[2025-03-11 13:12:47] [ui] Clicked Increment button
+[2025-03-11 13:12:47] [backend] Counter updated to 3
+[2025-03-11 13:12:48] [ui] Clicked Increment button
+[2025-03-11 13:12:48] [backend] Counter updated to 4
+[2025-03-11 13:12:48] [ui] Clicked Increment button
+[2025-03-11 13:12:48] [backend] Counter updated to 5
+[2025-03-11 13:12:49] [ui] Clicked Increment button
+[2025-03-11 13:12:49] [backend] Counter updated to 6
+[2025-03-11 13:12:49] [ui] Clicked Increment button
+[2025-03-11 13:12:49] [backend] Counter updated to 7
+[2025-03-11 13:12:49] [ui] Clicked Increment button
+[2025-03-11 13:12:49] [backend] Counter updated to 8
+[2025-03-11 13:12:50] [ui] Clicked Reset button
+[2025-03-11 13:12:50] [backend] Counter updated to 0
+[2025-03-11 13:12:50] [ui] Clicked Increment button
+[2025-03-11 13:12:50] [backend] Counter updated to 1
+[2025-03-11 13:12:51] [ui] Clicked Increment button
+[2025-03-11 13:12:51] [backend] Counter updated to 2
+[2025-03-11 13:12:51] [ui] Clicked Increment button
+[2025-03-11 13:12:51] [backend] Counter updated to 3
+[2025-03-11 13:12:51] [ui] Clicked Increment button
+[2025-03-11 13:12:51] [backend] Counter updated to 4
+[2025-03-11 13:12:54] [ui] Clicked Increment button
+[2025-03-11 13:12:54] [backend] Counter updated to 5
+[2025-03-11 13:12:54] [ui] Clicked Increment button
+[2025-03-11 13:12:54] [backend] Counter updated to 6
+[2025-03-11 13:12:54] [ui] Clicked Increment button
+[2025-03-11 13:12:54] [backend] Counter updated to 7
+[2025-03-11 13:12:54] [ui] Clicked Increment button
+[2025-03-11 13:12:54] [backend] Counter updated to 8
+[2025-03-11 13:12:56] [ui] Clicked Increment button
+[2025-03-11 13:12:56] [backend] Counter updated to 9
+[2025-03-11 13:12:56] [ui] Clicked Increment button
+[2025-03-11 13:12:56] [backend] Counter updated to 10
+[2025-03-11 13:12:56] [ui] Clicked Increment button
+[2025-03-11 13:12:56] [backend] Counter updated to 11
+[2025-03-11 13:12:56] [ui] Clicked Increment button
+[2025-03-11 13:12:56] [backend] Counter updated to 12
+[2025-03-11 13:12:57] [ui] Clicked Increment button
+[2025-03-11 13:12:57] [backend] Counter updated to 13
+[2025-03-11 13:12:57] [ui] Clicked Increment button
+[2025-03-11 13:12:57] [backend] Counter updated to 14
+[2025-03-11 13:12:57] [ui] Clicked Increment button
+[2025-03-11 13:12:57] [backend] Counter updated to 15
+[2025-03-11 13:12:57] [ui] Clicked Increment button
+[2025-03-11 13:12:57] [backend] Counter updated to 16
+[2025-03-11 13:12:57] [ui] Clicked Increment button
+[2025-03-11 13:12:57] [backend] Counter updated to 17
+[2025-03-11 13:12:58] [ui] Clicked Increment button
+[2025-03-11 13:12:58] [backend] Counter updated to 18
+[2025-03-11 13:12:58] [ui] Clicked Increment button
+[2025-03-11 13:12:58] [backend] Counter updated to 19
+[2025-03-11 13:12:58] [ui] Clicked Increment button
+[2025-03-11 13:12:58] [backend] Counter updated to 20
+[2025-03-11 13:12:58] [ui] Clicked Increment button
+[2025-03-11 13:12:58] [backend] Counter updated to 21
+[2025-03-11 13:12:58] [ui] Clicked Increment button
+[2025-03-11 13:12:58] [backend] Counter updated to 22
+[2025-03-11 13:12:58] [ui] Clicked Increment button
+[2025-03-11 13:12:58] [backend] Counter updated to 23
+[2025-03-11 13:12:59] [ui] Clicked Increment button
+[2025-03-11 13:12:59] [backend] Counter updated to 24
+[2025-03-11 13:12:59] [ui] Clicked Increment button
+[2025-03-11 13:12:59] [backend] Counter updated to 25
+[2025-03-11 13:12:59] [ui] Clicked Increment button
+[2025-03-11 13:12:59] [backend] Counter updated to 26
+[2025-03-11 13:13:00] [ui] Clicked Reset button
+[2025-03-11 13:13:00] [backend] Counter updated to 0
+[2025-03-11 13:17:54] [ui] Clicked Increment button
+[2025-03-11 13:17:54] [backend] Counter updated to 1
+[2025-03-11 13:17:54] [ui] Clicked Increment button
+[2025-03-11 13:17:54] [backend] Counter updated to 2
+[2025-03-11 13:17:54] [ui] Clicked Increment button
+[2025-03-11 13:17:54] [backend] Counter updated to 3
+[2025-03-11 13:17:56] [ui] Clicked Increment button
+[2025-03-11 13:17:56] [backend] Counter updated to 4
+[2025-03-11 13:17:56] [ui] Clicked Increment button
+[2025-03-11 13:17:56] [backend] Counter updated to 5
+[2025-03-11 13:17:57] [ui] Clicked Increment button
+[2025-03-11 13:17:57] [backend] Counter updated to 6
+[2025-03-11 13:17:57] [ui] Clicked Increment button
+[2025-03-11 13:17:57] [backend] Counter updated to 7
+[2025-03-11 13:17:57] [ui] Clicked Increment button
+[2025-03-11 13:17:57] [backend] Counter updated to 8
+[2025-03-11 13:17:57] [ui] Clicked Increment button
+[2025-03-11 13:17:57] [backend] Counter updated to 9
+[2025-03-11 13:17:58] [ui] Clicked Reset button
+[2025-03-11 13:17:58] [backend] Counter updated to 0
+[2025-03-11 13:17:59] [ui] Clicked Increment button
+[2025-03-11 13:17:59] [backend] Counter updated to 1
+[2025-03-11 13:18:00] [ui] Clicked Increment button
+[2025-03-11 13:18:00] [backend] Counter updated to 2
+[2025-03-11 13:18:00] [ui] Clicked Increment button
+[2025-03-11 13:18:00] [backend] Counter updated to 3
+[2025-03-11 13:18:02] [ui] Clicked Increment button
+[2025-03-11 13:18:02] [backend] Counter updated to 4
+[2025-03-11 13:18:02] [ui] Clicked Increment button
+[2025-03-11 13:18:02] [backend] Counter updated to 5
+[2025-03-11 13:18:02] [ui] Clicked Increment button
+[2025-03-11 13:18:02] [backend] Counter updated to 6
+[2025-03-11 13:18:03] [ui] Clicked Increment button
+[2025-03-11 13:18:03] [backend] Counter updated to 7
+[2025-03-11 13:18:03] [ui] Clicked Increment button
+[2025-03-11 13:18:03] [backend] Counter updated to 8
+[2025-03-11 13:18:03] [ui] Clicked Increment button
+[2025-03-11 13:18:03] [backend] Counter updated to 9
+[2025-03-11 13:18:03] [ui] Clicked Increment button
+[2025-03-11 13:18:03] [backend] Counter updated to 10
+[2025-03-11 13:18:03] [ui] Clicked Increment button
+[2025-03-11 13:18:03] [backend] Counter updated to 11
+[2025-03-11 13:18:04] [ui] Clicked Increment button
+[2025-03-11 13:18:04] [backend] Counter updated to 12
+[2025-03-11 13:18:04] [ui] Clicked Increment button
+[2025-03-11 13:18:04] [backend] Counter updated to 13
+[2025-03-11 13:19:58] [ui] Clicked Increment button
+[2025-03-11 13:19:58] [backend] Counter updated to 1
+[2025-03-11 13:19:59] [ui] Clicked Increment button
+[2025-03-11 13:19:59] [backend] Counter updated to 2
+[2025-03-11 13:19:59] [ui] Clicked Increment button
+[2025-03-11 13:19:59] [backend] Counter updated to 3
+[2025-03-11 13:19:59] [ui] Clicked Increment button
+[2025-03-11 13:19:59] [backend] Counter updated to 4
+[2025-03-11 13:20:00] [ui] Clicked Increment button
+[2025-03-11 13:20:00] [backend] Counter updated to 5
+[2025-03-11 13:20:00] [ui] Clicked Increment button
+[2025-03-11 13:20:00] [backend] Counter updated to 6
+[2025-03-11 13:20:00] [ui] Clicked Increment button
+[2025-03-11 13:20:00] [backend] Counter updated to 7
+[2025-03-11 13:20:00] [ui] Clicked Increment button
+[2025-03-11 13:20:00] [backend] Counter updated to 8
+[2025-03-11 13:20:02] [ui] Clicked Increment button
+[2025-03-11 13:20:02] [backend] Counter updated to 9
+[2025-03-11 13:20:02] [ui] Clicked Increment button
+[2025-03-11 13:20:02] [backend] Counter updated to 10
+[2025-03-11 13:20:02] [ui] Clicked Increment button
+[2025-03-11 13:20:02] [backend] Counter updated to 11
+[2025-03-11 13:20:02] [ui] Clicked Increment button
+[2025-03-11 13:20:02] [backend] Counter updated to 12
+[2025-03-11 13:20:03] [ui] Clicked Increment button
+[2025-03-11 13:20:03] [backend] Counter updated to 13
+[2025-03-11 13:20:03] [ui] Clicked Increment button
+[2025-03-11 13:20:03] [backend] Counter updated to 14
+[2025-03-11 13:20:03] [ui] Clicked Increment button
+[2025-03-11 13:20:03] [backend] Counter updated to 15
+[2025-03-11 13:20:03] [ui] Clicked Increment button
+[2025-03-11 13:20:03] [backend] Counter updated to 16
+[2025-03-11 13:20:06] [ui] Clicked Increment button
+[2025-03-11 13:20:06] [backend] Counter updated to 17
+[2025-03-11 13:20:07] [ui] Clicked Increment button
+[2025-03-11 13:20:07] [backend] Counter updated to 18
+[2025-03-11 13:20:07] [ui] Clicked Increment button
+[2025-03-11 13:20:07] [backend] Counter updated to 19
+[2025-03-11 13:20:07] [ui] Clicked Increment button
+[2025-03-11 13:20:07] [backend] Counter updated to 20
+[2025-03-11 13:20:08] [ui] Clicked Increment button
+[2025-03-11 13:20:08] [backend] Counter updated to 21
+[2025-03-11 13:20:08] [ui] Clicked Increment button
+[2025-03-11 13:20:08] [backend] Counter updated to 22
+[2025-03-11 13:20:09] [ui] Clicked Increment button
+[2025-03-11 13:20:09] [backend] Counter updated to 23
+[2025-03-11 13:20:10] [ui] Clicked Increment button
+[2025-03-11 13:20:10] [backend] Counter updated to 24
+[2025-03-11 13:20:10] [ui] Clicked Increment button
+[2025-03-11 13:20:10] [backend] Counter updated to 25
+[2025-03-11 13:20:10] [ui] Clicked Increment button
+[2025-03-11 13:20:10] [backend] Counter updated to 26
+[2025-03-11 13:20:10] [ui] Clicked Increment button
+[2025-03-11 13:20:10] [backend] Counter updated to 27
+[2025-03-11 13:20:11] [ui] Clicked Increment button
+[2025-03-11 13:20:11] [backend] Counter updated to 28
+[2025-03-11 13:20:11] [ui] Clicked Increment button
+[2025-03-11 13:20:11] [backend] Counter updated to 29
+[2025-03-11 13:20:11] [ui] Clicked Increment button
+[2025-03-11 13:20:11] [backend] Counter updated to 30
+[2025-03-11 13:20:12] [ui] Clicked Reset button
+[2025-03-11 13:20:12] [backend] Counter updated to 0
+[2025-03-11 13:20:14] [ui] Clicked Increment button
+[2025-03-11 13:20:14] [backend] Counter updated to 1
+[2025-03-11 13:20:15] [ui] Clicked Increment button
+[2025-03-11 13:20:15] [backend] Counter updated to 2
+[2025-03-11 13:20:15] [ui] Clicked Increment button
+[2025-03-11 13:20:15] [backend] Counter updated to 3
+[2025-03-11 13:20:15] [ui] Clicked Increment button
+[2025-03-11 13:20:15] [backend] Counter updated to 4
+[2025-03-11 13:20:15] [ui] Clicked Increment button
+[2025-03-11 13:20:15] [backend] Counter updated to 5
+[2025-03-11 13:20:15] [ui] Clicked Increment button
+[2025-03-11 13:20:15] [backend] Counter updated to 6
+[2025-03-11 13:20:16] [ui] Clicked Increment button
+[2025-03-11 13:20:16] [backend] Counter updated to 7
+[2025-03-11 13:20:16] [ui] Clicked Increment button
+[2025-03-11 13:20:16] [backend] Counter updated to 8
+[2025-03-11 13:20:16] [ui] Clicked Increment button
+[2025-03-11 13:20:16] [backend] Counter updated to 9
+[2025-03-11 13:20:16] [ui] Clicked Increment button
+[2025-03-11 13:20:16] [backend] Counter updated to 10
+[2025-03-11 13:20:16] [ui] Clicked Increment button
+[2025-03-11 13:20:16] [backend] Counter updated to 11
+[2025-03-11 13:20:17] [ui] Clicked Increment button
+[2025-03-11 13:20:17] [backend] Counter updated to 12
+[2025-03-11 13:20:17] [ui] Clicked Increment button
+[2025-03-11 13:20:17] [backend] Counter updated to 13
+[2025-03-11 13:20:17] [ui] Clicked Increment button
+[2025-03-11 13:20:17] [backend] Counter updated to 14
+[2025-03-11 13:20:17] [ui] Clicked Increment button
+[2025-03-11 13:20:17] [backend] Counter updated to 15
+[2025-03-11 13:20:17] [ui] Clicked Increment button
+[2025-03-11 13:20:17] [backend] Counter updated to 16
+[2025-03-11 13:20:18] [ui] Clicked Increment button
+[2025-03-11 13:20:18] [backend] Counter updated to 17
+[2025-03-11 13:20:18] [ui] Clicked Increment button
+[2025-03-11 13:20:18] [backend] Counter updated to 18
+[2025-03-11 13:20:18] [ui] Clicked Increment button
+[2025-03-11 13:20:18] [backend] Counter updated to 19
+[2025-03-11 13:20:18] [ui] Clicked Increment button
+[2025-03-11 13:20:18] [backend] Counter updated to 20
+[2025-03-11 13:20:19] [ui] Clicked Increment button
+[2025-03-11 13:20:19] [backend] Counter updated to 21
+[2025-03-11 13:20:19] [ui] Clicked Increment button
+[2025-03-11 13:20:19] [backend] Counter updated to 22
+[2025-03-11 13:25:45] [ui] Clicked Increment button
+[2025-03-11 13:25:45] [backend] Counter updated to 1
+[2025-03-11 13:25:46] [ui] Clicked Increment button
+[2025-03-11 13:25:46] [backend] Counter updated to 2
+[2025-03-11 13:25:46] [ui] Clicked Increment button
+[2025-03-11 13:25:46] [backend] Counter updated to 3
+[2025-03-11 13:25:46] [ui] Clicked Increment button
+[2025-03-11 13:25:46] [backend] Counter updated to 4
+[2025-03-11 13:25:46] [ui] Clicked Increment button
+[2025-03-11 13:25:46] [backend] Counter updated to 5
+[2025-03-11 13:25:48] [ui] Clicked Increment button
+[2025-03-11 13:25:48] [backend] Counter updated to 6
+[2025-03-11 13:25:48] [ui] Clicked Increment button
+[2025-03-11 13:25:48] [backend] Counter updated to 7
+[2025-03-11 13:25:49] [ui] Clicked Increment button
+[2025-03-11 13:25:49] [backend] Counter updated to 8
+[2025-03-11 13:25:49] [ui] Clicked Increment button
+[2025-03-11 13:25:49] [backend] Counter updated to 9
+[2025-03-11 13:25:49] [ui] Clicked Increment button
+[2025-03-11 13:25:49] [backend] Counter updated to 10
+[2025-03-11 13:25:49] [ui] Clicked Increment button
+[2025-03-11 13:25:49] [backend] Counter updated to 11
+[2025-03-11 13:25:49] [ui] Clicked Increment button
+[2025-03-11 13:25:49] [backend] Counter updated to 12
+[2025-03-11 13:26:34] [ui] Clicked Increment button
+[2025-03-11 13:26:34] [backend] Counter updated to 1
+[2025-03-11 13:26:34] [ui] Clicked Increment button
+[2025-03-11 13:26:34] [backend] Counter updated to 2
+[2025-03-11 13:26:34] [ui] Clicked Increment button
+[2025-03-11 13:26:34] [backend] Counter updated to 3
+[2025-03-11 13:26:35] [ui] Clicked Increment button
+[2025-03-11 13:26:35] [backend] Counter updated to 4
+[2025-03-11 13:26:35] [ui] Clicked Increment button
+[2025-03-11 13:26:35] [backend] Counter updated to 5
+[2025-03-11 13:26:35] [ui] Clicked Increment button
+[2025-03-11 13:26:35] [backend] Counter updated to 6
+[2025-03-11 13:26:35] [ui] Clicked Increment button
+[2025-03-11 13:26:35] [backend] Counter updated to 7
+[2025-03-11 13:26:37] [ui] Clicked Increment button
+[2025-03-11 13:26:37] [backend] Counter updated to 8
+[2025-03-11 13:26:37] [ui] Clicked Increment button
+[2025-03-11 13:26:37] [backend] Counter updated to 9
+[2025-03-11 13:26:38] [ui] Clicked Increment button
+[2025-03-11 13:26:38] [backend] Counter updated to 10
+[2025-03-11 13:26:40] [ui] Clicked Increment button
+[2025-03-11 13:26:40] [backend] Counter updated to 11
+[2025-03-11 13:26:41] [ui] Clicked Increment button
+[2025-03-11 13:26:41] [backend] Counter updated to 12
+[2025-03-11 13:26:41] [ui] Clicked Increment button
+[2025-03-11 13:26:41] [backend] Counter updated to 13
+[2025-03-11 13:26:41] [ui] Clicked Increment button
+[2025-03-11 13:26:41] [backend] Counter updated to 14
+[2025-03-11 13:26:41] [ui] Clicked Increment button
+[2025-03-11 13:26:41] [backend] Counter updated to 15
+[2025-03-11 13:26:41] [ui] Clicked Increment button
+[2025-03-11 13:26:41] [backend] Counter updated to 16
+[2025-03-11 13:26:42] [ui] Clicked Increment button
+[2025-03-11 13:26:42] [backend] Counter updated to 17
+[2025-03-11 13:26:42] [ui] Clicked Increment button
+[2025-03-11 13:26:42] [backend] Counter updated to 18
+[2025-03-11 13:26:42] [ui] Clicked Increment button
+[2025-03-11 13:26:42] [backend] Counter updated to 19
+[2025-03-11 13:26:42] [ui] Clicked Increment button
+[2025-03-11 13:26:42] [backend] Counter updated to 20
+[2025-03-11 13:26:42] [ui] Clicked Increment button
+[2025-03-11 13:26:42] [backend] Counter updated to 21
+[2025-03-11 13:26:43] [ui] Clicked Increment button
+[2025-03-11 13:26:43] [backend] Counter updated to 22
+[2025-03-11 13:26:43] [ui] Clicked Increment button
+[2025-03-11 13:26:43] [backend] Counter updated to 23
+[2025-03-11 13:26:43] [ui] Clicked Increment button
+[2025-03-11 13:26:43] [backend] Counter updated to 24
+[2025-03-11 13:26:43] [ui] Clicked Increment button
+[2025-03-11 13:26:43] [backend] Counter updated to 25
+[2025-03-11 13:26:44] [ui] Clicked Increment button
+[2025-03-11 13:26:44] [backend] Counter updated to 26
+[2025-03-11 13:26:44] [ui] Clicked Increment button
+[2025-03-11 13:26:44] [backend] Counter updated to 27
+[2025-03-11 13:26:44] [ui] Clicked Increment button
+[2025-03-11 13:26:44] [backend] Counter updated to 28
+[2025-03-11 13:26:44] [ui] Clicked Increment button
+[2025-03-11 13:26:44] [backend] Counter updated to 29
+[2025-03-11 13:26:44] [ui] Clicked Increment button
+[2025-03-11 13:26:44] [backend] Counter updated to 30
+[2025-03-11 13:26:45] [ui] Clicked Increment button
+[2025-03-11 13:26:45] [backend] Counter updated to 31
+[2025-03-11 13:26:45] [ui] Clicked Increment button
+[2025-03-11 13:26:45] [backend] Counter updated to 32
+[2025-03-11 13:26:45] [ui] Clicked Increment button
+[2025-03-11 13:26:45] [backend] Counter updated to 33
+[2025-03-11 13:26:45] [ui] Clicked Increment button
+[2025-03-11 13:26:45] [backend] Counter updated to 34
+[2025-03-11 13:26:45] [ui] Clicked Increment button
+[2025-03-11 13:26:45] [backend] Counter updated to 35
+[2025-03-11 13:26:46] [ui] Clicked Increment button
+[2025-03-11 13:26:46] [backend] Counter updated to 36
+[2025-03-11 13:26:46] [ui] Clicked Increment button
+[2025-03-11 13:26:46] [backend] Counter updated to 37
+[2025-03-11 13:26:46] [ui] Clicked Increment button
+[2025-03-11 13:26:46] [backend] Counter updated to 38
+[2025-03-11 13:26:46] [ui] Clicked Increment button
+[2025-03-11 13:26:46] [backend] Counter updated to 39
+[2025-03-11 13:26:46] [ui] Clicked Increment button
+[2025-03-11 13:26:46] [backend] Counter updated to 40
+[2025-03-11 13:26:47] [ui] Clicked Increment button
+[2025-03-11 13:26:47] [backend] Counter updated to 41
+[2025-03-11 13:26:47] [ui] Clicked Increment button
+[2025-03-11 13:26:47] [backend] Counter updated to 42
+[2025-03-11 13:26:47] [ui] Clicked Increment button
+[2025-03-11 13:26:47] [backend] Counter updated to 43
+[2025-03-11 13:26:47] [ui] Clicked Increment button
+[2025-03-11 13:26:47] [backend] Counter updated to 44
+[2025-03-11 13:26:47] [ui] Clicked Increment button
+[2025-03-11 13:26:47] [backend] Counter updated to 45
+[2025-03-11 13:26:48] [ui] Clicked Increment button
+[2025-03-11 13:26:48] [backend] Counter updated to 46
+[2025-03-11 13:26:48] [ui] Clicked Increment button
+[2025-03-11 13:26:48] [backend] Counter updated to 47
+[2025-03-11 13:26:48] [ui] Clicked Increment button
+[2025-03-11 13:26:48] [backend] Counter updated to 48
+[2025-03-11 13:26:48] [ui] Clicked Increment button
+[2025-03-11 13:26:48] [backend] Counter updated to 49
+[2025-03-11 13:26:48] [ui] Clicked Increment button
+[2025-03-11 13:26:48] [backend] Counter updated to 50
+[2025-03-11 13:30:12] [backend] Counter updated to 1
+[2025-03-11 13:30:12] [backend] Counter updated to 2
+[2025-03-11 13:30:13] [backend] Counter updated to 3
+[2025-03-11 13:30:13] [backend] Counter updated to 4
+[2025-03-11 13:30:14] [backend] Counter updated to 5
+[2025-03-11 13:30:14] [backend] Counter updated to 6
+[2025-03-11 13:30:14] [backend] Counter updated to 7
+[2025-03-11 13:30:14] [backend] Counter updated to 8
+[2025-03-11 13:30:15] [backend] Counter updated to 9
+[2025-03-11 13:30:15] [backend] Counter updated to 10
+[2025-03-11 13:30:16] [backend] Counter updated to 11
+[2025-03-11 13:30:17] [backend] Counter updated to 12
+[2025-03-11 13:30:17] [backend] Counter updated to 13
+[2025-03-11 13:30:17] [backend] Counter updated to 14
+[2025-03-11 13:30:18] [backend] Counter updated to 0
+[2025-03-11 13:32:41] [backend] Clicked Increment button. Counter updated to 1
+[2025-03-11 13:32:41] [backend] Clicked Increment button. Counter updated to 2
+[2025-03-11 13:32:42] [backend] Clicked Increment button. Counter updated to 3
+[2025-03-11 13:32:42] [backend] Clicked Increment button. Counter updated to 4
+[2025-03-11 13:32:43] [backend] Clicked Increment button. Counter updated to 5
+[2025-03-11 13:32:43] [backend] Clicked Increment button. Counter updated to 6
+[2025-03-11 13:32:44] [backend] Clicked Increment button. Counter updated to 7
+[2025-03-11 13:32:44] [backend] Clicked Increment button. Counter updated to 8
+[2025-03-11 13:32:50] [backend] Clicked Increment button. Counter updated to 9
+[2025-03-11 13:32:51] [backend] Clicked Increment button. Counter updated to 10
+[2025-03-11 13:32:51] [backend] Clicked Increment button. Counter updated to 11
+[2025-03-11 13:32:51] [backend] Clicked Increment button. Counter updated to 12
+[2025-03-11 13:36:09] [backend] Clicked Increment button. Counter updated to 1
+[2025-03-11 13:36:09] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:09] [backend] Clicked Increment button. Counter updated to 2
+[2025-03-11 13:36:09] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:09] [backend] Clicked Increment button. Counter updated to 3
+[2025-03-11 13:36:09] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:10] [backend] Clicked Increment button. Counter updated to 4
+[2025-03-11 13:36:10] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:10] [backend] Counter reset to 0
+[2025-03-11 13:36:10] [backend] Custom event: Clicked Reset button
+[2025-03-11 13:36:13] [backend] Clicked Increment button. Counter updated to 1
+[2025-03-11 13:36:13] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:13] [backend] Clicked Increment button. Counter updated to 2
+[2025-03-11 13:36:13] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:14] [backend] Clicked Increment button. Counter updated to 3
+[2025-03-11 13:36:14] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:14] [backend] Clicked Increment button. Counter updated to 4
+[2025-03-11 13:36:14] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:14] [backend] Clicked Increment button. Counter updated to 5
+[2025-03-11 13:36:14] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:14] [backend] Clicked Increment button. Counter updated to 6
+[2025-03-11 13:36:14] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:21] [backend] Clicked Increment button. Counter updated to 7
+[2025-03-11 13:36:21] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:21] [backend] Clicked Increment button. Counter updated to 8
+[2025-03-11 13:36:21] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:21] [backend] Clicked Increment button. Counter updated to 9
+[2025-03-11 13:36:21] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:21] [backend] Clicked Increment button. Counter updated to 10
+[2025-03-11 13:36:21] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:22] [backend] Clicked Increment button. Counter updated to 11
+[2025-03-11 13:36:22] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:22] [backend] Clicked Increment button. Counter updated to 12
+[2025-03-11 13:36:22] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:23] [backend] Clicked Increment button. Counter updated to 13
+[2025-03-11 13:36:23] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:23] [backend] Clicked Increment button. Counter updated to 14
+[2025-03-11 13:36:23] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:23] [backend] Clicked Increment button. Counter updated to 15
+[2025-03-11 13:36:23] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:23] [backend] Clicked Increment button. Counter updated to 16
+[2025-03-11 13:36:23] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:36:23] [backend] Clicked Increment button. Counter updated to 17
+[2025-03-11 13:36:23] [backend] Custom event: Clicked Increment button
+[2025-03-11 13:37:55] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:37:55] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:09] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:38:09] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:10] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:38:10] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:34] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:38:34] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:34] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:38:34] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:35] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:38:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:35] [backend] [backend] Counter incremented to 7
+[2025-03-11 13:38:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:35] [backend] [backend] Counter incremented to 8
+[2025-03-11 13:38:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:35] [backend] [backend] Counter incremented to 9
+[2025-03-11 13:38:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:35] [backend] [backend] Counter incremented to 10
+[2025-03-11 13:38:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:36] [backend] [backend] Counter incremented to 11
+[2025-03-11 13:38:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:38:36] [backend] [backend] Counter incremented to 12
+[2025-03-11 13:38:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:28] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:41:28] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:41:28] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:41:29] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:41:29] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:41:29] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:41:30] [backend] [backend] Counter reset to 0
+[2025-03-11 13:41:30] [backend] [backend] Counter reset to 0
+[2025-03-11 13:41:30] [backend] [backend] Counter reset to 0
+[2025-03-11 13:41:32] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:41:32] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:41:32] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:41:33] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:41:47] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:41:47] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:47] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:41:47] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:47] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:41:47] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:48] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:41:48] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:48] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:41:48] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:50] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:41:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:50] [backend] [backend] Counter incremented to 7
+[2025-03-11 13:41:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:50] [backend] [backend] Counter incremented to 8
+[2025-03-11 13:41:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:50] [backend] [backend] Counter incremented to 9
+[2025-03-11 13:41:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:50] [backend] [backend] Counter incremented to 10
+[2025-03-11 13:41:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:41:51] [backend] [backend] Counter incremented to 11
+[2025-03-11 13:41:51] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:10] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:43:10] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:16] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:43:16] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:16] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:43:16] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:17] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:43:17] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:17] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:43:17] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:17] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:43:17] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:17] [backend] [backend] Counter incremented to 7
+[2025-03-11 13:43:17] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:20] [backend] [backend] Counter incremented to 8
+[2025-03-11 13:43:20] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:20] [backend] [backend] Counter incremented to 9
+[2025-03-11 13:43:20] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:20] [backend] [backend] Counter incremented to 10
+[2025-03-11 13:43:20] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:24] [backend] [backend] Counter reset to 0
+[2025-03-11 13:43:24] [backend] [ui] Clicked Reset button
+[2025-03-11 13:43:30] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:43:30] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:30] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:43:30] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:30] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:43:30] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:31] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:43:31] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:31] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:43:31] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:34] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:43:34] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:34] [backend] [backend] Counter incremented to 7
+[2025-03-11 13:43:34] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:34] [backend] [backend] Counter incremented to 8
+[2025-03-11 13:43:34] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:34] [backend] [backend] Counter incremented to 9
+[2025-03-11 13:43:34] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:35] [backend] [backend] Counter incremented to 10
+[2025-03-11 13:43:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:35] [backend] [backend] Counter incremented to 11
+[2025-03-11 13:43:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:35] [backend] [backend] Counter incremented to 12
+[2025-03-11 13:43:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:35] [backend] [backend] Counter incremented to 13
+[2025-03-11 13:43:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:35] [backend] [backend] Counter incremented to 14
+[2025-03-11 13:43:35] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:36] [backend] [backend] Counter incremented to 15
+[2025-03-11 13:43:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:36] [backend] [backend] Counter incremented to 16
+[2025-03-11 13:43:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:36] [backend] [backend] Counter incremented to 17
+[2025-03-11 13:43:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:36] [backend] [backend] Counter incremented to 18
+[2025-03-11 13:43:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:36] [backend] [backend] Counter incremented to 19
+[2025-03-11 13:43:36] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:37] [backend] [backend] Counter incremented to 20
+[2025-03-11 13:43:37] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:50] [backend] [backend] Counter incremented to 21
+[2025-03-11 13:43:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:50] [backend] [backend] Counter incremented to 22
+[2025-03-11 13:43:50] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:51] [backend] [backend] Counter incremented to 23
+[2025-03-11 13:43:51] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:51] [backend] [backend] Counter incremented to 24
+[2025-03-11 13:43:51] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:51] [backend] [backend] Counter incremented to 25
+[2025-03-11 13:43:51] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:51] [backend] [backend] Counter incremented to 26
+[2025-03-11 13:43:51] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:52] [backend] [backend] Counter incremented to 27
+[2025-03-11 13:43:52] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:52] [backend] [backend] Counter incremented to 28
+[2025-03-11 13:43:52] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:52] [backend] [backend] Counter incremented to 29
+[2025-03-11 13:43:52] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:52] [backend] [backend] Counter incremented to 30
+[2025-03-11 13:43:52] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:52] [backend] [backend] Counter incremented to 31
+[2025-03-11 13:43:52] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:53] [backend] [backend] Counter incremented to 32
+[2025-03-11 13:43:53] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:53] [backend] [backend] Counter incremented to 33
+[2025-03-11 13:43:53] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:53] [backend] [backend] Counter incremented to 34
+[2025-03-11 13:43:53] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:53] [backend] [backend] Counter incremented to 35
+[2025-03-11 13:43:53] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:53] [backend] [backend] Counter incremented to 36
+[2025-03-11 13:43:53] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:54] [backend] [backend] Counter incremented to 37
+[2025-03-11 13:43:54] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:54] [backend] [backend] Counter incremented to 38
+[2025-03-11 13:43:54] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:54] [backend] [backend] Counter incremented to 39
+[2025-03-11 13:43:54] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:54] [backend] [backend] Counter incremented to 40
+[2025-03-11 13:43:54] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:54] [backend] [backend] Counter incremented to 41
+[2025-03-11 13:43:54] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:55] [backend] [backend] Counter incremented to 42
+[2025-03-11 13:43:55] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:55] [backend] [backend] Counter incremented to 43
+[2025-03-11 13:43:55] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:55] [backend] [backend] Counter incremented to 44
+[2025-03-11 13:43:55] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:55] [backend] [backend] Counter incremented to 45
+[2025-03-11 13:43:55] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:56] [backend] [backend] Counter incremented to 46
+[2025-03-11 13:43:56] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:56] [backend] [backend] Counter incremented to 47
+[2025-03-11 13:43:56] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:56] [backend] [backend] Counter incremented to 48
+[2025-03-11 13:43:56] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:56] [backend] [backend] Counter incremented to 49
+[2025-03-11 13:43:56] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:56] [backend] [backend] Counter incremented to 50
+[2025-03-11 13:43:56] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:57] [backend] [backend] Counter incremented to 51
+[2025-03-11 13:43:57] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:57] [backend] [backend] Counter incremented to 52
+[2025-03-11 13:43:57] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:57] [backend] [backend] Counter incremented to 53
+[2025-03-11 13:43:57] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:57] [backend] [backend] Counter incremented to 54
+[2025-03-11 13:43:57] [backend] [ui] Clicked Increment button
+[2025-03-11 13:43:57] [backend] [backend] Counter incremented to 55
+[2025-03-11 13:43:57] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:12] [backend] [backend] Counter incremented to 56
+[2025-03-11 13:44:12] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:12] [backend] [backend] Counter incremented to 57
+[2025-03-11 13:44:12] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:12] [backend] [backend] Counter incremented to 58
+[2025-03-11 13:44:12] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:12] [backend] [backend] Counter incremented to 59
+[2025-03-11 13:44:12] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:13] [backend] [backend] Counter incremented to 60
+[2025-03-11 13:44:13] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:13] [backend] [backend] Counter incremented to 61
+[2025-03-11 13:44:13] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:15] [backend] [backend] Counter incremented to 62
+[2025-03-11 13:44:15] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:15] [backend] [backend] Counter incremented to 63
+[2025-03-11 13:44:15] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:15] [backend] [backend] Counter incremented to 64
+[2025-03-11 13:44:15] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:15] [backend] [backend] Counter incremented to 65
+[2025-03-11 13:44:15] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:15] [backend] [backend] Counter incremented to 66
+[2025-03-11 13:44:15] [backend] [ui] Clicked Increment button
+[2025-03-11 13:44:16] [backend] [backend] Counter incremented to 67
+[2025-03-11 13:44:16] [backend] [ui] Clicked Increment button
+[2025-03-11 13:45:58] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:45:59] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:45:59] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:45:59] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:46:01] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:46:02] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:46:02] [backend] [backend] Counter incremented to 7
+[2025-03-11 13:46:02] [backend] [backend] Counter incremented to 8
+[2025-03-11 13:46:02] [backend] [backend] Counter incremented to 9
+[2025-03-11 13:46:02] [backend] [backend] Counter incremented to 10
+[2025-03-11 13:46:04] [backend] [backend] Counter incremented to 11
+[2025-03-11 13:46:04] [backend] [backend] Counter incremented to 12
+[2025-03-11 13:46:05] [backend] [backend] Counter incremented to 13
+[2025-03-11 13:47:15] [backend] [backend] Counter incremented to 1
+[2025-03-11 13:47:15] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:20] [backend] [backend] Counter incremented to 2
+[2025-03-11 13:47:20] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:24] [backend] [backend] Counter incremented to 3
+[2025-03-11 13:47:24] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:25] [backend] [backend] Counter incremented to 4
+[2025-03-11 13:47:25] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:26] [backend] [backend] Counter incremented to 5
+[2025-03-11 13:47:26] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:28] [backend] [backend] Counter incremented to 6
+[2025-03-11 13:47:28] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:28] [backend] [backend] Counter incremented to 7
+[2025-03-11 13:47:28] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:28] [backend] [backend] Counter incremented to 8
+[2025-03-11 13:47:28] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:29] [backend] [backend] Counter incremented to 9
+[2025-03-11 13:47:29] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:29] [backend] [backend] Counter incremented to 10
+[2025-03-11 13:47:29] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:29] [backend] [backend] Counter incremented to 11
+[2025-03-11 13:47:29] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:29] [backend] [backend] Counter incremented to 12
+[2025-03-11 13:47:29] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:29] [backend] [backend] Counter incremented to 13
+[2025-03-11 13:47:29] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:31] [backend] [backend] Counter incremented to 14
+[2025-03-11 13:47:31] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:31] [backend] [backend] Counter incremented to 15
+[2025-03-11 13:47:31] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:32] [backend] [backend] Counter incremented to 16
+[2025-03-11 13:47:32] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:32] [backend] [backend] Counter incremented to 17
+[2025-03-11 13:47:32] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:32] [backend] [backend] Counter incremented to 18
+[2025-03-11 13:47:32] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:32] [backend] [backend] Counter incremented to 19
+[2025-03-11 13:47:32] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:32] [backend] [backend] Counter incremented to 20
+[2025-03-11 13:47:32] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:33] [backend] [backend] Counter incremented to 21
+[2025-03-11 13:47:33] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:33] [backend] [backend] Counter incremented to 22
+[2025-03-11 13:47:33] [backend] [ui] Clicked Increment button
+[2025-03-11 13:47:33] [backend] [backend] Counter incremented to 23
+[2025-03-11 13:47:33] [backend] [ui] Clicked Increment button
+[2025-03-11 13:48:00] [backend] [backend] Counter incremented to 24
+[2025-03-11 13:48:00] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:31] [backend] [backend] Counter incremented to 1
+[2025-03-11 14:16:31] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:31] [backend] [backend] Counter incremented to 2
+[2025-03-11 14:16:31] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:32] [backend] [backend] Counter incremented to 3
+[2025-03-11 14:16:32] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:32] [backend] [backend] Counter incremented to 4
+[2025-03-11 14:16:32] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:36] [backend] [backend] Counter incremented to 5
+[2025-03-11 14:16:36] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:36] [backend] [backend] Counter incremented to 6
+[2025-03-11 14:16:36] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:36] [backend] [backend] Counter incremented to 7
+[2025-03-11 14:16:36] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:38] [backend] [backend] Counter incremented to 8
+[2025-03-11 14:16:38] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:39] [backend] [backend] Counter incremented to 9
+[2025-03-11 14:16:39] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:39] [backend] [backend] Counter incremented to 10
+[2025-03-11 14:16:39] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:39] [backend] [backend] Counter incremented to 11
+[2025-03-11 14:16:39] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:39] [backend] [backend] Counter incremented to 12
+[2025-03-11 14:16:39] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:39] [backend] [backend] Counter incremented to 13
+[2025-03-11 14:16:39] [backend] [ui] Clicked Increment button
+[2025-03-11 14:16:40] [backend] [backend] Counter incremented to 14
+[2025-03-11 14:16:40] [backend] [ui] Clicked Increment button
+[2025-03-14 08:44:30] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:44:40] [ui] clicked increment button
+[2025-03-14 08:44:40] [backend] Counter updated to 1
+[2025-03-14 08:44:40] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:41] [ui] clicked increment button
+[2025-03-14 08:44:41] [backend] Counter updated to 2
+[2025-03-14 08:44:41] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:43] [ui] clicked increment button
+[2025-03-14 08:44:43] [backend] Counter updated to 3
+[2025-03-14 08:44:43] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:47] [ui] clicked increment button
+[2025-03-14 08:44:47] [backend] Counter updated to 4
+[2025-03-14 08:44:47] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:48] [ui] clicked increment button
+[2025-03-14 08:44:48] [backend] Counter updated to 5
+[2025-03-14 08:44:48] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:49] [ui] clicked increment button
+[2025-03-14 08:44:49] [backend] Counter updated to 6
+[2025-03-14 08:44:49] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:49] [ui] clicked increment button
+[2025-03-14 08:44:49] [backend] Counter updated to 7
+[2025-03-14 08:44:49] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:50] [ui] clicked increment button
+[2025-03-14 08:44:50] [backend] Counter updated to 8
+[2025-03-14 08:44:50] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:51] [ui] clicked increment button
+[2025-03-14 08:44:51] [backend] Counter updated to 9
+[2025-03-14 08:44:51] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:52] [ui] clicked increment button
+[2025-03-14 08:44:52] [backend] Counter updated to 10
+[2025-03-14 08:44:52] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:52] [ui] clicked increment button
+[2025-03-14 08:44:52] [backend] Counter updated to 11
+[2025-03-14 08:44:52] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:53] [ui] clicked increment button
+[2025-03-14 08:44:53] [backend] Counter updated to 12
+[2025-03-14 08:44:53] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:53] [ui] clicked increment button
+[2025-03-14 08:44:53] [backend] Counter updated to 13
+[2025-03-14 08:44:53] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:53] [ui] clicked increment button
+[2025-03-14 08:44:53] [backend] Counter updated to 14
+[2025-03-14 08:44:53] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:53] [ui] clicked increment button
+[2025-03-14 08:44:53] [backend] Counter updated to 15
+[2025-03-14 08:44:53] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:54] [ui] clicked increment button
+[2025-03-14 08:44:54] [backend] Counter updated to 16
+[2025-03-14 08:44:54] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:54] [ui] clicked increment button
+[2025-03-14 08:44:54] [backend] Counter updated to 17
+[2025-03-14 08:44:54] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:54] [ui] clicked increment button
+[2025-03-14 08:44:54] [backend] Counter updated to 18
+[2025-03-14 08:44:54] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:54] [ui] clicked increment button
+[2025-03-14 08:44:54] [backend] Counter updated to 19
+[2025-03-14 08:44:54] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:54] [ui] clicked increment button
+[2025-03-14 08:44:54] [backend] Counter updated to 20
+[2025-03-14 08:44:54] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:55] [ui] clicked increment button
+[2025-03-14 08:44:55] [backend] Counter updated to 21
+[2025-03-14 08:44:55] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:55] [ui] clicked increment button
+[2025-03-14 08:44:55] [backend] Counter updated to 22
+[2025-03-14 08:44:55] [backend] processed message: Clicked Increment button
+[2025-03-14 08:44:55] [ui] clicked increment button
+[2025-03-14 08:44:55] [backend] Counter updated to 23
+[2025-03-14 08:44:55] [backend] processed message: Clicked Increment button
+[2025-03-14 08:45:05] [ui] clicked reset button
+[2025-03-14 08:45:05] [backend] Counter updated to 0
+[2025-03-14 08:45:05] [backend] processed message: Clicked Reset button
+[2025-03-14 08:46:35] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:46:35] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:46:45] [ui] clicked increment button
+[2025-03-14 08:46:45] [backend] Counter updated to 1
+[2025-03-14 08:46:45] [backend] processed message: Clicked Increment button
+[2025-03-14 08:46:53] [ui] clicked increment button
+[2025-03-14 08:46:53] [backend] Counter updated to 2
+[2025-03-14 08:46:53] [backend] processed message: Clicked Increment button
+[2025-03-14 08:46:56] [ui] clicked increment button
+[2025-03-14 08:46:56] [backend] Counter updated to 3
+[2025-03-14 08:46:56] [backend] processed message: Clicked Increment button
+[2025-03-14 08:46:57] [ui] clicked increment button
+[2025-03-14 08:46:57] [backend] Counter updated to 4
+[2025-03-14 08:46:57] [backend] processed message: Clicked Increment button
+[2025-03-14 08:46:58] [ui] clicked increment button
+[2025-03-14 08:46:58] [backend] Counter updated to 5
+[2025-03-14 08:46:58] [backend] processed message: Clicked Increment button
+[2025-03-14 08:47:33] [ui] clicked increment button
+[2025-03-14 08:47:33] [backend] Counter updated to 6
+[2025-03-14 08:47:33] [backend] processed message: Clicked Increment button
+[2025-03-14 08:47:45] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:47:45] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:47:50] [ui] clicked increment button
+[2025-03-14 08:47:50] [backend] Counter updated to 1
+[2025-03-14 08:47:50] [backend] processed message: Clicked Increment button
+[2025-03-14 08:47:52] [ui] clicked increment button
+[2025-03-14 08:47:52] [backend] Counter updated to 2
+[2025-03-14 08:47:52] [backend] processed message: Clicked Increment button
+[2025-03-14 08:52:45] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:52:50] [ui] clicked increment button
+[2025-03-14 08:52:50] [backend] Counter updated to 1
+[2025-03-14 08:52:50] [backend] processed message: Clicked Increment button
+[2025-03-14 08:52:51] [ui] clicked increment button
+[2025-03-14 08:52:51] [backend] Counter updated to 2
+[2025-03-14 08:52:51] [backend] processed message: Clicked Increment button
+[2025-03-14 08:53:03] [ui] clicked increment button
+[2025-03-14 08:53:03] [backend] Counter updated to 3
+[2025-03-14 08:53:03] [backend] processed message: Clicked Increment button
+[2025-03-14 08:53:03] [ui] clicked increment button
+[2025-03-14 08:53:03] [backend] Counter updated to 4
+[2025-03-14 08:53:03] [backend] processed message: Clicked Increment button
+[2025-03-14 08:53:04] [ui] clicked increment button
+[2025-03-14 08:53:04] [backend] Counter updated to 5
+[2025-03-14 08:53:04] [backend] processed message: Clicked Increment button
+[2025-03-14 08:54:53] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 08:55:05] [ui] clicked increment button
+[2025-03-14 08:55:05] [backend] Counter updated to 1
+[2025-03-14 08:55:05] [backend] processed message: Clicked Increment button
+[2025-03-14 08:55:09] [ui] clicked increment button
+[2025-03-14 08:55:09] [backend] Counter updated to 2
+[2025-03-14 08:55:09] [backend] processed message: Clicked Increment button
+[2025-03-14 09:05:01] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:05:10] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 09:05:13] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 09:05:15] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 09:05:16] [ui] clicked reset button
+[2025-03-14 09:05:16] [external] Dispatched: ResetCounter
+[2025-03-14 09:05:16] [external] Dispatched: Custom("Clicked Reset button")
+[2025-03-14 09:05:20] [ui] clicked increment button
+[2025-03-14 09:05:20] [external] Dispatched: IncrementCounter
+[2025-03-14 09:05:20] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:05:28] [ui] clicked increment button
+[2025-03-14 09:05:28] [external] Dispatched: IncrementCounter
+[2025-03-14 09:05:28] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:05:31] [ui] clicked reset button
+[2025-03-14 09:05:31] [external] Dispatched: ResetCounter
+[2025-03-14 09:05:31] [external] Dispatched: Custom("Clicked Reset button")
+[2025-03-14 09:07:12] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:07:21] [ui] clicked increment button
+[2025-03-14 09:07:21] [external] Dispatched: IncrementCounter
+[2025-03-14 09:07:21] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:07:26] [ui] clicked reset button
+[2025-03-14 09:07:26] [external] Dispatched: ResetCounter
+[2025-03-14 09:07:26] [external] Dispatched: Custom("Clicked Reset button")
+[2025-03-14 09:07:27] [ui] clicked increment button
+[2025-03-14 09:07:27] [external] Dispatched: IncrementCounter
+[2025-03-14 09:07:27] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:07:28] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 09:20:35] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:20:35] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:20:48] [ui] clicked increment button
+[2025-03-14 09:20:48] [external] Dispatched: IncrementCounter
+[2025-03-14 09:20:48] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:20:48] [backend] Counter updated to 1
+[2025-03-14 09:20:48] [backend] processed message: Clicked Increment button
+[2025-03-14 09:21:11] [ui] clicked increment button
+[2025-03-14 09:21:11] [external] Dispatched: IncrementCounter
+[2025-03-14 09:21:11] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:21:11] [backend] Counter updated to 2
+[2025-03-14 09:21:11] [backend] processed message: Clicked Increment button
+[2025-03-14 09:21:14] [ui] clicked increment button
+[2025-03-14 09:21:14] [external] Dispatched: IncrementCounter
+[2025-03-14 09:21:14] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:21:14] [backend] Counter updated to 3
+[2025-03-14 09:21:14] [backend] processed message: Clicked Increment button
+[2025-03-14 09:21:21] [ui] clicked increment button
+[2025-03-14 09:21:21] [external] Dispatched: IncrementCounter
+[2025-03-14 09:21:21] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:21:21] [backend] Counter updated to 4
+[2025-03-14 09:21:21] [backend] processed message: Clicked Increment button
+[2025-03-14 09:21:26] [ui] clicked increment button
+[2025-03-14 09:21:26] [external] Dispatched: IncrementCounter
+[2025-03-14 09:21:26] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:21:26] [backend] Counter updated to 5
+[2025-03-14 09:21:26] [backend] processed message: Clicked Increment button
+[2025-03-14 09:21:27] [ui] clicked increment button
+[2025-03-14 09:21:27] [external] Dispatched: IncrementCounter
+[2025-03-14 09:21:27] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:21:27] [backend] Counter updated to 6
+[2025-03-14 09:21:27] [backend] processed message: Clicked Increment button
+[2025-03-14 09:23:52] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:23:52] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:24:05] [ui] clicked increment button
+[2025-03-14 09:24:05] [external] Dispatched: IncrementCounter
+[2025-03-14 09:24:05] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:24:05] [backend] Counter updated to 1
+[2025-03-14 09:24:05] [backend] processed message: Clicked Increment button
+[2025-03-14 09:24:08] [ui] clicked increment button
+[2025-03-14 09:24:08] [external] Dispatched: IncrementCounter
+[2025-03-14 09:24:08] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:24:08] [backend] Counter updated to 2
+[2025-03-14 09:24:08] [backend] processed message: Clicked Increment button
+[2025-03-14 09:24:19] [ui] clicked increment button
+[2025-03-14 09:24:19] [external] Dispatched: IncrementCounter
+[2025-03-14 09:24:19] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:24:19] [backend] Counter updated to 3
+[2025-03-14 09:24:19] [backend] processed message: Clicked Increment button
+[2025-03-14 09:24:34] [ui] clicked increment button
+[2025-03-14 09:24:34] [external] Dispatched: IncrementCounter
+[2025-03-14 09:24:34] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:24:34] [backend] Counter updated to 4
+[2025-03-14 09:24:34] [backend] processed message: Clicked Increment button
+[2025-03-14 09:31:47] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:31:47] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:32:00] [ui] clicked increment button
+[2025-03-14 09:32:00] [external] Dispatched: IncrementCounter
+[2025-03-14 09:32:00] [backend] Counter updated to 1
+[2025-03-14 09:32:00] [backend] processed message: Clicked Increment button
+[2025-03-14 09:32:00] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:32:25] [ui] clicked increment button
+[2025-03-14 09:32:25] [external] Dispatched: IncrementCounter
+[2025-03-14 09:32:25] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:32:25] [backend] Counter updated to 2
+[2025-03-14 09:32:25] [backend] processed message: Clicked Increment button
+[2025-03-14 09:33:46] [ui] clicked increment button
+[2025-03-14 09:33:46] [external] Dispatched: IncrementCounter
+[2025-03-14 09:33:46] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:33:46] [backend] Counter updated to 3
+[2025-03-14 09:33:46] [backend] processed message: Clicked Increment button
+[2025-03-14 09:33:50] [ui] clicked increment button
+[2025-03-14 09:33:50] [external] Dispatched: IncrementCounter
+[2025-03-14 09:33:50] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:33:50] [backend] Counter updated to 4
+[2025-03-14 09:33:50] [backend] processed message: Clicked Increment button
+[2025-03-14 09:33:51] [ui] clicked increment button
+[2025-03-14 09:33:51] [external] Dispatched: IncrementCounter
+[2025-03-14 09:33:51] [backend] Counter updated to 5
+[2025-03-14 09:33:51] [backend] processed message: Clicked Increment button
+[2025-03-14 09:33:51] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:33:52] [ui] clicked increment button
+[2025-03-14 09:33:52] [external] Dispatched: IncrementCounter
+[2025-03-14 09:33:52] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:33:52] [backend] Counter updated to 6
+[2025-03-14 09:33:52] [backend] processed message: Clicked Increment button
+[2025-03-14 09:33:55] [ui] clicked increment button
+[2025-03-14 09:33:55] [external] Dispatched: IncrementCounter
+[2025-03-14 09:33:55] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:33:55] [backend] Counter updated to 7
+[2025-03-14 09:33:55] [backend] processed message: Clicked Increment button
+[2025-03-14 09:33:56] [ui] clicked increment button
+[2025-03-14 09:33:56] [external] Dispatched: IncrementCounter
+[2025-03-14 09:33:56] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:33:56] [backend] Counter updated to 8
+[2025-03-14 09:33:56] [backend] processed message: Clicked Increment button
+[2025-03-14 09:34:28] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:34:28] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:34:31] [ui] clicked increment button
+[2025-03-14 09:34:31] [external] Dispatched: IncrementCounter
+[2025-03-14 09:34:31] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:34:31] [backend] Counter updated to 1
+[2025-03-14 09:34:31] [backend] processed message: Clicked Increment button
+[2025-03-14 09:34:42] [ui] clicked increment button
+[2025-03-14 09:34:42] [external] Dispatched: IncrementCounter
+[2025-03-14 09:34:42] [backend] Counter updated to 2
+[2025-03-14 09:34:42] [backend] processed message: Clicked Increment button
+[2025-03-14 09:34:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:09] [ui] clicked increment button
+[2025-03-14 09:35:09] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:09] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:09] [backend] Counter updated to 3
+[2025-03-14 09:35:09] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:16] [ui] clicked increment button
+[2025-03-14 09:35:16] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:16] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:16] [backend] Counter updated to 4
+[2025-03-14 09:35:16] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:19] [ui] clicked increment button
+[2025-03-14 09:35:19] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:19] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:19] [backend] Counter updated to 5
+[2025-03-14 09:35:19] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:22] [ui] clicked increment button
+[2025-03-14 09:35:22] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:22] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:22] [backend] Counter updated to 6
+[2025-03-14 09:35:22] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:23] [ui] clicked increment button
+[2025-03-14 09:35:23] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:23] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:23] [backend] Counter updated to 7
+[2025-03-14 09:35:23] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:48] [ui] clicked increment button
+[2025-03-14 09:35:48] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:48] [backend] Counter updated to 8
+[2025-03-14 09:35:48] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:48] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:50] [ui] clicked increment button
+[2025-03-14 09:35:50] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:50] [backend] Counter updated to 9
+[2025-03-14 09:35:50] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:50] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:51] [ui] clicked increment button
+[2025-03-14 09:35:51] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:51] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:51] [backend] Counter updated to 10
+[2025-03-14 09:35:51] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:54] [ui] clicked increment button
+[2025-03-14 09:35:54] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:54] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:54] [backend] Counter updated to 11
+[2025-03-14 09:35:54] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:55] [ui] clicked increment button
+[2025-03-14 09:35:55] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:55] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:55] [backend] Counter updated to 12
+[2025-03-14 09:35:55] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:55] [ui] clicked increment button
+[2025-03-14 09:35:55] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:55] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:55] [backend] Counter updated to 13
+[2025-03-14 09:35:55] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:56] [ui] clicked increment button
+[2025-03-14 09:35:56] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:56] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:56] [backend] Counter updated to 14
+[2025-03-14 09:35:56] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:56] [ui] clicked increment button
+[2025-03-14 09:35:56] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:56] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:56] [backend] Counter updated to 15
+[2025-03-14 09:35:56] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:57] [ui] clicked increment button
+[2025-03-14 09:35:57] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:57] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:57] [backend] Counter updated to 16
+[2025-03-14 09:35:57] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:58] [ui] clicked increment button
+[2025-03-14 09:35:58] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:58] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:58] [backend] Counter updated to 17
+[2025-03-14 09:35:58] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:58] [ui] clicked increment button
+[2025-03-14 09:35:58] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:58] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:58] [backend] Counter updated to 18
+[2025-03-14 09:35:58] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:58] [ui] clicked increment button
+[2025-03-14 09:35:58] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:58] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:58] [backend] Counter updated to 19
+[2025-03-14 09:35:58] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:59] [ui] clicked increment button
+[2025-03-14 09:35:59] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:59] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:59] [backend] Counter updated to 20
+[2025-03-14 09:35:59] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:59] [ui] clicked increment button
+[2025-03-14 09:35:59] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:59] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:59] [backend] Counter updated to 21
+[2025-03-14 09:35:59] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:59] [ui] clicked increment button
+[2025-03-14 09:35:59] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:59] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:59] [backend] Counter updated to 22
+[2025-03-14 09:35:59] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:59] [ui] clicked increment button
+[2025-03-14 09:35:59] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:59] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:59] [backend] Counter updated to 23
+[2025-03-14 09:35:59] [backend] processed message: Clicked Increment button
+[2025-03-14 09:35:59] [ui] clicked increment button
+[2025-03-14 09:35:59] [external] Dispatched: IncrementCounter
+[2025-03-14 09:35:59] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:35:59] [backend] Counter updated to 24
+[2025-03-14 09:35:59] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:00] [ui] clicked increment button
+[2025-03-14 09:36:00] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:00] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:00] [backend] Counter updated to 25
+[2025-03-14 09:36:00] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:00] [ui] clicked increment button
+[2025-03-14 09:36:00] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:00] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:00] [backend] Counter updated to 26
+[2025-03-14 09:36:00] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:00] [ui] clicked increment button
+[2025-03-14 09:36:00] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:00] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:00] [backend] Counter updated to 27
+[2025-03-14 09:36:00] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:00] [ui] clicked increment button
+[2025-03-14 09:36:00] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:00] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:00] [backend] Counter updated to 28
+[2025-03-14 09:36:00] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:01] [ui] clicked increment button
+[2025-03-14 09:36:01] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:01] [backend] Counter updated to 29
+[2025-03-14 09:36:01] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:01] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:02] [ui] clicked increment button
+[2025-03-14 09:36:02] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:02] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:02] [backend] Counter updated to 30
+[2025-03-14 09:36:02] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:11] [ui] clicked increment button
+[2025-03-14 09:36:11] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:11] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:11] [backend] Counter updated to 31
+[2025-03-14 09:36:11] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:17] [ui] clicked increment button
+[2025-03-14 09:36:17] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:17] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:17] [backend] Counter updated to 32
+[2025-03-14 09:36:17] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:21] [ui] clicked increment button
+[2025-03-14 09:36:21] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:21] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:21] [backend] Counter updated to 33
+[2025-03-14 09:36:21] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:29] [ui] clicked increment button
+[2025-03-14 09:36:29] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:29] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:29] [backend] Counter updated to 34
+[2025-03-14 09:36:29] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:32] [ui] clicked increment button
+[2025-03-14 09:36:32] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:32] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:32] [backend] Counter updated to 35
+[2025-03-14 09:36:32] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:40] [ui] clicked increment button
+[2025-03-14 09:36:40] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:40] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:40] [backend] Counter updated to 36
+[2025-03-14 09:36:40] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:45] [ui] clicked increment button
+[2025-03-14 09:36:45] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:45] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:45] [backend] Counter updated to 37
+[2025-03-14 09:36:45] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:47] [ui] clicked increment button
+[2025-03-14 09:36:47] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:47] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:47] [backend] Counter updated to 38
+[2025-03-14 09:36:47] [backend] processed message: Clicked Increment button
+[2025-03-14 09:36:48] [ui] clicked increment button
+[2025-03-14 09:36:48] [external] Dispatched: IncrementCounter
+[2025-03-14 09:36:48] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:36:48] [backend] Counter updated to 39
+[2025-03-14 09:36:48] [backend] processed message: Clicked Increment button
+[2025-03-14 09:42:32] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:42:32] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:42:53] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:42:53] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:43:58] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 09:43:58] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 09:44:16] [ui] clicked increment button
+[2025-03-14 09:44:16] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:16] [backend] Counter updated to 1
+[2025-03-14 09:44:16] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:16] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:25] [ui] clicked increment button
+[2025-03-14 09:44:25] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:25] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:25] [backend] Counter updated to 2
+[2025-03-14 09:44:25] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:26] [ui] clicked increment button
+[2025-03-14 09:44:26] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:26] [backend] Counter updated to 3
+[2025-03-14 09:44:26] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:26] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:27] [ui] clicked increment button
+[2025-03-14 09:44:27] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:27] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:27] [backend] Counter updated to 4
+[2025-03-14 09:44:27] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:29] [ui] clicked increment button
+[2025-03-14 09:44:29] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:29] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:29] [backend] Counter updated to 5
+[2025-03-14 09:44:29] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:34] [ui] clicked increment button
+[2025-03-14 09:44:34] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:34] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:34] [backend] Counter updated to 6
+[2025-03-14 09:44:34] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:36] [ui] clicked increment button
+[2025-03-14 09:44:36] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:36] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:36] [backend] Counter updated to 7
+[2025-03-14 09:44:36] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:38] [ui] clicked increment button
+[2025-03-14 09:44:38] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:38] [backend] Counter updated to 8
+[2025-03-14 09:44:38] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:38] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:42] [ui] clicked increment button
+[2025-03-14 09:44:42] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:42] [backend] Counter updated to 9
+[2025-03-14 09:44:42] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:44] [ui] clicked increment button
+[2025-03-14 09:44:44] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:44] [backend] Counter updated to 10
+[2025-03-14 09:44:44] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:44] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:49] [ui] clicked increment button
+[2025-03-14 09:44:49] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:49] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:49] [backend] Counter updated to 11
+[2025-03-14 09:44:49] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:52] [ui] clicked increment button
+[2025-03-14 09:44:52] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:52] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:52] [backend] Counter updated to 12
+[2025-03-14 09:44:52] [backend] processed message: Clicked Increment button
+[2025-03-14 09:44:55] [ui] clicked reset button
+[2025-03-14 09:44:55] [external] Dispatched: ResetCounter
+[2025-03-14 09:44:55] [external] Dispatched: Custom("Clicked Reset button")
+[2025-03-14 09:44:55] [backend] Counter updated to 0
+[2025-03-14 09:44:55] [backend] processed message: Clicked Reset button
+[2025-03-14 09:44:58] [ui] clicked increment button
+[2025-03-14 09:44:58] [external] Dispatched: IncrementCounter
+[2025-03-14 09:44:58] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:44:58] [backend] Counter updated to 1
+[2025-03-14 09:44:58] [backend] processed message: Clicked Increment button
+[2025-03-14 09:45:10] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 09:45:10] [backend] processed message: Triggered from runtime UI button
+[2025-03-14 09:45:18] [ui] clicked increment button
+[2025-03-14 09:45:18] [external] Dispatched: IncrementCounter
+[2025-03-14 09:45:18] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 09:45:18] [backend] Counter updated to 2
+[2025-03-14 09:45:18] [backend] processed message: Clicked Increment button
+[2025-03-14 10:01:26] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 10:01:26] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 10:02:29] [external] Dispatched: Custom("Hello from Dispatcher!")
+[2025-03-14 10:02:29] [backend] processed message: Hello from Dispatcher!
+[2025-03-14 10:02:37] [ui] clicked increment button
+[2025-03-14 10:02:37] [external] Dispatched: IncrementCounter
+[2025-03-14 10:02:37] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:02:37] [backend] Counter updated to 1
+[2025-03-14 10:02:37] [backend] processed message: Clicked Increment button
+[2025-03-14 10:02:49] [ui] clicked increment button
+[2025-03-14 10:02:49] [external] Dispatched: IncrementCounter
+[2025-03-14 10:02:49] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:02:49] [backend] Counter updated to 2
+[2025-03-14 10:02:49] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:15] [ui] clicked increment button
+[2025-03-14 10:03:15] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:15] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:15] [backend] Counter updated to 3
+[2025-03-14 10:03:15] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:17] [ui] clicked increment button
+[2025-03-14 10:03:17] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:17] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:17] [backend] Counter updated to 4
+[2025-03-14 10:03:17] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:18] [ui] clicked increment button
+[2025-03-14 10:03:18] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:18] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:18] [backend] Counter updated to 5
+[2025-03-14 10:03:18] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:20] [ui] clicked increment button
+[2025-03-14 10:03:20] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:20] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:20] [backend] Counter updated to 6
+[2025-03-14 10:03:20] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:21] [ui] clicked increment button
+[2025-03-14 10:03:21] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:21] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:21] [backend] Counter updated to 7
+[2025-03-14 10:03:21] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:22] [ui] clicked increment button
+[2025-03-14 10:03:22] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:22] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:22] [backend] Counter updated to 8
+[2025-03-14 10:03:22] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:22] [ui] clicked increment button
+[2025-03-14 10:03:22] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:22] [backend] Counter updated to 9
+[2025-03-14 10:03:22] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:22] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:24] [ui] clicked increment button
+[2025-03-14 10:03:24] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:24] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:24] [backend] Counter updated to 10
+[2025-03-14 10:03:24] [backend] processed message: Clicked Increment button
+[2025-03-14 10:03:27] [ui] clicked increment button
+[2025-03-14 10:03:27] [external] Dispatched: IncrementCounter
+[2025-03-14 10:03:27] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 10:03:27] [backend] Counter updated to 11
+[2025-03-14 10:03:27] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:17] [ui] clicked increment button
+[2025-03-14 11:29:17] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:17] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:17] [backend] Counter updated to 12
+[2025-03-14 11:29:17] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:17] [ui] clicked increment button
+[2025-03-14 11:29:17] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:17] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:17] [backend] Counter updated to 13
+[2025-03-14 11:29:17] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:18] [ui] clicked increment button
+[2025-03-14 11:29:18] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:18] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:18] [backend] Counter updated to 14
+[2025-03-14 11:29:18] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:18] [ui] clicked increment button
+[2025-03-14 11:29:18] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:18] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:18] [backend] Counter updated to 15
+[2025-03-14 11:29:18] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:27] [ui] clicked increment button
+[2025-03-14 11:29:27] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:27] [backend] Counter updated to 16
+[2025-03-14 11:29:27] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:27] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:28] [ui] clicked increment button
+[2025-03-14 11:29:28] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:28] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:28] [backend] Counter updated to 17
+[2025-03-14 11:29:28] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:28] [ui] clicked increment button
+[2025-03-14 11:29:28] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:28] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:28] [backend] Counter updated to 18
+[2025-03-14 11:29:28] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:29] [ui] clicked increment button
+[2025-03-14 11:29:29] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:29] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:29] [backend] Counter updated to 19
+[2025-03-14 11:29:29] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:30] [ui] clicked increment button
+[2025-03-14 11:29:30] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:30] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:30] [backend] Counter updated to 20
+[2025-03-14 11:29:30] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:30] [ui] clicked increment button
+[2025-03-14 11:29:30] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:30] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:30] [backend] Counter updated to 21
+[2025-03-14 11:29:30] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:31] [ui] clicked increment button
+[2025-03-14 11:29:31] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:31] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:31] [backend] Counter updated to 22
+[2025-03-14 11:29:31] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:31] [ui] clicked increment button
+[2025-03-14 11:29:31] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:31] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:31] [backend] Counter updated to 23
+[2025-03-14 11:29:31] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:31] [ui] clicked increment button
+[2025-03-14 11:29:31] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:31] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:31] [backend] Counter updated to 24
+[2025-03-14 11:29:31] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:32] [ui] clicked increment button
+[2025-03-14 11:29:32] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:32] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:32] [backend] Counter updated to 25
+[2025-03-14 11:29:32] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:32] [ui] clicked increment button
+[2025-03-14 11:29:32] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:32] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:32] [backend] Counter updated to 26
+[2025-03-14 11:29:32] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:33] [ui] clicked increment button
+[2025-03-14 11:29:33] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:33] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:33] [backend] Counter updated to 27
+[2025-03-14 11:29:33] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:33] [ui] clicked increment button
+[2025-03-14 11:29:33] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:33] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:33] [backend] Counter updated to 28
+[2025-03-14 11:29:33] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:34] [ui] clicked increment button
+[2025-03-14 11:29:34] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:34] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:34] [backend] Counter updated to 29
+[2025-03-14 11:29:34] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:34] [ui] clicked increment button
+[2025-03-14 11:29:34] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:34] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:34] [backend] Counter updated to 30
+[2025-03-14 11:29:34] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:34] [ui] clicked increment button
+[2025-03-14 11:29:34] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:34] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:34] [backend] Counter updated to 31
+[2025-03-14 11:29:34] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:35] [ui] clicked increment button
+[2025-03-14 11:29:35] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:35] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:35] [backend] Counter updated to 32
+[2025-03-14 11:29:35] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:35] [ui] clicked increment button
+[2025-03-14 11:29:35] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:35] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:35] [backend] Counter updated to 33
+[2025-03-14 11:29:35] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:36] [ui] clicked increment button
+[2025-03-14 11:29:36] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:36] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:36] [backend] Counter updated to 34
+[2025-03-14 11:29:36] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:36] [ui] clicked increment button
+[2025-03-14 11:29:36] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:36] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:36] [backend] Counter updated to 35
+[2025-03-14 11:29:36] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:37] [ui] clicked increment button
+[2025-03-14 11:29:37] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:37] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:37] [backend] Counter updated to 36
+[2025-03-14 11:29:37] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:37] [ui] clicked increment button
+[2025-03-14 11:29:37] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:37] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:37] [backend] Counter updated to 37
+[2025-03-14 11:29:37] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:37] [ui] clicked increment button
+[2025-03-14 11:29:37] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:37] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:37] [backend] Counter updated to 38
+[2025-03-14 11:29:37] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:37] [ui] clicked increment button
+[2025-03-14 11:29:37] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:37] [backend] Counter updated to 39
+[2025-03-14 11:29:37] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:37] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:38] [ui] clicked increment button
+[2025-03-14 11:29:38] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:38] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:38] [backend] Counter updated to 40
+[2025-03-14 11:29:38] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:38] [ui] clicked increment button
+[2025-03-14 11:29:38] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:38] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:38] [backend] Counter updated to 41
+[2025-03-14 11:29:38] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:38] [ui] clicked increment button
+[2025-03-14 11:29:38] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:38] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:38] [backend] Counter updated to 42
+[2025-03-14 11:29:38] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:38] [ui] clicked increment button
+[2025-03-14 11:29:38] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:38] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:38] [backend] Counter updated to 43
+[2025-03-14 11:29:38] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:38] [ui] clicked increment button
+[2025-03-14 11:29:38] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:38] [backend] Counter updated to 44
+[2025-03-14 11:29:38] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:38] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:39] [ui] clicked increment button
+[2025-03-14 11:29:39] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:39] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:39] [backend] Counter updated to 45
+[2025-03-14 11:29:39] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:39] [ui] clicked increment button
+[2025-03-14 11:29:39] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:39] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:39] [backend] Counter updated to 46
+[2025-03-14 11:29:39] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:39] [ui] clicked increment button
+[2025-03-14 11:29:39] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:39] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:39] [backend] Counter updated to 47
+[2025-03-14 11:29:39] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:39] [ui] clicked increment button
+[2025-03-14 11:29:39] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:39] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:39] [backend] Counter updated to 48
+[2025-03-14 11:29:39] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:39] [ui] clicked increment button
+[2025-03-14 11:29:39] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:39] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:39] [backend] Counter updated to 49
+[2025-03-14 11:29:39] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:40] [ui] clicked increment button
+[2025-03-14 11:29:40] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:40] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:40] [backend] Counter updated to 50
+[2025-03-14 11:29:40] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:40] [ui] clicked increment button
+[2025-03-14 11:29:40] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:40] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:40] [backend] Counter updated to 51
+[2025-03-14 11:29:40] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:40] [ui] clicked increment button
+[2025-03-14 11:29:40] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:40] [backend] Counter updated to 52
+[2025-03-14 11:29:40] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:40] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:40] [ui] clicked increment button
+[2025-03-14 11:29:40] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:40] [backend] Counter updated to 53
+[2025-03-14 11:29:40] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:40] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:41] [ui] clicked increment button
+[2025-03-14 11:29:41] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:41] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:41] [backend] Counter updated to 54
+[2025-03-14 11:29:41] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:41] [ui] clicked increment button
+[2025-03-14 11:29:41] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:41] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:41] [backend] Counter updated to 55
+[2025-03-14 11:29:41] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:41] [ui] clicked increment button
+[2025-03-14 11:29:41] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:41] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:41] [backend] Counter updated to 56
+[2025-03-14 11:29:41] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:41] [ui] clicked increment button
+[2025-03-14 11:29:41] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:41] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:41] [backend] Counter updated to 57
+[2025-03-14 11:29:41] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:41] [ui] clicked increment button
+[2025-03-14 11:29:41] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:41] [backend] Counter updated to 58
+[2025-03-14 11:29:41] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:41] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:42] [ui] clicked increment button
+[2025-03-14 11:29:42] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:42] [backend] Counter updated to 59
+[2025-03-14 11:29:42] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:42] [ui] clicked increment button
+[2025-03-14 11:29:42] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:42] [backend] Counter updated to 60
+[2025-03-14 11:29:42] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:42] [ui] clicked increment button
+[2025-03-14 11:29:42] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:42] [backend] Counter updated to 61
+[2025-03-14 11:29:42] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:42] [ui] clicked increment button
+[2025-03-14 11:29:42] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:42] [backend] Counter updated to 62
+[2025-03-14 11:29:42] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:43] [ui] clicked increment button
+[2025-03-14 11:29:43] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:43] [backend] Counter updated to 63
+[2025-03-14 11:29:43] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:43] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:44] [ui] clicked increment button
+[2025-03-14 11:29:44] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:44] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:44] [backend] Counter updated to 64
+[2025-03-14 11:29:44] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:44] [ui] clicked increment button
+[2025-03-14 11:29:44] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:44] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:44] [backend] Counter updated to 65
+[2025-03-14 11:29:44] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:44] [ui] clicked increment button
+[2025-03-14 11:29:44] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:44] [backend] Counter updated to 66
+[2025-03-14 11:29:44] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:44] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:45] [ui] clicked increment button
+[2025-03-14 11:29:45] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:45] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:45] [backend] Counter updated to 67
+[2025-03-14 11:29:45] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:45] [ui] clicked increment button
+[2025-03-14 11:29:45] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:45] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:45] [backend] Counter updated to 68
+[2025-03-14 11:29:45] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:46] [ui] clicked increment button
+[2025-03-14 11:29:46] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:46] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:46] [backend] Counter updated to 69
+[2025-03-14 11:29:46] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:46] [ui] clicked increment button
+[2025-03-14 11:29:46] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:46] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:46] [backend] Counter updated to 70
+[2025-03-14 11:29:46] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:46] [ui] clicked increment button
+[2025-03-14 11:29:46] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:46] [backend] Counter updated to 71
+[2025-03-14 11:29:46] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:46] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:46] [ui] clicked increment button
+[2025-03-14 11:29:46] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:46] [backend] Counter updated to 72
+[2025-03-14 11:29:46] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:46] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:47] [ui] clicked increment button
+[2025-03-14 11:29:47] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:47] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:47] [backend] Counter updated to 73
+[2025-03-14 11:29:47] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:47] [ui] clicked increment button
+[2025-03-14 11:29:47] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:47] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:47] [backend] Counter updated to 74
+[2025-03-14 11:29:47] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:47] [ui] clicked increment button
+[2025-03-14 11:29:47] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:47] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:29:47] [backend] Counter updated to 75
+[2025-03-14 11:29:47] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:47] [ui] clicked increment button
+[2025-03-14 11:29:47] [external] Dispatched: IncrementCounter
+[2025-03-14 11:29:47] [backend] Counter updated to 76
+[2025-03-14 11:29:47] [backend] processed message: Clicked Increment button
+[2025-03-14 11:29:47] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:31] [ui] clicked increment button
+[2025-03-14 11:30:31] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:31] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:31] [backend] Counter updated to 77
+[2025-03-14 11:30:31] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:32] [ui] clicked increment button
+[2025-03-14 11:30:32] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:32] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:32] [backend] Counter updated to 78
+[2025-03-14 11:30:32] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:32] [ui] clicked increment button
+[2025-03-14 11:30:32] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:32] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:32] [backend] Counter updated to 79
+[2025-03-14 11:30:32] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:33] [ui] clicked reset button
+[2025-03-14 11:30:33] [external] Dispatched: ResetCounter
+[2025-03-14 11:30:33] [external] Dispatched: Custom("Clicked Reset button")
+[2025-03-14 11:30:33] [backend] Counter updated to 0
+[2025-03-14 11:30:33] [backend] processed message: Clicked Reset button
+[2025-03-14 11:30:34] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 11:30:34] [backend] processed message: Triggered from runtime UI button
+[2025-03-14 11:30:35] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 11:30:35] [backend] processed message: Triggered from runtime UI button
+[2025-03-14 11:30:37] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 11:30:37] [backend] processed message: Triggered from runtime UI button
+[2025-03-14 11:30:42] [ui] clicked increment button
+[2025-03-14 11:30:42] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:42] [backend] Counter updated to 1
+[2025-03-14 11:30:42] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:42] [ui] clicked increment button
+[2025-03-14 11:30:42] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:42] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:42] [backend] Counter updated to 2
+[2025-03-14 11:30:42] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:43] [ui] clicked increment button
+[2025-03-14 11:30:43] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:43] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:43] [backend] Counter updated to 3
+[2025-03-14 11:30:43] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:43] [ui] clicked increment button
+[2025-03-14 11:30:43] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:43] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:43] [backend] Counter updated to 4
+[2025-03-14 11:30:43] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:43] [ui] clicked increment button
+[2025-03-14 11:30:43] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:43] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:43] [backend] Counter updated to 5
+[2025-03-14 11:30:43] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:43] [ui] clicked increment button
+[2025-03-14 11:30:43] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:43] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:43] [backend] Counter updated to 6
+[2025-03-14 11:30:43] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:43] [ui] clicked increment button
+[2025-03-14 11:30:43] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:43] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:43] [backend] Counter updated to 7
+[2025-03-14 11:30:43] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:44] [ui] clicked increment button
+[2025-03-14 11:30:44] [external] Dispatched: IncrementCounter
+[2025-03-14 11:30:44] [external] Dispatched: Custom("Clicked Increment button")
+[2025-03-14 11:30:44] [backend] Counter updated to 8
+[2025-03-14 11:30:44] [backend] processed message: Clicked Increment button
+[2025-03-14 11:30:44] [external] Dispatched: Custom("Triggered from runtime UI button")
+[2025-03-14 11:30:44] [backend] processed message: Triggered from runtime UI button

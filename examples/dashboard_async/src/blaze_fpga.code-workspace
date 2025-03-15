@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../../hdl_projects/blaze_fpga"
+		},
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../../Rust/rlc_solver"
+		},
+		{
+			"path": "../../../../../atlantix-web/zolarwind"
+		}
+	],
+	"settings": {}
+}
