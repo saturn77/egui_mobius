@@ -29,6 +29,11 @@
 
 use std::collections::HashMap;
 use crate::types::Value;
+use crate::slot::Slot;
+use crate::signals::Signal;
+use std::future::Future;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
 
 /// The `SignalDispatcher` trait provides a generic interface
 /// for sending and receiving typed events across named channels.
@@ -122,6 +127,61 @@ impl<E: Clone + Send + 'static> SignalDispatcher<E> for Dispatcher<E> {
             .push(std::sync::Arc::new(f));
     }
 }
+
+
+
+
+/// A simple async dispatcher that listens to a Slot<E>, processes events asynchronously,
+/// and sends results via a Signal<R>.
+pub struct AsyncDispatcher<E, R> {
+    runtime: Arc<Runtime>,
+    _phantom: std::marker::PhantomData<(E, R)>,
+}
+
+impl<E: Send + 'static, R: Send + 'static> AsyncDispatcher<E, R> {
+    /// Creates a new `AsyncDispatcher` with its own Tokio runtime.
+    pub fn new() -> Self {
+        let runtime = Runtime::new().expect("Failed to build Tokio runtime");
+        Self {
+            runtime: Arc::new(runtime),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Attaches an async handler to the given `Slot<E>`, sending results via `Signal<R>`.
+    ///
+    /// This can be called only once per Slot.
+    pub fn attach_async<F, Fut>(
+        &self,
+        mut slot: Slot<E>,
+        signal: Signal<R>,
+        handler: F,
+    ) where
+        E: Clone + Send + 'static,
+        R: Send + 'static,
+        F: Fn(E) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = R> + Send + 'static,
+    {
+        let runtime = self.runtime.clone();
+        let handler = Arc::new(handler); // satisfy Fn(E) + Send + Sync
+    
+        slot.start({
+            let handler = handler.clone();
+            move |event| {
+                let fut = handler(event);
+                let signal = signal.clone();
+                runtime.spawn(async move {
+                    let result = fut.await;
+                    let _ = signal.send(result);
+                });
+            }
+        });
+    }
+    
+    
+}
+
+
 
 #[cfg(test)]
 mod tests {

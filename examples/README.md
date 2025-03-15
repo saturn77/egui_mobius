@@ -11,11 +11,14 @@ There are several original and older examples in this `deprecated` branch.
 ## ✅ Highlighted Examples
 
 ### `dashboard`
-A feature-rich example combining multiple widgets and internal state management. Demonstrates how to build a cohesive, multi-panel UI with `egui_mobius`.
+Demonstrates how to use the `Dispatcher` to register
+slots and send responses, and has internal logging to
+show what ui (events) , backend processing, and those
+messages handled by the `Dispatcher.` 
 
-- Shows event handling and component messaging
-- Integrates multiple UI features
-
+- A good place to start to understand the separation of ui and backend concerns within the overall framework of having a `Dispatcher.
+- Logging overal GUI events and processed responses, may be useful when making a GUI template from which to build other applications
+- A more modular example than some of the other examples based on the utility of the `Dispatcher`
 ---
 
 ### `dashboard_async`
@@ -25,12 +28,14 @@ An extension of the `dashboard` example that integrates asynchronous tasks using
 - Ideal reference for combining `egui_mobius` with long-running processes
 
 ---
-
 ### `ui_refresh_events`
-Demonstrates how to trigger UI refreshes based on custom timed or programmatic events.
+Demonstrates how to trigger UI refreshes based on custom timed or programmatic events. There are several widgets
+involved in this application, and demonstrates how sending
+events for each widget is done. 
 
+- Useful when getting started, does not have a true `Dispatcher` instance inside of it
 - Showcases the `RequestRepaint` integration pattern
-- Useful for streaming or polling-style apps
+- Useful for building more basic applications
 
 ---
 
@@ -44,8 +49,8 @@ Visualizes dynamic data updates in real time using line charts.
 
 ## 📝 Notes
 
-- Other, more minimal or legacy examples have been moved to the [`deprecated`](https://github.com/YOUR-ORG/egui_mobius/tree/deprecated) branch.
-- Dev/test utilities have been relocated to `examples/dev/`.
+- Other, more minimal or legacy examples have been moved to the `deprecated` branch.
+- Dev/test utilities will be in `examples/dev/`.
 
 ---
 

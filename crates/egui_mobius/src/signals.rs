@@ -7,7 +7,6 @@
 use std::sync::mpsc::Sender;
 
 /// Signal struct with send and send_multiple methods.
-#[derive(Clone)]
 pub struct Signal<T> {
     pub sender: Sender<T>,
 }
@@ -42,5 +41,13 @@ where
             }
         }
         Ok(())
+    }
+}
+
+impl<T> Clone for Signal<T> {
+    fn clone(&self) -> Self {
+        Signal {
+            sender: self.sender.clone(),
+        }
     }
 }

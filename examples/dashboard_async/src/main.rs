@@ -1,5 +1,6 @@
 // examples/dashboard/main.rs
 use egui::Context;
+use egui_mobius::dispatching::{Dispatcher, SignalDispatcher, AsyncDispatcher};
 use egui_mobius::factory;
 use egui_mobius::signals::*;
 use egui_mobius::slot::*;
@@ -24,6 +25,79 @@ pub enum Processed {
     StellarPrice(f64),
     SuiPrice(f64),
 }
+
+// -- Add this trait somewhere near AppState --
+pub trait Updatable<T> {
+    fn update(&mut self, msg: T);
+}
+
+// -- Update AppState to implement Updatable<Processed> --
+impl Updatable<Processed> for AppState {
+    fn update(&mut self, processed: Processed) {
+        match processed {
+            Processed::BitcoinPrice(p) => {
+                self.loading_coin = None;
+                if p > 0.0 {
+                    self.bitcoin_price = Some(p);
+                    self.error_message = None;
+                    self.record_price_entry("BTC", p);
+                } else {
+                    self.bitcoin_price = None;
+                    self.error_message = Some("Failed to retrieve a valid Bitcoin price.".to_string());
+                }
+            }
+            Processed::KaspaPrice(p) => {
+                self.loading_coin = None;
+                if p > 0.0 {
+                    self.kaspa_price = Some(p);
+                    self.error_message = None;
+                    self.record_price_entry("KAS", p);
+                } else {
+                    self.kaspa_price = None;
+                    self.error_message = Some("Failed to retrieve a valid Kaspa price.".to_string());
+                }
+            }
+            Processed::SolanaPrice(p) => {
+                self.loading_coin = None;
+                if p > 0.0 {
+                    self.solana_price = Some(p);
+                    self.error_message = None;
+                    self.record_price_entry("SOL", p);
+                } else {
+                    self.solana_price = None;
+                    self.error_message = Some("Failed to retrieve a valid Solana price.".to_string());
+                }
+            }
+            Processed::StellarPrice(p) => {
+                self.loading_coin = None;
+                if p > 0.0 {
+                    self.stellar_price = Some(p);
+                    self.error_message = None;
+                    self.record_price_entry("XLM", p);
+                } else {
+                    self.stellar_price = None;
+                    self.error_message = Some("Failed to retrieve a valid Stellar price.".to_string());
+                }
+            }
+            Processed::SuiPrice(p) => {
+                self.loading_coin = None;
+                if p > 0.0 {
+                    self.sui_price = Some(p);
+                    self.error_message = None;
+                    self.record_price_entry("SUI", p);
+                } else {
+                    self.sui_price = None;
+                    self.error_message = Some("Failed to retrieve a valid SUI price.".to_string());
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
 /// AppState
 ///
 /// AppState is a struct that holds the state of the application
@@ -58,79 +132,18 @@ impl AppState {
             price_log: Vec::new(),
         }
     }
-    pub fn log_price(&mut self, symbol: &str, price: f64) {
+
+    /// Making this a private function, as it is "owned" by the AppState
+    /// and should not be called from outside the AppState.
+    fn record_price_entry(&mut self, symbol: &str, price: f64)
+    {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-        self.price_log
-            .push(format!("[{}] {}: ${:.6}", timestamp, symbol, price));
+        self.price_log.push(format!("[{}] {}: ${:.6}", timestamp, symbol, price));
         if self.price_log.len() > 1000 {
             self.price_log.drain(0..self.price_log.len() - 1000);
         }
     }
 
-    fn handle_processed(&mut self, processed: Processed) {
-        match processed {
-            Processed::BitcoinPrice(p) => {
-                self.loading_coin = None;
-                if p > 0.0 {
-                    self.bitcoin_price = Some(p);
-                    self.error_message = None;
-                    self.log_price("BTC", p);
-                } else {
-                    self.bitcoin_price = None;
-                    self.error_message =
-                        Some("Failed to retrieve a valid Bitcoin price.".to_string());
-                }
-            }
-            Processed::KaspaPrice(p) => {
-                self.loading_coin = None;
-                if p > 0.0 {
-                    self.kaspa_price = Some(p);
-                    self.error_message = None;
-                    self.log_price("KAS", p);
-                } else {
-                    self.kaspa_price = None;
-                    self.error_message =
-                        Some("Failed to retrieve a valid Kaspa price.".to_string());
-                }
-            }
-
-            Processed::SolanaPrice(p) => {
-                self.loading_coin = None;
-                if p > 0.0 {
-                    self.solana_price = Some(p);
-                    self.error_message = None;
-                    self.log_price("SOL", p);
-                } else {
-                    self.solana_price = None;
-                    self.error_message =
-                        Some("Failed to retrieve a valid Solana price.".to_string());
-                }
-            }
-            Processed::StellarPrice(p) => {
-                self.loading_coin = None;
-                if p > 0.0 {
-                    self.stellar_price = Some(p);
-                    self.error_message = None;
-                    self.log_price("XLM", p);
-                } else {
-                    self.stellar_price = None;
-                    self.error_message =
-                        Some("Failed to retrieve a valid Stellar price.".to_string());
-                }
-            }
-            Processed::SuiPrice(p) => {
-                self.loading_coin = None;
-                if p > 0.0 {
-                    self.sui_price = Some(p);
-                    self.error_message = None;
-                    self.log_price("SUI", p);
-                } else {
-                    self.sui_price = None;
-                    self.error_message = Some("Failed to retrieve a valid SUI price.".to_string());
-                }
-            }
-        }
-    }
 }
 
 /// UiMainWindow
@@ -151,14 +164,14 @@ pub struct UiMainWindow {
 }
 /// Register the Slot for the UiMainWindow in the new method
 /// and then you can call the handle_processed method on the UiMainWindow instance
+/// Note that the "update" method is called on the AppState instance, not the UiMainWindow instance.
 impl UiMainWindow {
     pub fn new(event_signal: Signal<Event>, mut response_slot: Slot<Processed>) -> Self {
         let state = Value::new(AppState::new(event_signal.clone()));
 
-        // Initialize the response listener exactly once
         let state_clone = state.clone();
         response_slot.start(move |response| {
-            state_clone.lock().unwrap().handle_processed(response);
+            state_clone.lock().unwrap().update(response);
         });
 
         Self {
@@ -276,9 +289,35 @@ fn main() {
 
     let app = UiMainWindow::new(signal_to_dispatcher, slot_from_dispatcher);
 
-    let mut dispatcher = Dispatcher::new();
-    dispatcher.run(slot_from_ui, signal_to_ui.clone());
-    //dispatcher.
+    let dispatcher = AsyncDispatcher::<Event, Processed>::new();
+    let signal_to_ui = signal_to_ui.clone();
+    
+    dispatcher.attach_async(slot_from_ui, signal_to_ui.clone(), |event| async move {
+        match event {
+            Event::FetchBitcoin => {
+                let price = fetch_price("BTCUSD").await;
+                Processed::BitcoinPrice(price)
+            }
+            Event::FetchKaspa => {
+                let price = fetch_price("KASUSD").await;
+                Processed::KaspaPrice(price)
+            }
+            Event::FetchSolana => {
+                let price = fetch_price("SOLUSD").await;
+                Processed::SolanaPrice(price)
+            }
+            Event::FetchStellar => {
+                let price = fetch_price("XLMUSD").await;
+                Processed::StellarPrice(price)
+            }
+            Event::FetchSui => {
+                let price = fetch_price("SUIUSD").await;
+                Processed::SuiPrice(price)
+            }
+        }
+    });
+    
+    
 
     //start_dispatcher(slot_from_ui, signal_to_ui.clone());
 
@@ -299,90 +338,8 @@ fn main() {
     }
 }
 
-/// Dispatcher
-///
-/// The Dispatcher struct is responsible for running the background tasks
-/// that fetch the cryptocurrency prices. It listens for events on a Slot
-/// and sends the processed results to a Signal.
-///
-/// The Events arriving via the slot are assigned (brokered) to the appropriate
-/// fetch_price method, which is a Tokio async function that fetches the price
-/// from the Kraken API. The results are then sent to the Signal.
-///
-/// The general flow :
-/// Signals from Ui => Dispatcher (assign Event to a "task" method, which is a fetch_price method)
-/// TokioRuntime => fetch_price method => Signal => Ui
-///
-/// It would be relativeley easy to extend the functionality of the Dispatcher
-/// to include any number of other background tasks, such as fetching news articles,
-/// or fetching data from other APIs.
-///
-/// The are currently no other methods other than run, however, it would be easy to add
-/// a method to stop the dispatcher, or to add a method to add more tasks to the dispatcher.
-/// A "Broker" method could be added to the Dispatcher to handle the assignment of tasks to
-/// the appropriate fetch_price method (queueing, etc).
-///
-/// The Dispatcher could also be extended to include a method to handle the results of the
-/// fetch_price methods, such as logging the results, or sending the results to a database.
-///
-struct Dispatcher {}
 
-impl Dispatcher {
-    pub fn new() -> Self {
-        Self {}
-    }
 
-    fn run(&mut self, mut slot: Slot<Event>, signal: Signal<Processed>) {
-        let runtime = Arc::new(Runtime::new().expect("Failed to build Tokio runtime"));
-
-        slot.start(move |event| {
-            let signal = signal.clone();
-            let runtime = runtime.clone();
-            match event {
-                Event::FetchBitcoin => {
-                    runtime.spawn(async move {
-                        let price = fetch_price("BTCUSD").await;
-                        if let Err(e) = signal.send(Processed::BitcoinPrice(price)) {
-                            eprintln!("Failed to send Bitcoin price: {:?}", e);
-                        }
-                    });
-                }
-                Event::FetchKaspa => {
-                    runtime.spawn(async move {
-                        let price = fetch_price("KASUSD").await;
-                        if let Err(e) = signal.send(Processed::KaspaPrice(price)) {
-                            eprintln!("Failed to send Kaspa price: {:?}", e);
-                        }
-                    });
-                }
-                Event::FetchSolana => {
-                    runtime.spawn(async move {
-                        let price = fetch_price("SOLUSD").await;
-                        if let Err(e) = signal.send(Processed::SolanaPrice(price)) {
-                            eprintln!("Failed to send Solana price: {:?}", e);
-                        }
-                    });
-                }
-                Event::FetchStellar => {
-                    runtime.spawn(async move {
-                        let price = fetch_price("XLMUSD").await;
-                        if let Err(e) = signal.send(Processed::StellarPrice(price)) {
-                            eprintln!("Failed to send Stellar price: {:?}", e);
-                        }
-                    });
-                }
-                Event::FetchSui => {
-                    runtime.spawn(async move {
-                        let price = fetch_price("SUIUSD").await;
-                        if let Err(e) = signal.send(Processed::SuiPrice(price)) {
-                            eprintln!("Failed to send SUI price: {:?}", e);
-                        }
-                    });
-                }
-            }
-        });
-    }
-}
 
 #[derive(serde::Deserialize, Debug)]
 struct BitcoinPrice {
