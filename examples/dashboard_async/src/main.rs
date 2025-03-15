@@ -1,12 +1,27 @@
-// examples/dashboard/main.rs
+// examples/dashboard_async/main.rs
+///
+/// *** Notes for this example *** 
+/// 
+/// This is a "monolithic" example that demonstrates how to use the egui_mobius library to create
+/// an async based application that fetches cryptocurrency prices from the Kraken API. The example
+/// uses the egui library for the UI, and the reqwest library for the HTTP requests. The example
+/// uses the egui_mobius library for the signal-slot architecture, and the async dispatcher for
+/// handling the async requests. The example fetches the prices of Bitcoin, Kaspa, Solana, Stellar,
+/// and SUI, and displays them in the UI. The example also logs the prices in a price log.
+/// 
+/// The various parts of the code could be refactored into separate modules, but for the sake of
+/// simplicity, everything is in one file. The main function is the entry point of the application.
+/// The main purpose of the example is to illustrate how all the different aspects of the egui_mobius
+/// library can be used together to create an async based application.
+/// 
+/// James Bonanno, <atlantix-eda@proton.me>, 15 March 2025
+/// 
 use egui::Context;
-use egui_mobius::dispatching::{Dispatcher, SignalDispatcher, AsyncDispatcher};
+use egui_mobius::dispatching::AsyncDispatcher;
 use egui_mobius::factory;
 use egui_mobius::signals::*;
 use egui_mobius::slot::*;
 use egui_mobius::types::*;
-use std::sync::Arc;
-use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub enum Event {
@@ -26,12 +41,25 @@ pub enum Processed {
     SuiPrice(f64),
 }
 
-// -- Add this trait somewhere near AppState --
+/// Updatable Trait
+/// 
+/// The Updatable trait is a generic trait that is used to update the state of the application
+/// with a message of type T. The Updatable trait is implemented for the AppState struct
+/// to allow the AppState to be updated with a Processed message, that is coming from the background
+/// dispatcher.
+///
 pub trait Updatable<T> {
     fn update(&mut self, msg: T);
 }
 
-// -- Update AppState to implement Updatable<Processed> --
+/// Implement the Updatable trait for the AppState struct
+/// 
+/// The Updatable trait is implemented for the AppState struct to allow the AppState to be updated
+/// with a Processed message, that is coming from the background dispatcher. Note that the AppState
+/// struct is updated with a Processed message, not an Event message! Also note the private function
+/// record_price_entry is called from the update method. This is possible due the factor that the 
+/// Updatable trait is implemented for the AppState struct.
+///
 impl Updatable<Processed> for AppState {
     fn update(&mut self, processed: Processed) {
         match processed {
@@ -95,15 +123,12 @@ impl Updatable<Processed> for AppState {
 }
 
 
-
-
-
 /// AppState
 ///
-/// AppState is a struct that holds the state of the application
-/// that is shared between the UI and the background dispatcher.
-/// The background dispatcher is connected to the AppState via a Signal
-/// and a Slot, and the UI is connected to the AppState via a Value.
+/// AppState is the main state struct for the application. It holds the state of the application,
+/// such as the prices of the cryptocurrencies, the loading coin, etc. The AppState struct is
+/// updated with a Processed message, that is coming from the background dispatcher. The AppState
+/// struct is updated with a Processed message from the AsyncDispatcher, via the Updatable trait! 
 ///
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -150,8 +175,8 @@ impl AppState {
 /// 
 /// The UiMainWindow struct is the main UI window for the application.
 /// It is responsible for rendering the UI and handling user input.
-/// The UiMainWindow struct holds a Value<AppState> that is shared with the
-/// background dispatcher via a Signal<Event> and a Slot<Processed>.
+/// The UiMainWindow struct holds a `Value<AppState>` that is shared with the
+/// background dispatcher via a `Signal<Event>` and a `Slot<Processed>`.
 ///
 /// The UiMainWindow gets it's name as inspired by the UiMainWindow in Qt, which is the main window
 /// of a Qt application. The UiMainWindow is the main window of the application, and is responsible
@@ -283,6 +308,12 @@ impl eframe::App for UiMainWindow {
     }
 }
 
+/// Main function
+/// 
+/// The main function is the entry point of the application. It creates the Signal and Slot instances, 
+/// UiMainWindow instance, and the AsyncDispatcher instance. The main function also creates the
+/// eframe::NativeOptions instance, and runs the eframe::run_native function to run the application.
+///
 fn main() {
     let (signal_to_dispatcher, slot_from_ui) = factory::create_signal_slot::<Event>(1);
     let (signal_to_ui, slot_from_dispatcher) = factory::create_signal_slot::<Processed>(1);
@@ -317,10 +348,6 @@ fn main() {
         }
     });
     
-    
-
-    //start_dispatcher(slot_from_ui, signal_to_ui.clone());
-
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_titlebar_buttons_shown(true)
@@ -337,9 +364,6 @@ fn main() {
         eprintln!("Failed to run eframe UiMainWindowlication: {:?}", e);
     }
 }
-
-
-
 
 #[derive(serde::Deserialize, Debug)]
 struct BitcoinPrice {

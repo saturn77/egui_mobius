@@ -131,8 +131,8 @@ impl<E: Clone + Send + 'static> SignalDispatcher<E> for Dispatcher<E> {
 
 
 
-/// A simple async dispatcher that listens to a Slot<E>, processes events asynchronously,
-/// and sends results via a Signal<R>.
+/// A simple async dispatcher that listens to a `Slot<E>`, processes events asynchronously,
+/// and sends results via a `Signal<R>`.
 pub struct AsyncDispatcher<E, R> {
     runtime: Arc<Runtime>,
     _phantom: std::marker::PhantomData<(E, R)>,

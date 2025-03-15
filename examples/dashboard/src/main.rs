@@ -155,7 +155,7 @@ impl eframe::App for UiApp {
                     }
 
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        let mut current_cluster_counter: Option<usize> = None;
+                        let mut _current_cluster_counter: Option<usize> = None;
 
                         for entry in app_state
                             .logs
@@ -171,7 +171,7 @@ impl eframe::App for UiApp {
                                     .strip_prefix("Counter updated to ")
                                     .and_then(|v| v.parse::<usize>().ok())
                                 {
-                                    current_cluster_counter = Some(new_counter);
+                                    _current_cluster_counter = Some(new_counter);
                                     ui.label(
                                         egui::RichText::new(format!(
                                             "\n**** Counter Event Cluster @ Counter == {}",
