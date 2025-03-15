@@ -2,47 +2,22 @@
 
 ## Overview
 
-This Rust-based application demonstrates an interactive dashboard UI built with `egui_mobius`. It features asynchronous backend event processing, real-time logging, and efficient state management using Rust's concurrency primitives.
-
-## Features
-
-- Increment and reset a numeric counter via UI buttons.
-- Real-time, thread-safe logging of UI and backend events.
-- Filterable logs panel (by UI or backend).
-- Scrollable and selectable logs panel with text copying.
-- Persistent log storage (`ui_session_log.txt`).
-
-## Architecture
-
-- **UI (`egui`)**: Handles user interactions and sends events.
-- **Event and Response Messaging**: Asynchronous communication between frontend and backend using `Signal<Event>` and `Slot<Response>`.
-- **Backend Thread**: Processes events, manages application state, and provides logs.
-- **State Management**: `AppState` wrapped safely in `egui_mobius::types::Value<T>` (thread-safe, mutex-protected, and reference-counted).
-
-![egui_mobius dashboard architecture](../../assets/egui_mobius_diagram_threaded_with_legend.drawio.svg)
-
-
-## Features Recap
-
-- Increment and reset counter with immediate backend response.
-- Log panel with filter by source (`ui` or `backend`).
-- Scrollable, selectable logs supporting copy-paste.
-
-## Running the Application
+This example demonstrates modular communications and messages of Events and Responses within the GUI. 
 
 ```bash
 cargo run -p dashboard
 ```
 
-## Dependencies
+There is the ui portion that is sending events, the backend which is processing these events into Response<T> or Procssed<T> messages, and the `Dispatcher` which can register slots and send signals to anywhere in the application. 
 
-- `eframe`
-- `egui_mobius`
-- `chrono`
-- `lazy_static`
-- `log`
-- `env_logger`
+The screenshot below shots an internal log of a "Counter Event" where the ui, backen, and `Dispatcher` are logging their actions accordingly.
 
-## Log Persistence
+![egui_mobius dashboard ](../../assets/example_dashboard.png)
 
-Logs are automatically persisted to `ui_session_log.txt`.
+
+## Features
+
+- Increment and reset a numeric counter via UI buttons.
+- Real-time, thread-safe logging of UI and backend events.
+- Filterable logs panel (by UI, backend, Dispatcher).
+- Persistent log storage (`ui_session_log.txt`).
