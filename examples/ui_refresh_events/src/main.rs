@@ -23,9 +23,8 @@ use egui_mobius::signals::Signal;
 use egui_mobius::slot::Slot;
 use egui_mobius::types::{Value, Edge}; 
 use std::collections::VecDeque;
-use env_logger;
-use log::{info, warn};        
-use std::fmt::Debug; 
+use log::{info, warn};
+use std::fmt::Debug;
 //----------------------------------------------------------------------------
 // **Event Type**
 //----------------------------------------------------------------------------
@@ -311,7 +310,7 @@ fn backend_consumer_thread(
                 },
                 EventType::Combo { message: msg, _id } => {
                     let log_msg = format!("Backend processed Combo selection: {}", msg);
-                    let processed_msg = ProcessedType::_Combo { _id, message: log_msg.clone() };
+                    let processed_msg = ProcessedType::_Combo { _id: *_id, message: log_msg.clone() };
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
                 },
