@@ -60,9 +60,7 @@ type HandlerMap<E> = HashMap<String, Vec<Arc<HandlerFn<E>>>>;
 ///     Something,
 /// }
 ///
-/// fn main() {
-///     let dispatcher = Dispatcher::<MyEvent>::new();
-/// }
+/// let dispatcher = Dispatcher::<MyEvent>::default();
 /// ```
 pub trait SignalDispatcher<E> {
     fn send(&self, channel: &str, event: E);
