@@ -22,7 +22,7 @@ eframe = { workspace = true, default-features = false, features = [
 rand = { workspace = true }
 log = "0.4"
 env_logger = "0.9"
-egui_plot = "0.31.0"
+egui_plot = "0.30.0"
 
 [[bin]]
 name = "realtime_plot"
