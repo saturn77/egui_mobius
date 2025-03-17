@@ -1,0 +1,15 @@
+(
+    slider_value: 0.0,
+    combo_value: "Option A",
+    time_format: "24h",
+    colors: (
+        clock_updates: (100, 200, 255),    // Light Blue
+        slider_events: (255, 180, 100),    // Orange
+        option_a: (255, 150, 150),         // Soft Red
+        option_b: (150, 255, 150),         // Soft Green
+        option_c: (150, 150, 255),         // Soft Blue
+        primary_events: (100, 200, 255),   // Light Blue
+        secondary_events: (190, 140, 255),  // Purple
+        custom_events: (255, 255, 100),    // Yellow
+    ),
+)
