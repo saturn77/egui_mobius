@@ -26,6 +26,7 @@ Cargo.lock
 # Local configurations and logs
 **/.local/
 **/default_config.json
+ui_session_log.txt
 **/ui_session_log.txt
 
 # Documentation build
