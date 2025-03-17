@@ -309,9 +309,9 @@ fn backend_consumer_thread(
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
                 },
-                EventType::Combo { message: msg, .. } => {
+                EventType::Combo { message: msg, _id } => {
                     let log_msg = format!("Backend processed Combo selection: {}", msg);
-                    let processed_msg = ProcessedType::Slider{ message: log_msg.clone() };
+                    let processed_msg = ProcessedType::_Combo { _id, message: log_msg.clone() };
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
                 },
@@ -342,7 +342,7 @@ fn backend_consumer_thread(
                             queue.push_back("Shutting down...".to_string());
                             logger.push_str("Shutting down...\n");
                             let log_msg = "Shutting down...".to_string();
-                            process_event!(queue, logger, slot_on_uiapp, event, log_msg, ProcessedType::Slider{ message: log_msg.clone() });
+                            process_event!(queue, logger, slot_on_uiapp, event, log_msg, ProcessedType::_ApplicationCommand { message: log_msg.clone() });
                             
                             std::thread::sleep(std::time::Duration::from_millis(1500));
                             std::process::exit(0);
