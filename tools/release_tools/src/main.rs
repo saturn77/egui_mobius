@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::{eyre, Result};
 use semver::Version;
-use std::{fs, path::PathBuf, process::Command};
+use std::{fs, process::Command};
 use walkdir::WalkDir;
 
 #[derive(Parser)]
