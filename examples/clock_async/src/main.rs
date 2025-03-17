@@ -1,20 +1,20 @@
-use chrono::Local;
 use eframe::egui;
-use egui_extras::{Column, TableBuilder};
 use egui_mobius::dispatching::AsyncDispatcher;
 use egui_mobius::factory;
 use egui_mobius::signals::Signal;
 use egui_mobius::slot::Slot;
 use std::time::Duration;
-
+use egui_taffy::{taffy, tui};
+use taffy::prelude::{length, percent, Style};
+use egui_taffy::TuiBuilderLogic;
 mod logger;
 mod state;
 mod types;
+mod ui;
 
-use logger::{LogColors, LogEntry};
 use state::AppState;
 use types::{ClockMessage, Config, Event, Response};
-
+use ui::{ControlPanel, LoggerPanel};
 
 pub struct UiApp {
     state: AppState,
@@ -44,268 +44,74 @@ impl UiApp {
 
 impl eframe::App for UiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::SidePanel::right("log_panel")
-            .resizable(true)
-            .default_width(700.0)
-            .min_width(500.0)
-            .max_width(900.0)
-            .show(ctx, |ui| {
-                let total_events = self.state.logs.lock().unwrap().len();
-                ui.heading(format!("Event Log ({} events)", total_events));
 
-                let log_filters = self.state.log_filters.lock().unwrap().clone();
-                ui.horizontal(|ui| {
-                    ui.label("Source filter:");
-                    for source in [&"ui", &"clock"] {
-                        let source = source.to_string();
-                        let selected = log_filters.contains(&source);
-                        if ui.selectable_label(selected, &source).clicked() {
-                            let mut filters = self.state.log_filters.lock().unwrap();
-                            if selected {
-                                filters.retain(|s| s != &source);
-                            } else {
-                                filters.push(source.clone());
-                            }
-                        }
-                    }
-                });
-
-                if ui.button("Clear Logger").clicked() {
-                    self.state.logs.lock().unwrap().clear();
-                }
-
-                // Get all logs and filters at once to avoid multiple locks
-                let logs = self.state.logs.lock().unwrap().clone();
-                let filters = self.state.log_filters.lock().unwrap().clone();
-                let colors = self.state.colors.lock().unwrap().clone();
-
-                // Event counter in header
-                let total_events = logs.len();
-                ui.heading(format!("Event Log ({} events)", total_events));
-                ui.add_space(8.0);
-
-                // Create a table for the log entries
-                egui::ScrollArea::vertical().id_salt("log_scroll").show(ui, |ui| {
-                    let table = TableBuilder::new(ui)
-                        .striped(true)
-                        .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                        .column(Column::exact(280.0))
-                        .column(Column::exact(20.0))  // Spacer column
-                        .column(Column::exact(400.0))
-                        .header(20.0, |mut header| {
-                            header.col(|ui| {
-                                ui.label(egui::RichText::new("Time Updates").strong().monospace());
-                            });
-                            header.col(|_| {}); // Empty spacer column
-                            header.col(|ui| {
-                                ui.label(egui::RichText::new("UI Events").strong().monospace());
+        // Main layout using egui_taffy
+        egui::CentralPanel::default().show(ctx, |ui| {
+            tui(ui, "main_panel")
+                .reserve_available_space()
+                .style(taffy::Style {
+                    display: taffy::Display::Flex,
+                    flex_direction: taffy::FlexDirection::Row,
+                    align_items: Some(taffy::AlignItems::Stretch),
+                    padding: length(4.),
+                    gap: length(8.),
+                    size: taffy::Size {
+                        width: percent(1.0),
+                        height: percent(1.0),
+                    },
+                    ..Default::default()
+                })
+                .show(|tui| {
+                        // Left column (controls)
+                        tui.style(Style {
+                            display: taffy::Display::Flex,
+                            flex_direction: taffy::FlexDirection::Column,
+                            gap: length(8.0),
+                            flex_grow: 0.0,
+                            flex_shrink: 0.0,
+                            flex_basis: length(300.0),
+                            padding: length(16.0),
+                            ..Default::default()
+                        })
+                        .add(|tui| {
+                            // Render the ControlPanel component
+                            tui.ui(|ui| {
+                                ControlPanel::render(ui, &self.state);
                             });
                         });
 
-                    let mut time_updates = Vec::new();
-                    let mut ui_events = Vec::new();
-
-                    // Split entries into two columns
-                    for entry in logs.iter().rev() {
-                        if !filters.contains(&entry.source) {
-                            continue;
-                        }
-                        if entry.source == "clock" {
-                            time_updates.push(entry);
-                        } else if entry.source == "ui" {
-                            ui_events.push(entry);
-                        }
-                    }
-
-                    // Display entries side by side
-                    let max_entries = time_updates.len().max(ui_events.len());
-                    table.body(|mut body| {
-                        for i in 0..max_entries {
-                            body.row(18.0, |mut row| {
-                                // Time Updates column
-                                row.col(|ui| {
-                                    if let Some(entry) = time_updates.get(i) {
-                                        let text = egui::RichText::new(entry.formatted()).monospace();
-                                        ui.label(text.color(colors.clock));
-                                    }
-                                });
-
-                                // Spacer column
-                                row.col(|_| {});
-
-                                // UI Events column
-                                row.col(|ui| {
-                                    if let Some(entry) = ui_events.get(i) {
-                                        let color = if entry.message.contains("Slider value") {
-                                            colors.slider
-                                        } else if entry.message.contains("Selected option: Option A") {
-                                            colors.option_a
-                                        } else if entry.message.contains("Selected option: Option B") {
-                                            colors.option_b
-                                        } else if entry.message.contains("Selected option: Option C") {
-                                            colors.option_c
-                                        } else if entry.message.contains("Time format changed") {
-                                            colors.time_format
-                                        } else if entry.message.contains("Custom Event") {
-                                            colors.custom_event
-                                        } else {
-                                            colors.time_format // Default color
-                                        };
-                                        let text = egui::RichText::new(entry.formatted()).monospace();
-                                        ui.label(text.color(color));
-                                    }
-                                });
+                        // Right column (logger)
+                        tui.style(Style {
+                            display: taffy::Display::Flex,
+                            flex_direction: taffy::FlexDirection::Column,
+                            gap: length(8.0),
+                            flex_grow: 1.0,
+                            flex_shrink: 0.0,
+                            padding: length(16.0),
+                            size: taffy::Size {
+                                width: length(800.0),
+                                height: percent(100.0),
+                            },
+                            ..Default::default()
+                        })
+                        .add(|tui| {
+                            // Render the LoggerPanel component
+                            tui.ui(|ui| {
+                                LoggerPanel::render(ui, &self.state);
                             });
-                        }
+                        });
                     });
-                });
             });
-    
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let time = self.state.current_time.lock().unwrap().clone();
-            ui.heading("🕒 Live Clock");
-            ui.horizontal(|ui| {
-                ui.add(egui::Label::new(egui::RichText::new(format!("Current Time: {}", time)).size(24.0)));
-            });
-            ui.add_space(10.0);
-            ui.group(|ui| {
-                ui.horizontal(|ui| {
-                    ui.label("Time Format:");
-                    ui.add_space(10.0);
-                    let mut use_24h = *self.state.use_24h.lock().unwrap();
-                    if ui.selectable_label(use_24h, "24h").clicked() {
-                        use_24h = true;
-                        *self.state.use_24h.lock().unwrap() = use_24h;
-                        self.state.log("ui", "Time format changed to 24-hour".to_string());
-                        self.state.save_config();
-                    }
-                    if ui.selectable_label(!use_24h, "12h").clicked() {
-                        use_24h = false;
-                        *self.state.use_24h.lock().unwrap() = use_24h;
-                        self.state.log("ui", "Time format changed to 12-hour".to_string());
-                        self.state.save_config();
-                    }
-                });
-            });
-
-            ui.add_space(20.0);
-            ui.group(|ui| {
-                ui.heading("Controls");
-                ui.add_space(10.0);
-
-                // Slider
-                let mut slider_value = *self.state.slider_value.lock().unwrap();
-                if ui.add(egui::Slider::new(&mut slider_value, 0.0..=100.0).text("Value")).changed() {
-                    *self.state.slider_value.lock().unwrap() = slider_value;
-                    if let Some(signal) = &*self.state.event_signal.lock().unwrap() {
-                        let _ = signal.send(Event::SliderChanged(slider_value));
-                    }
-                    self.state.log("ui", format!("Slider value changed to {}", slider_value));
-                    self.state.save_config();
-                }
-
-                // Combo Box
-                ui.vertical(|ui| {
-                    ui.label("Select Option:");
-                    let mut combo_value = self.state.combo_value.lock().unwrap().clone();
-                    for option in ["Option A", "Option B", "Option C"] {
-                        if ui.radio_value(&mut combo_value, option.to_string(), option).clicked() {
-                            *self.state.combo_value.lock().unwrap() = combo_value.clone();
-                            if let Some(signal) = &*self.state.event_signal.lock().unwrap() {
-                                let _ = signal.send(Event::ComboSelected(combo_value.clone()));
-                            }
-                            self.state.log("ui", format!("Selected option: {}", combo_value));
-                            self.state.save_config();
-                        }
-                    }
-                });
-            });
-
-            ui.add_space(20.0);
-            ui.collapsing("🎨 Log Colors", |ui| {
-                let mut colors = self.state.colors.lock().unwrap().clone();
-                let mut changed = false;
-
-                ui.horizontal(|ui| {
-                    ui.label("Clock Updates:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.clock).changed();
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Slider Events:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.slider).changed();
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Option A:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.option_a).changed();
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Option B:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.option_b).changed();
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Option C:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.option_c).changed();
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Time Format:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.time_format).changed();
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Custom Events:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.custom_event).changed();
-                });
-
-                if changed {
-                    *self.state.colors.lock().unwrap() = colors.clone();
-                    self.state.save_config();
-
-                    // Update all existing log entries with new colors
-                    let mut logs = self.state.logs.lock().unwrap();
-                    for log in logs.iter_mut() {
-                        if log.source == "clock" {
-                            log.color = Some(colors.clock);
-                        } else if log.source == "ui" {
-                            if log.message.contains("Slider value") {
-                                log.color = Some(colors.slider);
-                            } else if log.message.contains("Selected option: Option A") {
-                                log.color = Some(colors.option_a);
-                            } else if log.message.contains("Selected option: Option B") {
-                                log.color = Some(colors.option_b);
-                            } else if log.message.contains("Selected option: Option C") {
-                                log.color = Some(colors.option_c);
-                            }
-                        }
-                    }
-                }
-            });
-
-            ui.add_space(20.0);
-            if ui.button("Log Custom Event").clicked() {
-                let colors = self.state.colors.lock().unwrap().clone();
-                let custom_event = LogEntry {
-                    timestamp: chrono::Local::now(),
-                    source: "ui".to_string(),
-                    message: "Custom Event".to_string(),
-                    color: Some(colors.custom_event),
-                };
-                self.state.logs.lock().unwrap().push(custom_event);
-            }
-        });
     }
 }
+
 
 
 
 fn background_generator_thread(clock_signal: Signal<ClockMessage>, _ctx: egui::Context) {
     std::thread::spawn(move || {
         loop {
-            let now = Local::now();
+            let now = chrono::Local::now();
             if let Err(e) = clock_signal.send(ClockMessage::TimeUpdated(now.format("%H:%M:%S").to_string())) {
                 eprintln!("Failed to send TimeUpdated message: {:?}", e);
             }
@@ -332,7 +138,7 @@ fn main() {
                             slider_value: 0.5,
                             combo_value: "Option A".to_string(),
                             time_format: "24h".to_string(),
-                            colors: LogColors::default(),
+                            colors: logger::LogColors::default(),
                         }
                     }
                 }
@@ -342,7 +148,7 @@ fn main() {
                     slider_value: 0.5,
                     combo_value: "Option A".to_string(),
                     time_format: "24h".to_string(),
-                    colors: LogColors::default(),
+                    colors: logger::LogColors::default(),
                 }
             }
         } else {
@@ -351,7 +157,7 @@ fn main() {
                 slider_value: 0.5,
                 combo_value: "Option A".to_string(),
                 time_format: "24h".to_string(),
-                colors: LogColors::default(),
+                colors: logger::LogColors::default(),
             };
             if let Ok(json_data) = serde_json::to_string_pretty(&default_config) {
                 if let Err(e) = std::fs::write(&config_path, json_data) {
@@ -386,7 +192,7 @@ fn main() {
 
     // Set up clock updates
     let (clock_signal, clock_slot) = factory::create_signal_slot::<ClockMessage>(64);
-    let now = Local::now().format("%H:%M:%S").to_string();
+    let now = chrono::Local::now().format("%H:%M:%S").to_string();
     let _ = clock_signal.send(ClockMessage::TimeUpdated(now));
 
     let native_options = eframe::NativeOptions {

@@ -17,9 +17,10 @@ path = "src/main.rs"
 [dependencies]
 egui_mobius = { workspace = true }
 as_command_derive = { workspace = true }
-egui = { workspace = true, features = ["serde"] }
-egui_extras = { workspace = true }
-eframe = { workspace = true, default-features = false, features = [
+egui_taffy = { workspace = true }
+egui = { version = "0.30.0", features = ["serde"] }
+egui_extras = { version = "0.30.0" }
+eframe = { version = "0.30.0", default-features = false, features = [
     "default_fonts",
     "glow",
     "wayland",
@@ -30,9 +31,10 @@ log = { workspace = true }
 env_logger = { workspace = true }
 chrono = { workspace = true }
 lazy_static = { workspace = true }
-tokio = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
 ron = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true }
 dirs = { workspace = true }
+
 
 

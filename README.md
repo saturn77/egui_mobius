@@ -4,7 +4,8 @@
 # egui_mobius  
 *Because GUI software design is a two sided problem operating on a single surface.*
 
-[![egui_version](https://img.shields.io/badge/egui-0.31-blue)](https://github.com/emilk/egui)
+[![egui_version](https://img.shields.io/badge/egui-0.30-blue)](https://github.com/emilk/egui)
+[![egui_taffy](https://img.shields.io/badge/taffy-0.3.18-purple)](https://github.com/DioxusLabs/taffy)
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Latest Version](https://img.shields.io/badge/version-0.3.0--alpha.1-green.svg)
 ![Crates.io](https://img.shields.io/badge/crates.io-unreleased-orange.svg)
@@ -39,6 +40,33 @@ Inspired by production-grade GUI frameworks, egui_mobius addresses the key chall
 
 * **Production-Focused Design:**
   Being built with real-world applications in mind, incorporating architectural patterns from mature GUI frameworks. While still evolving, the signal-slot system provides a foundation for managing complex UI state and background operations.
+
+* **Taffy Layout Integration:**
+  Full support for Taffy's powerful layout engine, enabling complex, responsive layouts with flexbox-style controls. Seamlessly integrates with egui's native layout system while providing additional capabilities for sophisticated UI designs.
+
+## Examples
+
+Check out our examples to see egui_mobius in action:
+
+* **Clock Async (`clock_async`):**
+  A comprehensive example demonstrating:
+  - Thread-aware slots for background time updates
+  - Type-safe message passing between UI and background threads
+  - Interactive controls with real-time updates
+  - Event logging with custom filtering
+  - Taffy-powered responsive layout
+  - Clean separation of UI and business logic
+
+* **UI Refresh Events (`ui_refresh_events`):**
+  Shows how to handle UI updates and background processing.
+
+* **Dashboard (`dashboard`):**
+  A more complex example with multiple panels and data visualization.
+
+Run any example using cargo from the workspace root:
+```bash
+cargo run -p clock_async
+```
 
 ## Versioning
 

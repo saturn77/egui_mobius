@@ -8,6 +8,14 @@
 
 ### Fixed
 
+## [0.3.0-alpha.2] - 2025-03-16
+
+### Added
+
+### Changed
+
+### Fixed
+
 All notable changes to egui_mobius will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
