@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0-alpha.3] - 2025-03-17
+
+### Added
+- New clock_async example showcasing:
+  - Thread-aware slot system with background clock generation
+  - Comprehensive event logging with proper thread separation
+  - Taffy layout integration for responsive UI
+  - Interactive controls (slider and combo box)
+
+### Changed
+- Updated to egui 0.30.0
+- Added Taffy layout support
+- Improved README with detailed example documentation
+
+### Fixed
+- Logger panel layout in clock_async example
+- Version mismatch in realtime_plot example
+
 ## [0.3.0-alpha.2] - 2025-03-16
 
 ### Added
