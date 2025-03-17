@@ -17,8 +17,7 @@ use std::thread;
 use std::cmp::Ordering;
 
 /// Slot struct with receiver and sequence number.
-/// 
-
+///
 /// Slot is a primary component of the egui_mobius library, 
 /// and slots are used to receive messages that may be of
 /// an Event, Command, Response, or any other type.
@@ -43,7 +42,7 @@ impl<T : Clone> Clone for Slot<T> {
         let (_new_sender, new_receiver) = std::sync::mpsc::channel(); // or std::sync::mpsc::channel()
 
         Self {
-            sequence: self.sequence.clone(),
+            sequence: self.sequence,
             receiver: Arc::new(Mutex::new(new_receiver)), 
         }
     }

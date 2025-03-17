@@ -7,6 +7,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, Condvar};
 use std::fmt::Debug;
 
+/// Type alias for a priority queue of slots.
+type SlotQueue<T> = PriorityQueue<Slot<T>, usize>;
+
+/// Type alias for a synchronized queue with condition variable.
+type SyncQueue<T> = Arc<(Mutex<SlotQueue<T>>, Condvar)>;
+
 /// Creates a new signal-slot pair with the given sequence ID.
 pub fn create_signal_slot<T>(id_sequence: usize) -> (Signal<T>, Slot<T>)
 where
@@ -23,7 +29,7 @@ pub struct Dispatcher<T> {
     /// A map of slot names to slots.
     slots: HashMap<String, Slot<T>>,
     /// A priority queue to handle slots in order.
-    rx_queue: Arc<(Mutex<PriorityQueue<Slot<T>, usize>>, Condvar)>,
+    rx_queue: SyncQueue<T>,
     /// The current sequence number.
     sequence: usize,
     /// A sender to the main thread.

@@ -194,7 +194,7 @@ impl<T> Value<VecDeque<T>> {
 /// - PartialOrd
 /// - Send
 /// - 'static
-/// The type T is the type of the input signal.
+///   The type T is the type of the input signal.
 /// 
 /// The Edge type is used to detect edges in the input signal, particularly
 /// since egui is an immediate mode GUI library, it is important to detect
