@@ -21,5 +21,16 @@ Cargo.lock
 #.idea/
 
 # Added by cargo
-
 /target
+
+# Local configurations and logs
+**/.local/
+**/default_config.json
+**/ui_session_log.txt
+
+# Documentation build
+guide/book/
+user_guide/
+
+# Duplicate config files (src version is canonical)
+examples/clock_async/default_config.ron
