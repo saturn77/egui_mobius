@@ -29,9 +29,11 @@ Cargo.lock
 ui_session_log.txt
 **/ui_session_log.txt
 
-# Documentation build
+# Documentation
 guide/book/
 user_guide/
+docs/
+*.pdf
 
 # Duplicate config files (src version is canonical)
 examples/clock_async/default_config.ron
