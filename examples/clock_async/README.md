@@ -15,9 +15,7 @@ This example demonstrates a rich interactive clock application using [`egui_mobi
   - Asynchronous event processing via `AsyncDispatcher`
   - Background clock updates using `tokio::Runtime`
 
-- ✅ Dual-Format Configuration System
-  - RON for static default configuration
-  - JSON for runtime state persistence
+- ✅ JSON Configuration System
   - Persists UI preferences (12h/24h format)
   - Maintains slider values and combo selections
   - Preserves custom color settings
@@ -62,14 +60,14 @@ UI refresh
 
 ### 3. Configuration Management
 ```
-Default Settings     Runtime Changes
-(default_config.ron)  (AppState)
-       ↓                 ↓
-  Initial Load     Config serialization
-       ↓                 ↓
-    AppState    →  JSON storage (.local/)
-                         ↓
-                 Automatic reload on startup
+Runtime Changes
+  (AppState)
+      ↓
+JSON serialization
+      ↓
+Config storage
+      ↓
+Automatic reload on startup
 ```
 
 This architecture ensures:
