@@ -5,7 +5,7 @@
 egui_mobius follows [Semantic Versioning](https://semver.org/) with the following structure:
 `MAJOR.MINOR.PATCH[-PRERELEASE]`
 
-### Current Phase: 0.3.0-alpha.1
+### Current Phase: 0.3.0-alpha.3
 
 We are currently in the alpha phase of our first public release. This version represents:
 - A mature architectural foundation
@@ -50,17 +50,18 @@ We are currently in the alpha phase of our first public release. This version re
 
 | egui_mobius Version | egui/eframe Version | Rust Edition | Status      |
 |---------------------|---------------------|--------------|-------------|
-| 0.3.0-alpha.1      | 0.31.0             | 2024         | Current     |
+| 0.3.0-alpha.3      | 0.30.0             | 2024         | Current     |
+| 0.3.0-alpha.2      | 0.30.0             | 2024         | Supported   |
 | 0.2.0-alpha        | 0.24.0             | 2024         | Deprecated  |
 | 0.1.0              | 0.22.0             | 2021         | Deprecated  |
 
 ### Crate Dependencies
 
 All egui_mobius crates maintain version parity:
-- egui_mobius: 0.3.0-alpha.1
-- egui_mobius_widgets: 0.3.0-alpha.1
-- egui_mobius_macros: 0.3.0-alpha.1
-- as_command_derive: 0.3.0-alpha.1
+- egui_mobius: 0.3.0-alpha.3
+- egui_mobius_widgets: 0.3.0-alpha.3
+- egui_mobius_macros: 0.3.0-alpha.3
+- as_command_derive: 0.3.0-alpha.3
 
 ## Breaking Changes Policy
 
