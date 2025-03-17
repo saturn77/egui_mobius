@@ -60,7 +60,7 @@ impl<'a> ControlPanel<'a> {
                 ui.add_space(10.0);
 
                 // Combo box
-                let mut combo_value = self.state.combo_value.lock().unwrap().clone();
+                let combo_value = self.state.combo_value.lock().unwrap().clone();
                 egui::ComboBox::from_label("Select an option")
                     .selected_text(combo_value.clone())
                     .show_ui(ui, |ui| {

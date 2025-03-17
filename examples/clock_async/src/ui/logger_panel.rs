@@ -1,5 +1,4 @@
 use eframe::egui;
-use egui_extras::{Column, TableBuilder};
 use crate::state::AppState;
 
 pub struct LoggerPanel<'a> {
