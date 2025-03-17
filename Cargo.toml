@@ -4,6 +4,7 @@ cargo-features = ["edition2024"]
 members = [ "crates/as_command_derive",
     "crates/egui_mobius", "crates/egui_mobius_macros", "crates/egui_mobius_widgets",
     "examples/*",
+    "tools/*",
 ]
 exclude = [
     # this example has its own workspace

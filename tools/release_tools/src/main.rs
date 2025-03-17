@@ -105,11 +105,11 @@ fn bump_version(new_version: &str) -> Result<()> {
         let entry = entry?;
         if entry.file_name() == "Cargo.toml" {
             let content = fs::read_to_string(entry.path())?;
-            let mut doc = content.parse::<toml::Document>()?;
+            let mut doc = content.parse::<toml_edit::Document>()?;
             
             if let Some(package) = doc.get_mut("package") {
                 if let Some(version) = package.get_mut("version") {
-                    *version = toml::Value::String(new_version.to_string());
+                    *version = toml_edit::value(new_version);
                 }
             }
             
@@ -139,7 +139,7 @@ fn bump_version(new_version: &str) -> Result<()> {
 
 fn get_version(path: impl AsRef<std::path::Path>) -> Result<String> {
     let content = fs::read_to_string(path)?;
-    let doc = content.parse::<toml::Document>()?;
+    let doc = content.parse::<toml_edit::Document>()?;
     
     doc.get("package")
         .and_then(|p| p.get("version"))
