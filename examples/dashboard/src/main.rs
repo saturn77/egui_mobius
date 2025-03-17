@@ -251,15 +251,17 @@ pub struct AppState {
     pub log_filters: Vec<String>,
 }
 
-impl AppState {
-    pub fn default() -> Self {
+impl Default for AppState {
+    fn default() -> Self {
         Self {
             dashboard: DashboardState::default(),
             logs: Vec::new(),
             log_filters: vec!["ui".to_string()],
         }
     }
+}
 
+impl AppState {
     pub fn log(&mut self, source: &str, message: String) {
         let entry = LogEntry {
             timestamp: Local::now(),
