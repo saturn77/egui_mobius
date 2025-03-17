@@ -1,0 +1,38 @@
+[package]
+name = "clock_async"
+version = "0.1.0"
+edition = "2024"
+repository  = "https://github.com/saturn77/egui_mobius"
+authors     = ["James Bonanno <atlantix-eda@proton.me>"]
+description = "A Mobius strip in egui"
+license     = "MIT"
+keywords    = ["egui", "eframe", "mobius", "framework", "gui", "ui", "graphics"]
+categories  = ["graphics", "ui", "framework", "gui"]
+readme      = "README.md"
+
+[[bin]]
+name = "clock_async"
+path = "src/main.rs"
+
+[dependencies]
+egui_mobius = { workspace = true }
+as_command_derive = { workspace = true }
+egui = { workspace = true, features = ["serde"] }
+egui_extras = { workspace = true }
+eframe = { workspace = true, default-features = false, features = [
+    "default_fonts",
+    "glow",
+    "wayland",
+] }
+serde_json = { workspace = true }
+rand = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+chrono = { workspace = true }
+lazy_static = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+ron = { workspace = true }
+dirs = { workspace = true }
+
+
