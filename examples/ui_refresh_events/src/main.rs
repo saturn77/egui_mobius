@@ -289,7 +289,7 @@ fn backend_consumer_thread(
             let mut queue = messages_clone.lock().unwrap();
             let mut logger = logger_text_clone.lock().unwrap();
             
-            let _log_msg = match &event {
+            match &event {
                 EventType::Foo { id, message } => {
                     let log_msg = format!("Backend processed Foo event [{}]: {}", id, message);
                     let processed_msg = ProcessedType::Foo { _id: *id, message: log_msg.clone() };
@@ -316,7 +316,7 @@ fn backend_consumer_thread(
                 },
 
                 EventType::ApplicationCommand(cmd) => {
-                    let _log_msg = match cmd.as_str() {
+                    match cmd.as_str() {
                         "Clear Logger" => {
                             warn!("Clearing Logger...");
                             let log_msg = "Backend cleared the logger".to_string();
