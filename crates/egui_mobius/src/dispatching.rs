@@ -14,17 +14,15 @@
 //!     Text(String),
 //! }
 //!
-//! fn main() {
-//!     let dispatcher = Dispatcher::<Event>::new();
+//! let dispatcher = Dispatcher::<Event>::default();
 //!
-//!     dispatcher.register_slot("greet", |event| {
-//!         if let Event::Text(text) = event {
-//!             println!("Received: {}", text);
-//!         }
-//!     });
+//! dispatcher.register_slot("greet", |event| {
+//!     if let Event::Text(text) = event {
+//!         println!("Received: {}", text);
+//!     }
+//! });
 //!
-//!     dispatcher.send("greet", Event::Text("hi from egui_mobius".into()));
-//! }
+//! dispatcher.send("greet", Event::Text("hi from egui_mobius".into()));
 //! ```
 
 use std::collections::HashMap;
@@ -34,6 +32,13 @@ use crate::signals::Signal;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
+
+/// Type alias for a handler function that can process events.
+type HandlerFn<E> = dyn Fn(E) + Send + Sync;
+
+/// Type alias for a collection of event handlers.
+type HandlerMap<E> = HashMap<String, Vec<Arc<HandlerFn<E>>>>;
+
 
 /// The `SignalDispatcher` trait provides a generic interface
 /// for sending and receiving typed events across named channels.
@@ -77,7 +82,13 @@ pub trait SignalDispatcher<E> {
 /// Stores handlers (slots) for named channels and dispatches events to them.
 #[derive(Clone)]
 pub struct Dispatcher<E> {
-    handlers: Value<HashMap<String, Vec<std::sync::Arc<dyn Fn(E) + Send + Sync>>>>,
+    handlers: Value<HandlerMap<E>>,
+}
+
+impl<E: Clone + Send + 'static> Default for Dispatcher<E> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<E: Clone + Send + 'static> Dispatcher<E> {
@@ -92,7 +103,7 @@ impl<E: Clone + Send + 'static> Dispatcher<E> {
     ///     Something,
     /// }
     /// use egui_mobius::dispatching::Dispatcher;
-    /// let dispatcher = Dispatcher::<MyEvent>::new();
+    /// let dispatcher = Dispatcher::<MyEvent>::default();
     /// ```
     pub fn new() -> Self {
         Self {
@@ -136,6 +147,12 @@ impl<E: Clone + Send + 'static> SignalDispatcher<E> for Dispatcher<E> {
 pub struct AsyncDispatcher<E, R> {
     runtime: Arc<Runtime>,
     _phantom: std::marker::PhantomData<(E, R)>,
+}
+
+impl<E: Send + 'static, R: Send + 'static> Default for AsyncDispatcher<E, R> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<E: Send + 'static, R: Send + 'static> AsyncDispatcher<E, R> {
