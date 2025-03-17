@@ -44,29 +44,6 @@ Inspired by production-grade GUI frameworks, egui_mobius addresses the key chall
 * **Taffy Layout Integration:**
   Full support for Taffy's powerful layout engine, enabling complex, responsive layouts with flexbox-style controls. Seamlessly integrates with egui's native layout system while providing additional capabilities for sophisticated UI designs.
 
-## Examples
-
-Check out our examples to see egui_mobius in action:
-
-* **Clock Async (`clock_async`):**
-  A comprehensive example demonstrating:
-  - Thread-aware slots for background time updates
-  - Type-safe message passing between UI and background threads
-  - Interactive controls with real-time updates
-  - Event logging with custom filtering
-  - Taffy-powered responsive layout
-  - Clean separation of UI and business logic
-
-* **UI Refresh Events (`ui_refresh_events`):**
-  Shows how to handle UI updates and background processing.
-
-* **Dashboard (`dashboard`):**
-  A more complex example with multiple panels and data visualization.
-
-Run any example using cargo from the workspace root:
-```bash
-cargo run -p clock_async
-```
 
 ## Versioning
 
