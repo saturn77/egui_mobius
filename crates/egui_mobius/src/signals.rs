@@ -1,8 +1,12 @@
 #![allow(dead_code)]
+//! The Signal struct is a non-threaded mspc channel sender.
+//! 
+//! ```Signal<T>``` is used to send messages either command or response type 
+//! to the ```Slot<T>``` receiver. Alternatively, the Dispatcher or AsyncDispatcher
+//! can be used to dispatch messages to the ```Slot<T>``` receiver, while also 
+//! registering the ```Slot<T>``` with the ```Dispatcher``` or ```AsyncDispatcher```
+//! 
 
-// improved concept of the Signal! macro
-// Signal struct with send and send_multiple methods
-// Signal struct is used to send commands to the MobiusEnque<Command> sender
 
 use std::sync::mpsc::Sender;
 
@@ -16,6 +20,15 @@ where
     T: Send + 'static,
 {
     /// Create a new Signal instance with a ```Sender<T>``` instance.
+    /// 
+    /// Example Usage:
+    /// ```rust
+    /// use egui_mobius::factory::create_signal_slot; 
+    /// use egui_mobius::signals::Signal;
+    /// 
+    /// let (signal, _slot) = create_signal_slot::<String>();
+    /// signal.send("Hello".to_string());
+    /// ```
     pub fn new(sender: Sender<T>) -> Self {
         Signal { sender }
     }
@@ -44,6 +57,20 @@ where
     }
 }
 
+
+/// ```Clone``` trait implementation for ```Signal<T>```
+/// 
+/// This is important not to use #[derive(Clone)] because the ```Sender<T>``` is not
+/// ```Clone``` and the ```Sender<T>``` is the only field in the ```Signal<T>``` struct.
+/// 
+/// Example Usage:
+/// ```rust
+/// use egui_mobius::signals::Signal;
+/// use egui_mobius::factory::create_signal_slot;
+/// 
+/// let (signal, _) = create_signal_slot::<String>();
+/// let cloned_signal = signal.clone();
+/// ```
 impl<T> Clone for Signal<T> {
     fn clone(&self) -> Self {
         Signal {
