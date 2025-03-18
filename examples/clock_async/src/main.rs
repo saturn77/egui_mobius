@@ -169,8 +169,8 @@ fn main() {
     };
 
     // Set up event handling system first
-    let (event_signal, event_slot) = factory::create_signal_slot::<Event>(64);
-    let (response_signal, response_slot) = factory::create_signal_slot::<Response>(64);
+    let (event_signal, event_slot) = factory::create_signal_slot::<Event>();
+    let (response_signal, response_slot) = factory::create_signal_slot::<Response>();
     
     let dispatcher = AsyncDispatcher::new();
     dispatcher.attach_async(
@@ -191,7 +191,7 @@ fn main() {
     );
 
     // Set up clock updates
-    let (clock_signal, clock_slot) = factory::create_signal_slot::<ClockMessage>(64);
+    let (clock_signal, clock_slot) = factory::create_signal_slot::<ClockMessage>();
     let now = chrono::Local::now().format("%H:%M:%S").to_string();
     let _ = clock_signal.send(ClockMessage::TimeUpdated(now));
 

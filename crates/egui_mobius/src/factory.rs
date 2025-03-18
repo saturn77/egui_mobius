@@ -13,14 +13,14 @@ type SlotQueue<T> = PriorityQueue<Slot<T>, usize>;
 /// Type alias for a synchronized queue with condition variable.
 type SyncQueue<T> = Arc<(Mutex<SlotQueue<T>>, Condvar)>;
 
-/// Creates a new signal-slot pair with the given sequence ID.
-pub fn create_signal_slot<T>(id_sequence: usize) -> (Signal<T>, Slot<T>)
+/// Creates a new signal-slot pair.
+pub fn create_signal_slot<T>() -> (Signal<T>, Slot<T>)
 where
     T: Send + Clone + 'static,
 {
     let (tx, rx): (Sender<T>, Receiver<T>) = mpsc::channel();
     let signal = Signal::new(tx);
-    let slot = Slot::new(rx, Some(id_sequence));
+    let slot = Slot::new(rx, None);
     (signal, slot)
 }
 

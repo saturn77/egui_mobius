@@ -11,7 +11,7 @@ mod backend_core;
 pub fn main() {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
-    let (signal, mut slot) = factory::create_signal_slot::<UiCommand>(0);
+    let (signal, mut slot) = factory::create_signal_slot::<UiCommand>();
     
     let ui_state = Value::new(UiState::default());
 

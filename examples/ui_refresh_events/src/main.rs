@@ -382,8 +382,8 @@ fn main() {
     let update_needed = Value::new(false);
     let logger_text = Value::new("Welcome to egui_mobius ui_refresh_events example ....\n".to_string());
 
-    let (signal_to_backend, slot_to_backend) = factory::create_signal_slot::<EventType>(1);
-    let (slot_on_uiapp, slot_from_backend) = factory::create_signal_slot::<ProcessedType>(1);
+    let (signal_to_backend, slot_to_backend) = factory::create_signal_slot::<EventType>();
+    let (slot_on_uiapp, slot_from_backend) = factory::create_signal_slot::<ProcessedType>();
 
     backend_consumer_thread(
         Value::clone(&logger_text),
