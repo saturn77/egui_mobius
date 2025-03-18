@@ -5,6 +5,7 @@
 ### Changed
 - Formally deprecated `AsCommand` macro with warning messages
 - Enhanced documentation for Signal/Slot pattern as the recommended approach
+- Removed deprecated `as_command_derive` crate
 
 ## [0.3.0-alpha.4] - 2025-03-18
 

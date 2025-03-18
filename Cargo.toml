@@ -1,8 +1,7 @@
 cargo-features = ["edition2024"]
 
 [workspace]
-members = [ "crates/as_command_derive",
-    "crates/egui_mobius", "crates/egui_mobius_macros", "crates/egui_mobius_widgets",
+members = [ "crates/egui_mobius", "crates/egui_mobius_macros", "crates/egui_mobius_widgets",
     "examples/*",
     "tools/*",
 ]
@@ -16,7 +15,6 @@ resolver = "2"
 [workspace.dependencies]
 # egui mobius related crates
 egui_mobius   = { path = "crates/egui_mobius" }
-as_command_derive = { path = "crates/as_command_derive" }
 egui_mobius_widgets = { path = "crates/egui_mobius_widgets" }
 egui_mobius_macros = { path = "crates/egui_mobius_macros" }
 
