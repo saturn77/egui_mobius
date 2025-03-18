@@ -2,6 +2,14 @@
 
 ## [0.3.0-alpha.6] - 2025-03-18
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.3.0-alpha.6] - 2025-03-18
+
 ### Changed
 - Simplified Signal/Slot API by removing channel number requirement
 - Improved ergonomics of create_signal_slot function
