@@ -12,6 +12,12 @@ pub struct StatefulButton {
     stop_color: Color32,
 }
 
+impl Default for StatefulButton {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StatefulButton {
     /// Create a new stateful button
     pub fn new() -> Self {
