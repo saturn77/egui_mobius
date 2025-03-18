@@ -29,8 +29,8 @@
 //!         println!("Styled button clicked!");
 //!     }
 //!
-//!     if stateful_btn.show(ui, "Toggle").clicked() {
-//!         println!("Stateful button toggled!");
+//!     if stateful_btn.show(ui).clicked() {
+//!         println!("Stateful button state: {}", stateful_btn.is_started());
 //!     }
 //! }
 //! ```
