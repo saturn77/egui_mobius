@@ -47,7 +47,7 @@ Inspired by production-grade GUI frameworks, egui_mobius addresses the key chall
 
 ## Versioning
 
-egui_mobius follows semantic versioning and is currently in its alpha phase (0.3.0-alpha.5). This version represents:
+egui_mobius follows semantic versioning and is currently in its alpha phase (0.3.0-alpha.6). This version represents:
 
 - A mature architectural foundation with thread-aware slots
 - Production-ready core features including type-safe messaging
