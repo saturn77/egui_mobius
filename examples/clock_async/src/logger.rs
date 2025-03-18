@@ -25,6 +25,23 @@ mod color32_serde {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ButtonColors {
+    #[serde(with = "color32_serde")]
+    pub run_state: egui::Color32,
+    #[serde(with = "color32_serde")]
+    pub stop_state: egui::Color32,
+}
+
+impl Default for ButtonColors {
+    fn default() -> Self {
+        Self {
+            run_state: egui::Color32::GREEN,    // Green for RUN state
+            stop_state: egui::Color32::RED,     // Red for STOP state
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogColors {
     #[serde(with = "color32_serde")]
     pub clock: egui::Color32,
@@ -40,6 +57,8 @@ pub struct LogColors {
     pub time_format: egui::Color32,
     #[serde(with = "color32_serde")]
     pub custom_event: egui::Color32,
+    #[serde(with = "color32_serde")]
+    pub run_stop_log: egui::Color32,
 }
 
 impl Default for LogColors {
@@ -52,6 +71,7 @@ impl Default for LogColors {
             option_c: egui::Color32::from_rgb(150, 150, 255),  // Soft Blue
             time_format: egui::Color32::from_rgb(190, 140, 255), // Purple
             custom_event: egui::Color32::from_rgb(255, 215, 0), // Gold
+            run_stop_log: egui::Color32::from_rgb(0, 255, 255), // Cyan
         }
     }
 }

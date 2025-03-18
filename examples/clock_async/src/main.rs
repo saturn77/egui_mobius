@@ -139,6 +139,7 @@ fn main() {
                             combo_value: "Option A".to_string(),
                             time_format: "24h".to_string(),
                             colors: logger::LogColors::default(),
+                            button_colors: logger::ButtonColors::default(),
                         }
                     }
                 }
@@ -149,6 +150,7 @@ fn main() {
                     combo_value: "Option A".to_string(),
                     time_format: "24h".to_string(),
                     colors: logger::LogColors::default(),
+                    button_colors: logger::ButtonColors::default(),
                 }
             }
         } else {
@@ -158,6 +160,7 @@ fn main() {
                 combo_value: "Option A".to_string(),
                 time_format: "24h".to_string(),
                 colors: logger::LogColors::default(),
+                button_colors: logger::ButtonColors::default(),
             };
             if let Ok(json_data) = serde_json::to_string_pretty(&default_config) {
                 if let Err(e) = std::fs::write(&config_path, json_data) {

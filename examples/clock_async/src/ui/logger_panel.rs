@@ -93,21 +93,24 @@ impl<'a> LoggerPanel<'a> {
                 ui.vertical(|ui| {
                     ui.set_min_width(400.0);
                     for entry in ui_events.iter() {
-                        let color = if entry.message.contains("Slider value") {
-                            colors.slider
-                        } else if entry.message.contains("Selected option: Option A") {
-                            colors.option_a
-                        } else if entry.message.contains("Selected option: Option B") {
-                            colors.option_b
-                        } else if entry.message.contains("Selected option: Option C") {
-                            colors.option_c
-                        } else if entry.message.contains("Time format changed") {
-                            colors.time_format
-                        } else if entry.message.contains("Custom Event") {
-                            colors.custom_event
-                        } else {
-                            colors.time_format // Default color
-                        };
+                        // Use the entry's custom color if available, otherwise determine from message
+                        let color = entry.color.unwrap_or_else(|| {
+                            if entry.message.contains("Slider value") {
+                                colors.slider
+                            } else if entry.message.contains("Selected option: Option A") {
+                                colors.option_a
+                            } else if entry.message.contains("Selected option: Option B") {
+                                colors.option_b
+                            } else if entry.message.contains("Selected option: Option C") {
+                                colors.option_c
+                            } else if entry.message.contains("Time format changed") {
+                                colors.time_format
+                            } else if entry.message.contains("Custom Event") {
+                                colors.custom_event
+                            } else {
+                                colors.time_format // Default color
+                            }
+                        });
                         let text = egui::RichText::new(entry.formatted()).monospace();
                         ui.label(text.color(color));
                     }

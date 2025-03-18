@@ -2,6 +2,13 @@
 name = "egui_mobius_macros"
 version = "0.3.0-alpha.6"
 edition = "2024"
+description = "Template for future procedural macros in the egui_mobius framework"
+license = "MIT"
+repository = "https://github.com/saturn77/egui_mobius"
+documentation = "https://docs.rs/egui_mobius_macros"
+readme = "README.md"
+keywords = ["egui", "macros", "proc-macro"]
+categories = ["development-tools::procedural-macro-helpers", "gui"]
 
 [dependencies]
 syn = { version = "2.0", features = ["derive", "parsing"] }

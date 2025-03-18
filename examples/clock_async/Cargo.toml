@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 egui_mobius = { workspace = true }
+egui_mobius_widgets = { workspace = true }
 egui_taffy = { workspace = true }
 egui = { workspace = true, features = ["serde"] }
 egui_extras = { workspace = true }

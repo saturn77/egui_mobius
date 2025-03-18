@@ -1,34 +1,52 @@
+//! egui_mobius_macros - Procedural macros for the egui_mobius framework
+//!
+//! This crate provides derive macros that help reduce boilerplate when working
+//! with egui_mobius. Currently, it serves as a template for future derive macros
+//! that will be implemented as needed.
+//!
+//! # Future Macros
+//! 
+//! Planned derive macros may include:
+//! - State management traits
+//! - Signal/slot connection helpers
+//! - UI component generation
+//! - Event handling
+//!
+//! # Example Template
+//!
+//! ```rust,ignore
+//! use proc_macro::TokenStream;
+//! use quote::quote;
+//! use syn::{parse_macro_input, DeriveInput};
+//!
+//! #[proc_macro_derive(MyFutureMacro)]
+//! pub fn my_future_macro(input: TokenStream) -> TokenStream {
+//!     let input = parse_macro_input!(input as DeriveInput);
+//!     let name = &input.ident;
+//!
+//!     let expanded = quote! {
+//!         impl #name {
+//!             // Generated implementation will go here
+//!         }
+//!     };
+//!
+//!     TokenStream::from(expanded)
+//! }
+//! ```
+
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DataEnum, DeriveInput};
+use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(EventMacro)]
-pub fn event_macro_derive(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let name = &input.ident;
+/// Template derive macro for future implementation.
+/// 
+/// This is a placeholder that demonstrates the basic structure of a derive macro.
+/// Replace this with actual derive macros as needed.
+#[proc_macro_derive(Template)]
+pub fn template_derive(_input: TokenStream) -> TokenStream {
+    // Parse the input tokens into a syntax tree
+    let _input = parse_macro_input!(_input as DeriveInput);
 
-    // Ensure macro is applied only to enums
-    let variants = if let Data::Enum(DataEnum { variants, .. }) = &input.data {
-        variants
-    } else {
-        return TokenStream::from(quote! {
-            compile_error!("EventMacro can only be derived for enums");
-        });
-    };
-
-    let variant_idents: Vec<_> = variants.iter().map(|v| &v.ident).collect();
-
-    // Generate code for event_name only once
-    let expanded = quote! {
-        impl #name {
-            /// Returns the event name as a string.
-            pub fn event_name(&self) -> &'static str {
-                match self {
-                    #(Self::#variant_idents { .. } => stringify!(#variant_idents),)*
-                }
-            }
-        }
-    };
-
-    TokenStream::from(expanded)
+    // Return empty implementation for now
+    TokenStream::from(quote! {})
 }

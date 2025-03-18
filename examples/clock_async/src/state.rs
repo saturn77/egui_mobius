@@ -1,4 +1,4 @@
-use crate::logger::{LogColors, LogEntry};
+use crate::logger::{LogColors, LogEntry, ButtonColors};
 use crate::types::{ClockMessage, Event, Config};
 use chrono::Local;
 use eframe::egui;
@@ -15,7 +15,9 @@ pub struct AppState {
     pub repaint: egui::Context,
     pub event_signal: Value<Option<Signal<Event>>>,
     pub colors: Value<LogColors>,
+    pub button_colors: Value<ButtonColors>,
     pub use_24h: Value<bool>,
+    pub button_started: Value<bool>,
 }
 
 impl AppState {
@@ -29,7 +31,9 @@ impl AppState {
             repaint,
             event_signal: Value::new(None),
             colors: Value::new(config.colors),
+            button_colors: Value::new(config.button_colors),
             use_24h: Value::new(config.time_format == "24h"),
+            button_started: Value::new(false),
         }
     }
 
@@ -69,6 +73,7 @@ impl AppState {
             combo_value: self.combo_value.lock().unwrap().clone(),
             time_format: if *self.use_24h.lock().unwrap() { "24h" } else { "12h" }.to_string(),
             colors: self.colors.lock().unwrap().clone(),
+            button_colors: self.button_colors.lock().unwrap().clone(),
         };
         if let Ok(json_data) = serde_json::to_string_pretty(&config) {
             let local_dir = std::path::Path::new(".local");

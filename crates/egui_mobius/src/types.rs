@@ -1,21 +1,21 @@
-//! The types module contains useful and powerful types for ipmlementing the general design
-//! patterns and framework of egui_mobius. 
+//! The types module provides core types for implementing the design patterns and
+//! architecture of egui_mobius.
 //! 
-//! The types module contains the following types:
-//! - Value
-//! - ValueGuard
-//! - Edge
+//! This module contains three primary types:
+//! - **Value**: A heap-allocated, thread-safe container for shared state
+//! - **ValueGuard**: A RAII guard for safe access to Value contents
+//! - **Edge**: A utility for detecting state transitions in signals
 //!
-//! The **Value** type is a heap allocated and thread safe type that can be used to store
-//! a value that can be shared across multiple threads, useful for shared state or for
-//! Signal and Slot types. This is particularly useful for not having to refer to 
-//! the `Arc<Mutex<T>>` type directly in the code, as this often clutters the code.
+//! The **Value** type wraps `Arc<Mutex<T>>` to provide a cleaner interface for
+//! thread-safe state sharing, commonly used with Signal and Slot types. It
+//! eliminates the need to directly handle atomic reference counting and mutex
+//! operations in client code.
 //! 
-//! The **ValueGuard** type is a guard type that is used to lock the `Value` type and
-//! provides a way to read and write the value.
+//! The **ValueGuard** type implements the RAII pattern to ensure safe access
+//! to Value contents, automatically handling mutex locking and unlocking.
 //!
-//! The **Edge** type is used to detect edges in the input signal. It is used to detect
-//! rising and falling edges in the input signal. 
+//! The **Edge** type provides utilities for detecting rising and falling edges
+//! in signal transitions, particularly useful in immediate mode GUI contexts.
 //! 
 
 

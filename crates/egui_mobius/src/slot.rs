@@ -1,20 +1,18 @@
-//! The Slot struct is a self-thread channel receiver. 
+//! The Slot module provides a self-contained threaded channel receiver.
 //! 
-//! Slot is a primary component of the egui_mobius library.
-//! Slot receive messages that may be of an Event, Command, 
-//! Response, or any other type that implments a Rust type of 
-//! ```T : Send + 'static + Clone```.
+//! Slot is a core component of the egui_mobius library that handles message processing
+//! in its own dedicated thread. It can receive messages of type Event, Command,
+//! Response, or any other type that implements `T: Send + 'static + Clone`.
 //! 
-//! It is noteworthy that the Slot struct is a self-thread channel receiver, 
-//! meaning that it can process messages in a separate thread from the main application.
-//! A "handler" function is passed to the Slot struct to process the messages.
+//! Each Slot maintains its own thread for message processing, allowing concurrent
+//! execution independent of the main application thread. Messages are processed by
+//! a user-provided handler function that defines the slot's behavior.
 //!
 
 use std::sync::{Arc, Mutex};
 use std::fmt::{Debug, Display};
 use std::sync::mpsc::Receiver;
 use std::thread;
-use std::cmp::Ordering;
 
 /// Slot struct with receiver and sequence number.
 ///
@@ -23,12 +21,11 @@ use std::cmp::Ordering;
 /// an Event, Command, Response, or any other type.
 pub struct Slot<T> {
     pub receiver: Arc<Mutex<Receiver<T>>>,
-    pub sequence: usize,
 }
 
 //-----------------Rust Trait Implementations ---------------------//
 
-/// Impelmentations for ```Slot<T>``` of the following traits:
+/// Implementations for `Slot<T>` of the following traits:
 /// - Clone
 /// - Hash
 /// - PartialEq
@@ -39,57 +36,24 @@ pub struct Slot<T> {
 /// - Debug
 impl<T : Clone> Clone for Slot<T> {
     fn clone(&self) -> Self {
-        let (_new_sender, new_receiver) = std::sync::mpsc::channel(); // or std::sync::mpsc::channel()
-
+        let (_new_sender, new_receiver) = std::sync::mpsc::channel();
         Self {
-            sequence: self.sequence,
             receiver: Arc::new(Mutex::new(new_receiver)), 
         }
-    }
-}
-
-/// Hash method implementation for ```Slot<T>```
-impl<T> std::hash::Hash for Slot<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.sequence.hash(state);
-    }
-}
-
-/// PartialEq implementation for ```Slot<T>```
-impl<T> PartialEq for Slot<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.sequence == other.sequence
-    }
-}
-
-/// Eq implementation for ```Slot<T>```
-impl<T> Eq for Slot<T> {}
-
-/// PartialOrd for ```Slot<T>```
-impl<T> PartialOrd for Slot<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-/// Ord for ```Slot<T>```
-impl<T> Ord for Slot<T> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.sequence.cmp(&other.sequence)
     }
 }
 
 /// Display for ```Slot<T>```
 impl<T: Display> Display for Slot<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Slot: {}", self.sequence)
+        write!(f, "Slot")
     }
 }
 
 /// Debug for ```Slot<T>```
 impl <T: Debug> Debug for Slot<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Slot: {}", self.sequence)
+        write!(f, "Slot")
     }
 }
 
@@ -102,10 +66,9 @@ where
     T: Send + 'static + Clone,
 {
     /// Create a new slot with the given receiver and sequence ID.
-    pub fn new(receiver: Receiver<T>, id_sequence : Option<usize>) -> Self {
+    pub fn new(receiver: Receiver<T>) -> Self {
         Slot {
             receiver: Arc::new(Mutex::new(receiver)),
-            sequence: id_sequence.unwrap_or(0),
         }
     }
 
@@ -136,18 +99,15 @@ mod tests {
     use std::time::Duration;
     use std::thread;
     
-    use egui_mobius_macros::EventMacro;
-
-        /// Test with basic unit variants
-        #[derive(EventMacro, PartialEq, Clone, Debug)]
-        enum EventSimple {
-            RefreshUI,
-            CloseApp,
-        }
-
+    /// Test with basic unit variants
+    #[derive(PartialEq, Clone, Debug)]
+    enum EventSimple {
+        RefreshUI,
+        CloseApp,
+    }
 
     /// Define an enum for testing event processing
-    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    #[derive(PartialEq, Clone, Debug)]
     enum Event {
         RefreshUI,
         UpdateData(String),
@@ -160,8 +120,8 @@ mod tests {
         Decrement,
     }
 
-    /// Define an enum for testing the EventMacro derive
-    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    /// Define an enum for testing event processing
+    #[derive(PartialEq, Clone, Debug)]
     enum MyEventMacro {
         UpdateData(String),
     }
@@ -177,7 +137,7 @@ mod tests {
         let (sender, receiver) = mpsc::channel();
 
         // Create a slot with the receiver.
-        let mut slot = Slot::new(receiver, Some(1));
+        let mut slot = Slot::new(receiver);
 
         // Shared storage to collect processed events.
         let processed_events = Arc::new(Mutex::new(Vec::new()));
@@ -213,7 +173,7 @@ mod tests {
         let (sender, receiver) = mpsc::channel();
 
         // Create a slot with the receiver.
-        let mut slot = Slot::new(receiver, Some(1));
+        let mut slot = Slot::new(receiver);
 
         // Shared counter state.
         let counter = Arc::new(Mutex::new(0));
@@ -242,54 +202,19 @@ mod tests {
     }
 
     /// test the EventMacro derive
-    #[test]
-    fn test_event_macro_derive() {
-
-        let event = MyEventMacro::UpdateData("Hello!".to_string());
-
-        println!("Event name: {}", event.event_name()); // Should print: UpdateData
-    }
-
-    /// Test with unit variants
-    #[test]
-    fn test_event_macro_unit_variants() {
-        let event = EventSimple::RefreshUI;
-        assert_eq!(event.event_name(), "RefreshUI");
-
-        let event = EventSimple::CloseApp;
-        assert_eq!(event.event_name(), "CloseApp");
-    }
-
-    /// Test with tuple variants
-    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    /// Test different event enum variants that will be used with future derive macros
+    #[derive(PartialEq, Clone, Debug)]
     enum EventTuple {
         UpdateData(String),
         ResizeWindow(u32, u32),
     }
 
-    #[test]
-    fn test_event_macro_tuple_variants() {
-        let event = EventTuple::UpdateData("Hello".to_string());
-        assert_eq!(event.event_name(), "UpdateData");
-
-        let event = EventTuple::ResizeWindow(800, 600);
-        assert_eq!(event.event_name(), "ResizeWindow");
-    }
-
-    /// Test with struct-like variants
-    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    #[derive(PartialEq, Clone, Debug)]
     enum EventStruct {
         Custom { id: u32, name: String },
     }
 
-    #[test]
-    fn test_event_macro_struct_variants() {
-        let event = EventStruct::Custom { id: 1, name: "Test".to_string() };
-        assert_eq!(event.event_name(), "Custom");
-    }
-
-    /// Test multiple event types together
-    #[derive(EventMacro, PartialEq, Clone, Debug)]
+    #[derive(PartialEq, Clone, Debug)]
     enum EventMixed {
         Ping,
         Pong(u32),
@@ -297,10 +222,21 @@ mod tests {
     }
 
     #[test]
-    fn test_event_macro_mixed_variants() {
-        assert_eq!(EventMixed::Ping.event_name(), "Ping");
-        assert_eq!(EventMixed::Pong(42).event_name(), "Pong");
-        assert_eq!(EventMixed::Data { key: "A".to_string(), value: 10 }.event_name(), "Data");
+    fn test_event_types() {
+        // Test that we can create and use different event types
+        let _event = MyEventMacro::UpdateData("test".to_string());
+        
+        let _simple = EventSimple::RefreshUI;
+        let _simple_alt = EventSimple::CloseApp;
+        
+        let _tuple = EventTuple::UpdateData("test".to_string());
+        let _tuple_alt = EventTuple::ResizeWindow(800, 600);
+        
+        let _struct = EventStruct::Custom { id: 1, name: "test".to_string() };
+        
+        let _mixed = EventMixed::Ping;
+        let _mixed_tuple = EventMixed::Pong(42);
+        let _mixed_struct = EventMixed::Data { key: "A".to_string(), value: 10 };
     }
 
 

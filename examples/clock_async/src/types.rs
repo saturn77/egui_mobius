@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::logger::LogColors;
+use crate::logger::{LogColors, ButtonColors};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -7,6 +7,7 @@ pub struct Config {
     pub combo_value: String,
     pub time_format: String,
     pub colors: LogColors,
+    pub button_colors: ButtonColors,
 }
 
 #[derive(Debug, Clone)]

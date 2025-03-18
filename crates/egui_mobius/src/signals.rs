@@ -1,10 +1,10 @@
 #![allow(dead_code)]
-//! The Signal struct is a non-threaded mspc channel sender.
+//! The Signal module provides a non-threaded mpsc (multi-producer, single-consumer) channel sender.
 //! 
-//! ```Signal<T>``` is used to send messages either command or response type 
-//! to the ```Slot<T>``` receiver. Alternatively, the Dispatcher or AsyncDispatcher
-//! can be used to dispatch messages to the ```Slot<T>``` receiver, while also 
-//! registering the ```Slot<T>``` with the ```Dispatcher``` or ```AsyncDispatcher```
+//! `Signal<T>` is used to send messages (either commands or responses) to a corresponding
+//! `Slot<T>` receiver. Messages can be sent directly through the Signal, or alternatively,
+//! through a `Dispatcher` or `AsyncDispatcher`. The dispatchers provide additional functionality
+//! by managing signal-slot registration and message routing.
 //! 
 
 

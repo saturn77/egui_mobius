@@ -1,88 +1,115 @@
-use egui::{Color32, Margin, Response, Stroke, Ui, Widget};
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ButtonState {
-    Idle,
-    Hovered,
-    Pressed,
-    Clicked,
-}
+use egui::{Response, Ui, Color32, CornerRadius, Stroke, Vec2};
+use egui::epaint::StrokeKind;
 
-#[derive(Debug, Default, Clone)]
-pub struct ButtonStyle {
-    pub stroke_size          : Option<u8>,
-    pub stroke_size_on_hover : Option<u8>,
-    pub stroke_color         : Option<Color32>,
-    pub hovered_color        : Option<Color32>,
-    pub corner_radius        : Option<u8>,
-    pub inner_margin         : Option<Margin>,
-}
-
+/// A button that maintains its state (started/stopped) and changes appearance accordingly
+#[derive(Debug)]
 pub struct StatefulButton {
-    pub id    : usize,
-    pub label : String,
-    pub state : ButtonState,
-    pub style : ButtonStyle,
+    started: bool,
+    margin: Vec2,
+    rounding: f32,
+    min_size: Vec2,
+    run_color: Color32,
+    stop_color: Color32,
 }
 
 impl StatefulButton {
-    pub fn new(assigned_id: usize, label: &str, style: ButtonStyle) -> Self {
+    /// Create a new stateful button
+    pub fn new() -> Self {
         Self {
-            id    : assigned_id,
-            label : label.to_string(),
-            state : ButtonState::Idle,
-            style,
+            started: false,
+            margin: Vec2::new(8.5, 4.25),
+            rounding: 8.0,
+            min_size: Vec2::new(0.0, 0.0),
+            run_color: Color32::GREEN,
+            stop_color: Color32::RED,
         }
     }
 
-    pub fn next_state_logic(&mut self, response: &Response) {
+    /// Set the margin around the button
+    pub fn margin(mut self, margin: Vec2) -> Self {
+        self.margin = margin;
+        self
+    }
+
+    /// Set the corner rounding of the button
+    pub fn rounding(mut self, rounding: f32) -> Self {
+        self.rounding = rounding;
+        self
+    }
+
+    /// Set the minimum size of the button
+    pub fn min_size(mut self, min_size: Vec2) -> Self {
+        self.min_size = min_size;
+        self
+    }
+
+    /// Set the color for RUN state
+    pub fn run_color(mut self, color: Color32) -> Self {
+        self.run_color = color;
+        self
+    }
+
+    /// Set the color for STOP state
+    pub fn stop_color(mut self, color: Color32) -> Self {
+        self.stop_color = color;
+        self
+    }
+
+    /// Show the button in the UI
+    pub fn show(&mut self, ui: &mut Ui) -> Response {
+        ui.add_space(self.margin.y);
+        let response = ui.horizontal(|ui| {
+            ui.add_space(self.margin.x);
+            let text = if self.started { "RUN" } else { "STOP" };
+            let response = ui.add(
+                egui::Button::new(text)
+                    .fill(Color32::TRANSPARENT)
+                    .stroke(Stroke::new(
+                        1.0,
+                        if self.started {
+                            self.run_color
+                        } else {
+                            self.stop_color
+                        },
+                    ))
+                    .corner_radius(CornerRadius::from(self.rounding))
+                    .min_size(self.min_size)
+            );
+            ui.add_space(self.margin.x);
+            response
+        }).inner;
+
         if response.clicked() {
-            self.state = ButtonState::Clicked;
-        } else if response.is_pointer_button_down_on() {
-            self.state = ButtonState::Pressed;
-        } else if response.hovered() {
-            self.state = ButtonState::Hovered;
-        } else {
-            self.state = ButtonState::Idle;
+            self.started = !self.started;
         }
-    }
 
-    pub fn apply_style(&mut self, style: &mut egui::Style) {
-        match self.state {
-            ButtonState::Clicked => style.visuals.widgets.inactive.bg_fill = egui::Color32::RED,
-            ButtonState::Pressed => style.visuals.widgets.inactive.bg_fill = egui::Color32::BLUE,
-            ButtonState::Hovered => {
-                style.visuals.widgets.hovered.bg_fill = self.style.hovered_color.unwrap_or(egui::Color32::GRAY);
-                self.style.stroke_size = Some(4);
-            },
-            ButtonState::Idle => {
-                style.visuals.widgets.inactive.bg_fill = egui::Color32::GREEN;
-                self.style.stroke_size = Some(1);
-            },
+        // Draw hover effect
+        if response.hovered() {
+            ui.painter().rect_stroke(
+                response.rect,
+                CornerRadius::from(self.rounding),
+                Stroke::new(
+                    2.0,
+                    if self.started {
+                        self.run_color
+                    } else {
+                        self.stop_color
+                    },
+                ),
+                StrokeKind::Outside,
+            );
         }
-    }
 
-    pub fn ui_with_style(&mut self, ui: &mut Ui) -> Response {
-        let mut style = egui::Style::default();
-        self.apply_style(&mut style);
-
-        let frame = egui::Frame::new()
-            .fill(style.visuals.widgets.hovered.bg_fill)
-            .corner_radius(self.style.corner_radius.unwrap_or(10) as f32)
-            .stroke(Stroke::new(self.style.stroke_size.unwrap_or(1) as f32, self.style.stroke_color.unwrap_or(egui::Color32::GREEN)))
-            .inner_margin(self.style.inner_margin.unwrap_or(Margin::same(5)));
-
-        frame.show(ui, |ui| {
-            self.ui(ui)
-        }).inner
-    }
-}
-
-impl Widget for &mut StatefulButton {
-    fn ui(self, ui: &mut Ui) -> Response {
-        let button = egui::Button::new(&self.label);
-        let response = ui.add(button);
-
-        self.next_state_logic(&response);
         response
+    }
+
+    /// Get the current state of the button
+    pub fn is_started(&self) -> bool {
+        self.started
+    }
+
+    /// Set the current state of the button
+    pub fn set_started(&mut self, started: bool) {
+        self.started = started;
     }
 }

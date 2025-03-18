@@ -1,7 +1,9 @@
 //! Dispatcher module for egui_mobius
 //!
-//! This provides a generic signal-slot system using `Dispatcher` and `SignalDispatcher`.
-//! It supports named channels and integrates with the `Value<T>` type from `egui_mobius`.
+//! This module provides a generic signal-slot system using `Dispatcher` and `SignalDispatcher`.
+//! It supports named channels for message routing and integrates seamlessly with the `Value<T>` type
+//! from `egui_mobius`. The dispatcher system enables decoupled communication between components
+//! through a type-safe event system.
 //!
 //! ## Example
 //!
@@ -294,6 +296,3 @@ mod tests {
     }
 }
 
-// src/main.rs
-//mod dispatching;
-// mod app;

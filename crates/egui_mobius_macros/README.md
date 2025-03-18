@@ -1,124 +1,83 @@
 # egui_mobius_macros
 
-🚀 **Procedural Macros for egui_mobius** 🚀  
-This crate provides powerful **procedural macros** to simplify event handling in the `egui_mobius` framework.  
+🚀 **Procedural Macros for egui_mobius** 🚀
 
-## **Overview**
-`egui_mobius_macros` provides the `#[derive(EventMacro)]` macro, which **automatically implements key traits** and utilities for event enums in `egui_mobius`.  
+This crate provides a template for future procedural macros that will help reduce boilerplate when working with the `egui_mobius` framework.
 
-### **Key Features:**
-✅ **Auto-generates `event_name()`** – Get the event type as a string.  
-✅ **Implements `Debug` and `Clone`** – No manual trait implementations needed.  
-✅ **Supports all enum styles** – Works with unit, tuple, and struct-like variants.  
+## Overview
 
----
+Currently, this crate serves as a placeholder and template for future derive macros. It provides the basic structure and tooling needed to implement procedural macros that will enhance the `egui_mobius` development experience.
 
-## **Installation**
-Add `egui_mobius_macros` to your `Cargo.toml`:
+### Planned Features
+
+🔄 **State Management**
+- Auto-implement state management traits
+- Thread-safe state synchronization
+- Value<T> integration
+
+🔌 **Signal/Slot Helpers**
+- Automatic signal-slot connections
+- Type-safe message passing
+- Event routing decorators
+
+🎨 **UI Components**
+- Component generation
+- Layout helpers
+- State binding
+
+⚡ **Event Handling**
+- Event type generation
+- Handler registration
+- Dispatcher integration
+
+## Installation
+
+Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 egui_mobius_macros = { path = "../egui_mobius_macros" }
 ```
 
-Or, when published on **crates.io**:
-```toml
-[dependencies]
-egui_mobius_macros = "0.1"
-```
+## Development
 
----
+To implement a new derive macro:
 
-## **Usage**
-Simply derive `EventMacro` on an enum:
-
+1. Use the template in `src/lib.rs`:
 ```rust
-use egui_mobius_macros::EventMacro;
-
-#[derive(EventMacro, PartialEq, Clone)]
-enum MyEvent {
-    RefreshUI,
-    UpdateData(String),
-    Custom(i32),
-}
-
-fn main() {
-    let event = MyEvent::UpdateData("Hello!".to_string());
-
-    println!("Event name: {}", event.event_name()); // Outputs: UpdateData
+#[proc_macro_derive(MyMacro)]
+pub fn my_macro(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    // Implementation here
 }
 ```
 
-### **What Happens Under the Hood?**
-- **`event_name()`** method is auto-generated:
-  ```rust
-  impl MyEvent {
-      pub fn event_name(&self) -> &'static str {
-          match self {
-              MyEvent::RefreshUI => "RefreshUI",
-              MyEvent::UpdateData(..) => "UpdateData",
-              MyEvent::Custom(..) => "Custom",
-          }
-      }
-  }
-  ```
-- **`Debug` implementation:**  
-  ```rust
-  println!("{:?}", event); // Outputs: "UpdateData event"
-  ```
-
----
-
-## **Supported Enum Variants**
-This macro works with all Rust enum styles:
-
-#### ✅ **Unit Variants**
+2. Add tests to verify behavior:
 ```rust
-#[derive(EventMacro, Clone)]
-enum SimpleEvent {
-    Start,
-    Stop,
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_my_macro() {
+        // Test implementation
+    }
 }
 ```
 
-#### ✅ **Tuple Variants**
-```rust
-#[derive(EventMacro, Clone)]
-enum TupleEvent {
-    Resize(u32, u32),
-    UpdateData(String),
-}
-```
+3. Document usage and examples
 
-#### ✅ **Struct-like Variants**
-```rust
-#[derive(EventMacro, Clone)]
-enum StructEvent {
-    Custom { id: u32, name: String },
-}
-```
+## Contributing
+
+Contributions are welcome! When adding new macros:
+
+- Follow the template structure in `src/lib.rs`
+- Include comprehensive documentation
+- Add tests for all functionality
+- Update this README with usage examples
+
+## License
+
+This project is licensed under the MIT License.
 
 ---
 
-## **Advanced Features (Planned)**
-🚀 **Trait-Based Event Dispatching** – Automatic conversion to `dyn EventTrait`.  
-🚀 **`From<T>` Implementations** – Simplified event conversions.  
-🚀 **Integration with `Slot<T>`** – Automatic event-slot binding.  
-
----
-
-## **Contributing**
-Contributions are welcome! Feel free to:
-- Open an issue 💡
-- Submit a pull request 🚀
-- Improve documentation 📚
-
----
-
-## **License**
-This project is licensed under the **MIT License**.
-
----
-
-### 🎉 **Happy coding with `egui_mobius`!** 🚀
-
+🎉 **Ready to enhance egui_mobius with powerful macros!** 🚀
