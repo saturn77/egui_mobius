@@ -12,7 +12,7 @@
 //!   compile-time correctness
 //! - **Signal-Slot Architecture**: Qt-inspired design pattern for decoupled
 //!   communication
-//! - **Value<T> State Management**: Thread-safe state container with proper
+//! - **`Value<T>` State Management**: Thread-safe state container with proper
 //!   synchronization
 //! - **Background Operations**: Clean thread separation for non-blocking UI
 //!
@@ -40,7 +40,7 @@
 //! - [`signals`]: Signal type for sending messages
 //! - [`slot`]: Slot type for receiving and processing messages
 //! - [`factory`]: Utilities for creating signal-slot pairs
-//! - [`types`]: Core types like Value<T> for state management
+//! - [`types`]: Core types like `Value<T>` for state management
 //! - [`dispatching`]: Signal dispatching and routing system
 //!
 
