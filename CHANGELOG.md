@@ -2,6 +2,14 @@
 
 ## [0.3.0-alpha.4] - 2025-03-18
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.3.0-alpha.4] - 2025-03-18
+
 ### Changed
 - Updated to egui 0.31.1 and egui_plot 0.31.0
 - Standardized workspace dependencies for egui ecosystem crates
