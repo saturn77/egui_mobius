@@ -1,7 +1,40 @@
+//! A customizable button widget with enhanced styling options.
+//!
+//! The `StyledButton` provides a flexible button implementation with the following features:
+//! - Customizable hover and normal colors
+//! - Adjustable corner rounding
+//! - Configurable margins and minimum size
+//! - Hover effect with outer stroke
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use egui_mobius_widgets::StyledButton;
+//! use eframe::egui;
+//!
+//! fn ui_example(ui: &mut egui::Ui) {
+//!     let button = StyledButton::new("Click me")
+//!         .hover_color(egui::Color32::RED)
+//!         .normal_color(egui::Color32::BLUE)
+//!         .rounding(8.0)
+//!         .margin(egui::Vec2::new(10.0, 5.0));
+//!
+//!     if button.show(ui).clicked() {
+//!         println!("Button clicked!");
+//!     }
+//! }
+//! ```
+
 use egui::{Response, Ui, Color32, CornerRadius, Stroke, Vec2};
 use egui::epaint::StrokeKind;
 
-/// A styled button that changes border color on hover
+/// A styled button with customizable appearance and hover effects.
+///
+/// The button supports:
+/// - Custom text
+/// - Hover and normal colors
+/// - Corner rounding
+/// - Margin and minimum size settings
 #[derive(Debug)]
 pub struct StyledButton {
     text: String,
@@ -13,7 +46,19 @@ pub struct StyledButton {
 }
 
 impl StyledButton {
-    /// Create a new styled button
+    /// Creates a new styled button with the given text and default styling.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text to display on the button
+    ///
+    /// # Default Values
+    ///
+    /// * `hover_color` - Light blue (RGB: 100, 200, 255)
+    /// * `normal_color` - Gray (RGB: 128, 128, 128)
+    /// * `rounding` - 5.0 pixels
+    /// * `margin` - Vec2::new(10.0, 5.0)
+    /// * `min_size` - Vec2::ZERO
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -25,37 +70,85 @@ impl StyledButton {
         }
     }
 
-    /// Set the hover color
+    /// Sets the color of the button's border when hovered.
+    ///
+    /// # Arguments
+    ///
+    /// * `color` - The color to use for the hover effect
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining
     pub fn hover_color(mut self, color: Color32) -> Self {
         self.hover_color = color;
         self
     }
 
-    /// Set the normal color
+    /// Sets the color of the button's border in its normal state.
+    ///
+    /// # Arguments
+    ///
+    /// * `color` - The color to use for the normal state
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining
     pub fn normal_color(mut self, color: Color32) -> Self {
         self.normal_color = color;
         self
     }
 
-    /// Set the corner rounding
+    /// Sets the radius for rounding the button's corners.
+    ///
+    /// # Arguments
+    ///
+    /// * `rounding` - The corner radius in pixels
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining
     pub fn rounding(mut self, rounding: f32) -> Self {
         self.rounding = rounding;
         self
     }
 
-    /// Set the margin - space around the button ()
+    /// Sets the margin (space around the button).
+    ///
+    /// # Arguments
+    ///
+    /// * `margin` - A Vec2 where x is horizontal margin and y is vertical margin
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining
     pub fn margin(mut self, margin: Vec2) -> Self {
         self.margin = margin;
         self
     }
 
-    /// Set the minimum size of the button
+    /// Sets the minimum size of the button.
+    ///
+    /// # Arguments
+    ///
+    /// * `min_size` - A Vec2 where x is minimum width and y is minimum height
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining
     pub fn min_size(mut self, min_size: Vec2) -> Self {
         self.min_size = min_size;
         self
     }
 
-    /// Show the button in the UI
+    /// Shows the button in the UI and returns the response.
+    ///
+    /// # Arguments
+    ///
+    /// * `ui` - The UI to add the button to
+    ///
+    /// # Returns
+    ///
+    /// Returns an egui::Response that can be used to check for clicks and hover state
     pub fn show(self, ui: &mut Ui) -> Response {
         let Self { text, hover_color, normal_color, rounding, margin, min_size } = self;
 
