@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0-alpha.7] - 2025-03-18
+
+### Added
+- New ButtonColors struct to separate button appearance from log colors
+- Unified RUN/STOP log color in LogColors
+- Default implementation for StatefulButton
+
+### Changed
+- Improved UI responsiveness with better lock management
+- Enhanced button layout and padding
+- Separated button appearance colors from log colors
+- Removed deprecated derive macros in favor of Signal/Slot pattern
+
+### Fixed
+- Lock contention issues in clock_async example
+- Button color synchronization between UI and logs
+
+### Removed
+- Deprecated derive macros and associated code
+- `macros.rs` module
+
+
+
+
 ## [0.3.0-alpha.6] - 2025-03-18
 
 ### Changed
