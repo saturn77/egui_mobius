@@ -16,7 +16,6 @@ path = "src/main.rs"
 
 [dependencies]
 egui_mobius = { workspace = true }
-as_command_derive = { workspace = true }
 egui_taffy = { workspace = true }
 egui = { workspace = true, features = ["serde"] }
 egui_extras = { workspace = true }

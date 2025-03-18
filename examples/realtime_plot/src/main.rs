@@ -240,7 +240,7 @@ fn consumer_thread(mut slot: Slot<Event>, fabric_data: &Fabric) {
 // the shared data and the signal/slot pair.
 //-------------------------------------------------------------------------
 fn main() {
-    let (ui_signal, ui_slot) = factory::create_signal_slot(1);
+    let (ui_signal, ui_slot) = factory::create_signal_slot();
     let app = UiApp::new(ui_signal.clone(), ui_slot.clone());
 
     producer_thread(ui_signal.clone(), &app.fabric_data);

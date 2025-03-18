@@ -315,8 +315,8 @@ impl eframe::App for UiMainWindow {
 /// eframe::NativeOptions instance, and runs the eframe::run_native function to run the application.
 ///
 fn main() {
-    let (signal_to_dispatcher, slot_from_ui) = factory::create_signal_slot::<Event>(1);
-    let (signal_to_ui, slot_from_dispatcher) = factory::create_signal_slot::<Processed>(1);
+    let (signal_to_dispatcher, slot_from_ui) = factory::create_signal_slot::<Event>();
+    let (signal_to_ui, slot_from_dispatcher) = factory::create_signal_slot::<Processed>();
 
     let app = UiMainWindow::new(signal_to_dispatcher, slot_from_dispatcher);
 

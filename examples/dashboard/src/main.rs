@@ -49,7 +49,7 @@ pub fn run_backend(mut event_slot: Slot<Event>, response_signal: Signal<Response
 }
 
 fn main() {
-    let (response_signal, response_slot) = factory::create_signal_slot::<Response>(64);
+    let (response_signal, response_slot) = factory::create_signal_slot::<Response>();
 
     let dispatcher = Dispatcher::<Event>::new();
 
