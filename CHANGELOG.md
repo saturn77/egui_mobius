@@ -13,6 +13,7 @@
 ### Changed
 - Updated to egui 0.31.1 and egui_plot 0.31.0
 - Standardized workspace dependencies for egui ecosystem crates
+- Deprecated `AsCommand` macro in favor of Signal/Slot pattern with AsyncDispatcher
 
 ### Fixed
 - Version mismatches between egui and egui_taffy
