@@ -52,7 +52,7 @@ egui_mobius follows semantic versioning and is currently in its alpha phase (0.3
 - A mature architectural foundation with thread-aware slots
 - Production-ready core features including type-safe messaging
 - Ongoing API refinements based on real-world usage
-- Full compatibility with egui 0.31.0
+- Full compatibility with egui 0.31.1
 
 See [VERSIONING.md](VERSIONING.md) for our complete version strategy and compatibility matrix.
 
