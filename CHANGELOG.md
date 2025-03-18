@@ -38,18 +38,12 @@
 ## [0.3.0-alpha.2] - 2025-03-16
 
 ### Added
+- Initial support for async operations
+- Enhanced thread safety features
 
 ### Changed
-
-### Fixed
-
-## [0.3.0-alpha.2] - 2025-03-16
-
-### Added
-
-### Changed
-
-### Fixed
+- Improved signal-slot system
+- Better error handling
 
 All notable changes to egui_mobius will be documented in this file.
 
