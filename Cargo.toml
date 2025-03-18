@@ -21,10 +21,10 @@ egui_mobius_widgets = { path = "crates/egui_mobius_widgets" }
 egui_mobius_macros = { path = "crates/egui_mobius_macros" }
 
 # egui and eframe
-egui = "0.30.0"
-eframe = { version = "0.30.0", default-features = false }
-egui_extras = "0.30.0"
-egui_taffy = "0.4.0"
+egui = "0.31.1"
+eframe = { version = "0.31.1", default-features = false }
+egui_extras = "0.31.1"
+egui_taffy = "0.7.0"
 # random number generation, useful for testing and examples
 rand = "0.9.0"
 

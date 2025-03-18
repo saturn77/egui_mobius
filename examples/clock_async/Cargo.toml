@@ -18,9 +18,9 @@ path = "src/main.rs"
 egui_mobius = { workspace = true }
 as_command_derive = { workspace = true }
 egui_taffy = { workspace = true }
-egui = { version = "0.30.0", features = ["serde"] }
-egui_extras = { version = "0.30.0" }
-eframe = { version = "0.30.0", default-features = false, features = [
+egui = { workspace = true, features = ["serde"] }
+egui_extras = { workspace = true }
+eframe = { workspace = true, features = [
     "default_fonts",
     "glow",
     "wayland",
