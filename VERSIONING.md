@@ -5,12 +5,12 @@
 egui_mobius follows [Semantic Versioning](https://semver.org/) with the following structure:
 `MAJOR.MINOR.PATCH[-PRERELEASE]`
 
-### Current Phase: 0.3.0-alpha.5
+### Current Phase: 0.3.0-alpha.6
 
 We are currently in the alpha phase of our first public release. This version represents:
 - A mature architectural foundation with Signal/Slot pattern
 - Production-ready core features and async support
-- Ongoing API refinements and deprecations
+- Ongoing API refinements and ergonomic improvements
 - Full compatibility with egui 0.31.1 and egui_taffy 0.7.0
 
 ### Version Progression

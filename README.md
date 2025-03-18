@@ -7,7 +7,7 @@
 [![egui_version](https://img.shields.io/badge/egui-0.31.1-blue)](https://github.com/emilk/egui)
 [![egui_taffy](https://img.shields.io/badge/egui__taffy-0.7.0-purple)](https://github.com/Veykril/egui_taffy)
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Latest Version](https://img.shields.io/badge/version-0.3.0--alpha.5-green.svg)
+![Latest Version](https://img.shields.io/badge/version-0.3.0--alpha.6-green.svg)
 ![Crates.io](https://img.shields.io/badge/crates.io-unreleased-orange.svg)
 [![Rust](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml/badge.svg)](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml)
 ![Rust 2024](https://img.shields.io/badge/rust-2024-blue.svg)
