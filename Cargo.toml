@@ -1,5 +1,3 @@
-cargo-features = ["edition2024"]
-
 [workspace]
 members = [ "crates/egui_mobius", "crates/egui_mobius_macros", "crates/egui_mobius_widgets",
     "examples/*",
