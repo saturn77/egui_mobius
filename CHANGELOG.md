@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0-alpha.11] - 2025-03-19
+
+### Added
+- New subscriber example showcasing signal-slot pattern with real-time data visualization
+- IDE settings to .gitignore
+
+### Changed
+- Removed edition2024 feature flag (now stabilized in Rust 1.85)
+- Improved code quality in subscriber example:
+  - Added Default implementations
+  - Fixed clippy warnings
+  - Removed unused imports
+
 ## [0.3.0-alpha.10] - 2025-03-18
 
 ### Changed
