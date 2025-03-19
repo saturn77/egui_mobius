@@ -14,7 +14,6 @@
 //!
 //! ```rust,no_run
 //! use egui_mobius_widgets::{StyledButton, StatefulButton};
-//! use eframe::egui;
 //!
 //! fn ui_example(ui: &mut egui::Ui) {
 //!     // Create a styled button with custom appearance
@@ -39,65 +38,6 @@
 //!         stateful_btn.set_started(!stateful_btn.is_started());
 //!         println!("Process is now {}", 
 //!             if stateful_btn.is_started() { "running" } else { "stopped" });
-//!     }
-//! }
-//! ```
-//!
-//! ## Advanced Usage
-//!
-//! ### Error Handling
-//!
-//! ```rust,no_run
-//! use egui_mobius_widgets::StatefulButton;
-//! use eframe::egui;
-//! use std::sync::mpsc::{channel, TryRecvError};
-//!
-//! struct ProcessManager {
-//!     tx: std::sync::mpsc::Sender<bool>,
-//!     rx: std::sync::mpsc::Receiver<bool>,
-//!     button: StatefulButton,
-//!     error: Option<String>,
-//! }
-//!
-//! impl ProcessManager {
-//!     fn new() -> Self {
-//!         let (tx, rx) = channel();
-//!         Self {
-//!             tx,
-//!             rx,
-//!             button: StatefulButton::new(),
-//!             error: None,
-//!         }
-//!     }
-//!
-//!     fn ui(&mut self, ui: &mut egui::Ui) {
-//!         // Check for process status updates
-//!         match self.rx.try_recv() {
-//!             Ok(running) => {
-//!                 self.button.set_started(running);
-//!                 self.error = None;
-//!             }
-//!             Err(TryRecvError::Empty) => {},
-//!             Err(TryRecvError::Disconnected) => {
-//!                 self.error = Some("Process disconnected".to_string());
-//!                 self.button.set_started(false);
-//!             }
-//!         }
-//!
-//!         // Show error if any
-//!         if let Some(error) = &self.error {
-//!             ui.label(egui::RichText::new(error).color(egui::Color32::RED));
-//!         }
-//!
-//!         // Show control button
-//!         if self.button.show(ui).clicked() {
-//!             let new_state = !self.button.is_started();
-//!             if let Err(e) = self.tx.send(new_state) {
-//!                 self.error = Some(format!("Failed to control process: {}", e));
-//!             } else {
-//!                 self.button.set_started(new_state);
-//!             }
-//!         }
 //!     }
 //! }
 //! ```
