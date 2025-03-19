@@ -35,5 +35,8 @@ user_guide/
 docs/
 *.pdf
 
+# IDE settings
+.vscode/
+
 # Duplicate config files (src version is canonical)
 examples/clock_async/default_config.ron
