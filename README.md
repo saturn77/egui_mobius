@@ -26,8 +26,8 @@ Inspired by production-grade GUI frameworks, egui_mobius addresses the key chall
 * **Thread-Aware Signal-Slot Architecture:**
   Unlike the Signal types in frameworks like Leptos or Dioxus, egui_mobius's slots maintain their own threads, enabling true hybrid synchronous/asynchronous operation. This approach allows slots to handle both immediate UI updates and long-running background tasks without blocking.
 
-* **Flexible Dispatcher System:**
-  Integral to egui_mobius is its dispatching system. The standard Dispatcher manages signal-slot connections through named channels and priority queues, with an AsyncDispatcher variant available for specialized async workloads using Tokio. This flexibility enables clean handling of both synchronous UI events and asynchronous background operations.
+* **Modern Dispatcher System:**
+  A streamlined dispatching module is at the heart of egui_mobius. The AsyncDispatcher provides efficient async workload handling using Tokio, while the standard Dispatcher offers synchronous event processing. Both implementations share a clean, unified interface for managing signal-slot connections, enabling seamless handling of UI events and background operations.
 
 * **True Concurrent Processing:**
   Each slot's dedicated thread enables genuine parallel execution, not just asynchronous scheduling. Background tasks like clock updates run independently of the UI thread, with type-safe message passing ensuring thread-safe communication.
