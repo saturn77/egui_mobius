@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0-alpha.9] - 2025-03-18
+
+### Changed
+- Consolidated dispatching functionality in `dispatching` module
+- Removed old Dispatcher implementation from factory.rs
+- Enhanced documentation for signal-slot creation
+
 ## [0.3.0-alpha.8] - 2025-03-18
 
 ### Added
