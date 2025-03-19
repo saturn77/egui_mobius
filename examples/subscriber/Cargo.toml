@@ -1,0 +1,17 @@
+[package]
+name = "subscriber"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+egui = { workspace = true }
+egui_mobius =  { workspace = true }
+egui_mobius_widgets = { workspace = true }
+eframe = {workspace = true }
+tokio = { version = "1.36", features = ["full"] }
+chrono = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rand = "0.8"
