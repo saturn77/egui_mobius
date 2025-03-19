@@ -142,8 +142,86 @@ impl<E: Clone + Send + 'static> SignalDispatcher<E> for Dispatcher<E> {
 
 
 
-/// A simple async dispatcher that listens to a `Slot<E>`, processes events asynchronously,
-/// and sends results via a `Signal<R>`.
+/// An asynchronous dispatcher that processes events in a dedicated thread pool and
+/// supports non-blocking operations with proper error handling and timeouts.
+///
+/// The `AsyncDispatcher` is particularly useful for:
+/// - Long-running background tasks that shouldn't block the UI
+/// - Network requests and file I/O operations
+/// - Parallel processing of computationally intensive tasks
+/// - Operations that require timeouts or cancellation
+///
+/// # Type Parameters
+/// - `E`: The event type this dispatcher processes
+/// - `R`: The result type returned after processing
+///
+/// # Examples
+///
+/// ## Basic Usage
+/// ```rust
+/// use egui_mobius::dispatching::AsyncDispatcher;
+/// use egui_mobius::factory::create_signal_slot;
+///
+/// // Create an async dispatcher for processing image data
+/// let dispatcher = AsyncDispatcher::<Vec<u8>, String>::new();
+///
+/// // Set up signal/slot for image processing
+/// let (signal, slot) = create_signal_slot::<Vec<u8>>();
+/// let (result_signal, result_slot) = create_signal_slot::<String>();
+///
+/// // Attach async handler
+/// dispatcher.attach_async(slot, result_signal, |image_data| async move {
+///     // Simulate image processing
+///     format!("Processed {} bytes of image data", image_data.len())
+/// });
+/// ```
+///
+/// ## With Timeouts and Error Handling
+/// ```rust
+/// use egui_mobius::dispatching::AsyncDispatcher;
+/// use egui_mobius::factory::create_signal_slot;
+/// use std::time::Duration;
+/// use tokio::time::timeout;
+///
+/// #[derive(Debug, Clone)]
+/// enum ProcessError {
+///     Timeout,
+///     Failed(String),
+/// }
+///
+/// let dispatcher = AsyncDispatcher::<String, Result<String, ProcessError>>::new();
+/// let (signal, slot) = create_signal_slot::<String>();
+/// let (result_signal, result_slot) = create_signal_slot::<Result<String, ProcessError>>();
+///
+/// dispatcher.attach_async(slot, result_signal, |input| async move {
+///     match timeout(Duration::from_secs(5), async {
+///         // Simulate long-running task
+///         tokio::time::sleep(Duration::from_secs(1)).await;
+///         Ok(format!("Processed: {}", input))
+///     }).await {
+///         Ok(result) => result,
+///         Err(_) => Err(ProcessError::Timeout),
+///     }
+/// });
+/// ```
+///
+/// ## Parallel Processing
+/// ```rust
+/// use egui_mobius::dispatching::AsyncDispatcher;
+/// use egui_mobius::factory::create_signal_slot;
+/// use futures::future::join_all;
+///
+/// let dispatcher = AsyncDispatcher::<Vec<i32>, Vec<i32>>::new();
+/// let (signal, slot) = create_signal_slot::<Vec<i32>>();
+/// let (result_signal, result_slot) = create_signal_slot::<Vec<i32>>();
+///
+/// dispatcher.attach_async(slot, result_signal, |numbers| async move {
+///     let tasks: Vec<_> = numbers.into_iter()
+///         .map(|n| async move { n * n })
+///         .collect();
+///     join_all(tasks).await
+/// });
+/// ```
 pub struct AsyncDispatcher<E, R> {
     runtime: Arc<Runtime>,
     _phantom: std::marker::PhantomData<(E, R)>,
@@ -165,9 +243,45 @@ impl<E: Send + 'static, R: Send + 'static> AsyncDispatcher<E, R> {
         }
     }
 
-    /// Attaches an async handler to the given `Slot<E>`, sending results via `Signal<R>`.
+    /// Attaches an async handler to the given `Slot<E>`, processing events asynchronously
+    /// and sending results via `Signal<R>`. The handler runs in a dedicated thread pool
+    /// managed by Tokio, ensuring non-blocking operation.
     ///
-    /// This can be called only once per Slot.
+    /// # Arguments
+    /// * `slot` - The slot that will receive events to process
+    /// * `signal` - The signal used to send processed results
+    /// * `handler` - An async closure that processes events and returns results
+    ///
+    /// # Type Parameters
+    /// * `F` - The handler function type that takes an event and returns a Future
+    /// * `Fut` - The Future type returned by the handler
+    ///
+    /// # Notes
+    /// - This can be called only once per Slot
+    /// - The handler runs in a Tokio runtime with work-stealing scheduler
+    /// - Results are sent asynchronously through the signal
+    /// - If the signal send fails (e.g., no receivers), the error is silently ignored
+    ///
+    /// # Example
+    /// ```rust
+    /// use egui_mobius::dispatching::AsyncDispatcher;
+    /// use egui_mobius::factory::create_signal_slot;
+    /// use tokio::time::sleep;
+    /// use std::time::Duration;
+    ///
+    /// async fn process_data(data: String) -> Result<String, String> {
+    ///     sleep(Duration::from_millis(100)).await; // Simulate work
+    ///     Ok(format!("Processed: {}", data))
+    /// }
+    ///
+    /// let dispatcher = AsyncDispatcher::<String, Result<String, String>>::new();
+    /// let (signal, slot) = create_signal_slot::<String>();
+    /// let (result_signal, result_slot) = create_signal_slot::<Result<String, String>>();
+    ///
+    /// dispatcher.attach_async(slot, result_signal, |input| async move {
+    ///     process_data(input).await
+    /// });
+    /// ```
     pub fn attach_async<F, Fut>(
         &self,
         mut slot: Slot<E>,
