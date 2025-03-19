@@ -134,34 +134,16 @@ fn main() {
                     Ok(config) => config,
                     Err(e) => {
                         eprintln!("Failed to parse config: {}", e);
-                        Config {
-                            slider_value: 0.5,
-                            combo_value: "Option A".to_string(),
-                            time_format: "24h".to_string(),
-                            colors: logger::LogColors::default(),
-                            button_colors: logger::ButtonColors::default(),
-                        }
+                        Config::default()
                     }
                 }
             } else {
                 eprintln!("Failed to read config file");
-                Config {
-                    slider_value: 0.5,
-                    combo_value: "Option A".to_string(),
-                    time_format: "24h".to_string(),
-                    colors: logger::LogColors::default(),
-                    button_colors: logger::ButtonColors::default(),
-                }
+                Config::default()
             }
         } else {
             // Copy default config
-            let default_config = Config {
-                slider_value: 0.5,
-                combo_value: "Option A".to_string(),
-                time_format: "24h".to_string(),
-                colors: logger::LogColors::default(),
-                button_colors: logger::ButtonColors::default(),
-            };
+            let default_config = Config::default();
             if let Ok(json_data) = serde_json::to_string_pretty(&default_config) {
                 if let Err(e) = std::fs::write(&config_path, json_data) {
                     eprintln!("Failed to write default config: {}", e);
@@ -171,7 +153,6 @@ fn main() {
         }
     };
 
-    // Set up event handling system first
     let (event_signal, event_slot) = factory::create_signal_slot::<Event>();
     let (response_signal, response_slot) = factory::create_signal_slot::<Response>();
     

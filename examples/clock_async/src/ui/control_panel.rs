@@ -1,5 +1,6 @@
 use eframe::egui;
 use egui_mobius_widgets::{StyledButton, StatefulButton};
+
 use crate::state::AppState;
 use crate::types::Event;
 
@@ -8,6 +9,29 @@ pub struct ControlPanel<'a> {
 }
 
 impl<'a> ControlPanel<'a> {
+    fn update_log_colors(&self, colors: &crate::logger::LogColors) {
+        let mut logs = self.state.logs.lock().unwrap();
+        for log in logs.iter_mut() {
+            if log.source == "clock" {
+                log.color = Some(colors.clock);
+            } else if log.source == "ui" {
+                if log.message.contains("Slider value") {
+                    log.color = Some(colors.slider);
+                } else if log.message.contains("Selected option: Option A") {
+                    log.color = Some(colors.option_a);
+                } else if log.message.contains("Selected option: Option B") {
+                    log.color = Some(colors.option_b);
+                } else if log.message.contains("Selected option: Option C") {
+                    log.color = Some(colors.option_c);
+                } else if log.message.contains("Process") {
+                    log.color = Some(colors.run_stop_log);
+                } else if log.message.contains("Custom Event") {
+                    log.color = Some(colors.custom_event);
+                }
+            }
+        }
+        self.state.save_config();
+    }
     pub fn new(state: &'a AppState) -> Self {
         Self { state }
     }
@@ -77,6 +101,7 @@ impl<'a> ControlPanel<'a> {
                     });
             });
 
+
             // Button Colors Section
             ui.add_space(20.0);
             ui.collapsing("🎨 Button Colors", |ui| {
@@ -102,159 +127,137 @@ impl<'a> ControlPanel<'a> {
             // Log Colors Section
             ui.add_space(20.0);
             ui.collapsing("🎨 Log Colors", |ui| {
-                let mut colors = self.state.colors.lock().unwrap().clone();
+                let mut colors = self.state.colors.lock().unwrap();
                 let mut changed = false;
+                let mut colors_clone = colors.clone();
 
                 ui.horizontal(|ui| {
                     ui.label("Clock Updates:");
                     changed |= ui.color_edit_button_srgba(&mut colors.clock).changed();
+                    colors_clone.clock = colors.clock;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Slider Events:");
                     changed |= ui.color_edit_button_srgba(&mut colors.slider).changed();
+                    colors_clone.slider = colors.slider;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Option A:");
                     changed |= ui.color_edit_button_srgba(&mut colors.option_a).changed();
+                    colors_clone.option_a = colors.option_a;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Option B:");
                     changed |= ui.color_edit_button_srgba(&mut colors.option_b).changed();
+                    colors_clone.option_b = colors.option_b;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Option C:");
                     changed |= ui.color_edit_button_srgba(&mut colors.option_c).changed();
+                    colors_clone.option_c = colors.option_c;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Time Format:");
                     changed |= ui.color_edit_button_srgba(&mut colors.time_format).changed();
+                    colors_clone.time_format = colors.time_format;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Custom Events:");
                     changed |= ui.color_edit_button_srgba(&mut colors.custom_event).changed();
+                    colors_clone.custom_event = colors.custom_event;
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label("RUN/STOP Log:");
+                    ui.label("RUN/STOP Events:");
                     changed |= ui.color_edit_button_srgba(&mut colors.run_stop_log).changed();
+                    colors_clone.run_stop_log = colors.run_stop_log;
                 });
 
+                drop(colors);
                 if changed {
-                    *self.state.colors.lock().unwrap() = colors.clone();
-                    self.state.save_config();
-
-                    // Update all existing log entries with new colors
-                    let mut logs = self.state.logs.lock().unwrap();
-                    for log in logs.iter_mut() {
-                        if log.source == "clock" {
-                            log.color = Some(colors.clock);
-                        } else if log.source == "ui" {
-                            if log.message.contains("Slider value") {
-                                log.color = Some(colors.slider);
-                            } else if log.message.contains("Selected option: Option A") {
-                                log.color = Some(colors.option_a);
-                            } else if log.message.contains("Selected option: Option B") {
-                                log.color = Some(colors.option_b);
-                            } else if log.message.contains("Selected option: Option C") {
-                                log.color = Some(colors.option_c);
-                            }
-                        }
-                    }
+                    self.update_log_colors(&colors_clone);
                 }
             });
 
             // Button container with vertical layout
             ui.vertical(|ui| {
-                ui.add_space(20.0);
+                ui.add_space(10.0);
 
-                // Custom Event Button (now styled)
+                // Custom Event Button
                 let custom_button = StyledButton::new("Custom Event")
                     .hover_color(egui::Color32::from_rgb(100, 200, 255))
                     .normal_color(egui::Color32::from_gray(128))
-                    .rounding(8.0)
-                    .margin(egui::Vec2::new(10.0, 5.0))
-                    .min_size(egui::vec2(120.0, 27.0));
+                    .rounding(4.0)
+                    .margin(egui::Vec2::new(4.0, 2.0))
+                    .min_size(egui::vec2(120.0, 24.0));
                 
                 if custom_button.show(ui).clicked() {
+                    let colors = self.state.colors.lock().unwrap();
                     let custom_event = crate::logger::LogEntry {
                         timestamp: chrono::Local::now(),
                         source: "ui".to_string(),
                         message: "Custom Event".to_string(),
-                        color: Some(egui::Color32::from_rgb(100, 200, 255)),
+                        color: Some(colors.custom_event),
                     };
                     self.state.logs.lock().unwrap().push(custom_event);
                 }
 
-                ui.add_space(10.0);
+                ui.add_space(5.0);
 
-                // Green Styled Button
-                let styled_button = StyledButton::new("Green Styled Event")
-                    .hover_color(egui::Color32::from_rgb(0, 255, 0)) // Bright green hover
+                // Custom Event 2 Button
+                let styled_button = StyledButton::new("Custom Event 2")
+                    .hover_color(egui::Color32::from_rgb(100, 200, 255))
                     .normal_color(egui::Color32::from_gray(128))
-                    .rounding(8.0)
-                    .margin(egui::Vec2::new(10.0, 5.0))
-                    .min_size(egui::vec2(120.0, 27.0));
+                    .rounding(4.0)
+                    .margin(egui::Vec2::new(4.0, 2.0))
+                    .min_size(egui::vec2(120.0, 24.0));
                 
                 if styled_button.show(ui).clicked() {
+                    let colors = self.state.colors.lock().unwrap();
                     let custom_event = crate::logger::LogEntry {
                         timestamp: chrono::Local::now(),
                         source: "ui".to_string(),
-                        message: "Green Custom Event".to_string(),
-                        color: Some(egui::Color32::from_rgb(0, 255, 0)),
+                        message: "Custom Event 2".to_string(),
+                        color: Some(colors.custom_event),
                     };
                     self.state.logs.lock().unwrap().push(custom_event);
                 }
 
                 ui.add_space(10.0);
 
-                // Stateful Start/Stop Button
-                // Get button colors and release lock immediately
-                let (run_color, stop_color) = {
-                    let colors = self.state.button_colors.lock().unwrap();
-                    (colors.run_state, colors.stop_state)
-                };
-                
-                // Get log color
-                let log_color = self.state.colors.lock().unwrap().run_stop_log;
+                // RUN/STOP Button
+                let mut button_started = self.state.button_started.lock().unwrap();
+                let button_colors = self.state.button_colors.lock().unwrap();
                 
                 let mut stateful_button = StatefulButton::new()
-                    .margin(egui::Vec2::new(8.5, 4.25))
-                    .rounding(8.0)
-                    .min_size(egui::vec2(120.0, 27.0))
-                    .run_color(run_color)
-                    .stop_color(stop_color);
+                    .margin(egui::Vec2::new(4.0, 2.0))
+                    .rounding(4.0)
+                    .min_size(egui::vec2(120.0, 24.0))
+                    .run_color(button_colors.run_state)
+                    .stop_color(button_colors.stop_state);
                 
-                // Set the button's state from our stored state
-                let mut button_started = self.state.button_started.lock().unwrap();
                 stateful_button.set_started(*button_started);
                 
                 if stateful_button.show(ui).clicked() {
-                    // Toggle the state and get the new state
                     *button_started = !*button_started;
-                    let is_started = *button_started;
-                    drop(button_started); // Release the lock early
-                    
-                    // Get the appropriate color
-                    // Use the same log color for both states
-                    let color = log_color;
-                    
-                    let message = if is_started {
+                    let message = if *button_started {
                         "Process Started"
                     } else {
                         "Process Stopped"
                     };
-                    
+
+                    let colors = self.state.colors.lock().unwrap();
                     let custom_event = crate::logger::LogEntry {
                         timestamp: chrono::Local::now(),
                         source: "ui".to_string(),
                         message: message.to_string(),
-                        color: Some(color),
+                        color: Some(colors.run_stop_log),
                     };
                     self.state.logs.lock().unwrap().push(custom_event);
                 }

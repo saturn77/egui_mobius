@@ -10,6 +10,18 @@ pub struct Config {
     pub button_colors: ButtonColors,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            slider_value: 0.5,
+            combo_value: "Option A".to_string(),
+            time_format: "24h".to_string(),
+            colors: LogColors::default(),
+            button_colors: ButtonColors::default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ClockMessage {
     TimeUpdated(String),

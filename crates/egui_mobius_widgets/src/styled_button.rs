@@ -178,8 +178,7 @@ impl StyledButton {
         let response = ui.horizontal(|ui| {
             ui.add_space(margin.x);
             let button = egui::Button::new(egui::RichText::new(&text).color(text_color))
-                .fill(if ui.ctx().input(|i| i.pointer.any_down()) { hover_color } else { normal_color })
-                .stroke(Stroke::new(1.0, normal_color))
+                .fill(egui::Color32::TRANSPARENT)
                 .corner_radius(CornerRadius::from(rounding))
                 .min_size(min_size);
 
@@ -189,7 +188,14 @@ impl StyledButton {
                 ui.painter().rect_stroke(
                     response.rect,
                     CornerRadius::from(rounding),
-                    Stroke::new(2.0, hover_color),
+                    Stroke::new(1.0, hover_color),
+                    StrokeKind::Outside,
+                );
+            } else {
+                ui.painter().rect_stroke(
+                    response.rect,
+                    CornerRadius::from(rounding),
+                    Stroke::new(1.0, normal_color),
                     StrokeKind::Outside,
                 );
             }
@@ -198,9 +204,7 @@ impl StyledButton {
             response
         }).inner;
 
-        if response.clicked() {
-            ui.ctx().request_repaint();
-        }
+
 
         response
     }

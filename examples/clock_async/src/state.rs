@@ -16,8 +16,8 @@ pub struct AppState {
     pub event_signal: Value<Option<Signal<Event>>>,
     pub colors: Value<LogColors>,
     pub button_colors: Value<ButtonColors>,
-    pub use_24h: Value<bool>,
     pub button_started: Value<bool>,
+    pub use_24h: Value<bool>,
 }
 
 impl AppState {
@@ -32,8 +32,8 @@ impl AppState {
             event_signal: Value::new(None),
             colors: Value::new(config.colors),
             button_colors: Value::new(config.button_colors),
-            use_24h: Value::new(config.time_format == "24h"),
             button_started: Value::new(false),
+            use_24h: Value::new(config.time_format == "24h"),
         }
     }
 
@@ -75,16 +75,20 @@ impl AppState {
             colors: self.colors.lock().unwrap().clone(),
             button_colors: self.button_colors.lock().unwrap().clone(),
         };
-        if let Ok(json_data) = serde_json::to_string_pretty(&config) {
-            let local_dir = std::path::Path::new(".local");
-            if !local_dir.exists() {
-                let _ = std::fs::create_dir_all(local_dir);
+
+        // Move config saving to background thread to avoid blocking UI
+        std::thread::spawn(move || {
+            if let Ok(json_data) = serde_json::to_string_pretty(&config) {
+                let local_dir = std::path::Path::new(".local");
+                if !local_dir.exists() {
+                    let _ = std::fs::create_dir_all(local_dir);
+                }
+                let config_path = local_dir.join("config.json");
+                if let Err(e) = std::fs::write(&config_path, json_data) {
+                    eprintln!("Failed to save config: {}", e);
+                }
             }
-            let config_path = local_dir.join("config.json");
-            if let Err(e) = std::fs::write(&config_path, json_data) {
-                eprintln!("Failed to save config: {}", e);
-            }
-        }
+        });
     }
 
     pub fn log(&self, source: &str, message: String) {

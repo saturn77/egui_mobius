@@ -71,7 +71,7 @@ impl Default for LogColors {
             option_c: egui::Color32::from_rgb(150, 150, 255),  // Soft Blue
             time_format: egui::Color32::from_rgb(190, 140, 255), // Purple
             custom_event: egui::Color32::from_rgb(255, 215, 0), // Gold
-            run_stop_log: egui::Color32::from_rgb(0, 255, 255), // Cyan
+            run_stop_log: egui::Color32::from_rgb(255, 215, 0), // Gold
         }
     }
 }

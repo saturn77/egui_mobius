@@ -172,8 +172,7 @@ impl StatefulButton {
             let text = if self.started { "RUN" } else { "STOP" };
             let color = if self.started { self.run_color } else { self.stop_color };
             let button = egui::Button::new(text)
-                .fill(if ui.ctx().input(|i| i.pointer.any_down()) { color.gamma_multiply(1.2) } else { color })
-                .stroke(Stroke::new(1.0, color))
+                .fill(egui::Color32::TRANSPARENT)
                 .corner_radius(CornerRadius::from(self.rounding))
                 .min_size(self.min_size);
 
@@ -183,7 +182,14 @@ impl StatefulButton {
                 ui.painter().rect_stroke(
                     response.rect,
                     CornerRadius::from(self.rounding),
-                    Stroke::new(2.0, color),
+                    Stroke::new(1.0, color.gamma_multiply(1.2)),
+                    StrokeKind::Outside,
+                );
+            } else {
+                ui.painter().rect_stroke(
+                    response.rect,
+                    CornerRadius::from(self.rounding),
+                    Stroke::new(1.0, color),
                     StrokeKind::Outside,
                 );
             }
@@ -194,7 +200,6 @@ impl StatefulButton {
 
         if response.clicked() {
             self.started = !self.started;
-            ui.ctx().request_repaint();
         }
 
         response
