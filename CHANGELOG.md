@@ -2,14 +2,6 @@
 
 ## [0.3.0-alpha.9] - 2025-03-18
 
-### Added
-
-### Changed
-
-### Fixed
-
-## [0.3.0-alpha.9] - 2025-03-18
-
 ### Changed
 - Consolidated dispatching functionality in `dispatching` module
 - Removed old Dispatcher implementation from factory.rs
