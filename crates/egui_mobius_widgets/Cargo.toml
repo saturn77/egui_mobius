@@ -1,6 +1,6 @@
 [package]
 name        = "egui_mobius_widgets"
-version     = "0.3.0-alpha.7"
+version     = "0.3.0-alpha.9"
 edition     = "2021"
 repository  = "https://github.com/saturn77/egui_mobius"
 authors     = ["James Bonanno <atlantix-eda@proton.me>"]
