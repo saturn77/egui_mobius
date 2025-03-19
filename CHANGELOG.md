@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0-alpha.8] - 2025-03-18
+
+### Added
+- Text color customization for StyledButton
+- Default implementation for StyledButton
+
+### Changed
+- Simplified widget test framework by removing egui_kittest dependency
+- Removed custom winit crate in favor of standard implementation
+
+### Removed
+- Integration test files
+- Custom winit crate and egui_kittest dependencies
+
 ## [0.3.0-alpha.7] - 2025-03-18
 
 ### Added
@@ -20,9 +34,6 @@
 ### Removed
 - Deprecated derive macros and associated code
 - `macros.rs` module
-
-
-
 
 ## [0.3.0-alpha.6] - 2025-03-18
 

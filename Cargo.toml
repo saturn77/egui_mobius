@@ -21,6 +21,7 @@ egui_mobius_macros = { path = "crates/egui_mobius_macros" }
 # egui and eframe
 egui = "0.31.1"
 eframe = { version = "0.31.1", default-features = false }
+egui-winit = { version = "0.31.1", features = ["accesskit"] }
 egui_extras = "0.31.1"
 egui_taffy = "0.7.0"
 # random number generation, useful for testing and examples
@@ -53,3 +54,5 @@ crossbeam-channel = "0.5.14"
 [profile.dist]
 inherits = "release"
 lto = "thin"
+
+

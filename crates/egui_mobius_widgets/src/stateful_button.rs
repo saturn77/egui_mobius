@@ -170,43 +170,31 @@ impl StatefulButton {
         let response = ui.horizontal(|ui| {
             ui.add_space(self.margin.x);
             let text = if self.started { "RUN" } else { "STOP" };
-            let response = ui.add(
-                egui::Button::new(text)
-                    .fill(Color32::TRANSPARENT)
-                    .stroke(Stroke::new(
-                        1.0,
-                        if self.started {
-                            self.run_color
-                        } else {
-                            self.stop_color
-                        },
-                    ))
-                    .corner_radius(CornerRadius::from(self.rounding))
-                    .min_size(self.min_size)
-            );
+            let color = if self.started { self.run_color } else { self.stop_color };
+            let button = egui::Button::new(text)
+                .fill(if ui.ctx().input(|i| i.pointer.any_down()) { color.gamma_multiply(1.2) } else { color })
+                .stroke(Stroke::new(1.0, color))
+                .corner_radius(CornerRadius::from(self.rounding))
+                .min_size(self.min_size);
+
+            let response = ui.add(button);
+
+            if response.hovered() {
+                ui.painter().rect_stroke(
+                    response.rect,
+                    CornerRadius::from(self.rounding),
+                    Stroke::new(2.0, color),
+                    StrokeKind::Outside,
+                );
+            }
+
             ui.add_space(self.margin.x);
             response
         }).inner;
 
         if response.clicked() {
             self.started = !self.started;
-        }
-
-        // Draw hover effect
-        if response.hovered() {
-            ui.painter().rect_stroke(
-                response.rect,
-                CornerRadius::from(self.rounding),
-                Stroke::new(
-                    2.0,
-                    if self.started {
-                        self.run_color
-                    } else {
-                        self.stop_color
-                    },
-                ),
-                StrokeKind::Outside,
-            );
+            ui.ctx().request_repaint();
         }
 
         response
@@ -231,5 +219,55 @@ impl StatefulButton {
     ///   * `false` - Set to STOP state
     pub fn set_started(&mut self, started: bool) {
         self.started = started;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_stateful_button_creation() {
+        let button = StatefulButton::new()
+            .run_color(Color32::RED)
+            .stop_color(Color32::BLUE)
+            .rounding(10.0)
+            .margin(Vec2::new(10.0, 5.0));
+
+        assert!(!button.is_started());
+        assert_eq!(button.run_color, Color32::RED);
+        assert_eq!(button.stop_color, Color32::BLUE);
+        assert_eq!(button.rounding, 10.0);
+        assert_eq!(button.margin, Vec2::new(10.0, 5.0));
+    }
+
+    #[test]
+    fn test_stateful_button_default() {
+        let button = StatefulButton::default();
+        assert!(!button.is_started());
+        assert_eq!(button.margin, Vec2::new(8.5, 4.25));
+        assert_eq!(button.rounding, 8.0);
+        assert_eq!(button.min_size, Vec2::new(0.0, 0.0));
+        assert_eq!(button.run_color, Color32::GREEN);
+        assert_eq!(button.stop_color, Color32::RED);
+    }
+
+    #[test]
+    fn test_stateful_button_state_changes() {
+        let mut button = StatefulButton::new();
+        assert!(!button.is_started());
+
+        button.set_started(true);
+        assert!(button.is_started());
+
+        button.set_started(false);
+        assert!(!button.is_started());
+    }
+
+    #[test]
+    fn test_stateful_button_min_size() {
+        let button = StatefulButton::new()
+            .min_size(Vec2::new(100.0, 50.0));
+        assert_eq!(button.min_size, Vec2::new(100.0, 50.0));
     }
 }

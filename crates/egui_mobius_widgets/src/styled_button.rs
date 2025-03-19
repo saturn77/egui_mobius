@@ -40,9 +40,16 @@ pub struct StyledButton {
     text: String,
     hover_color: Color32,
     normal_color: Color32,
+    text_color: Color32,
     rounding: f32,
     margin: Vec2,
     min_size: Vec2,
+}
+
+impl Default for StyledButton {
+    fn default() -> Self {
+        Self::new("Button")
+    }
 }
 
 impl StyledButton {
@@ -64,6 +71,7 @@ impl StyledButton {
             text: text.into(),
             hover_color: Color32::from_rgb(100, 200, 255),  // Default to light blue
             normal_color: Color32::from_gray(128),          // Default to gray
+            text_color: Color32::WHITE,                    // Default to white text
             rounding: 5.0,
             margin: Vec2::new(10.0, 5.0),
             min_size: Vec2::new(0.0, 0.0),
@@ -140,6 +148,20 @@ impl StyledButton {
         self
     }
 
+    /// Sets the text color of the button.
+    ///
+    /// # Arguments
+    ///
+    /// * `color` - The color to use for the button text
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining
+    pub fn text_color(mut self, color: Color32) -> Self {
+        self.text_color = color;
+        self
+    }
+
     /// Shows the button in the UI and returns the response.
     ///
     /// # Arguments
@@ -150,30 +172,34 @@ impl StyledButton {
     ///
     /// Returns an egui::Response that can be used to check for clicks and hover state
     pub fn show(self, ui: &mut Ui) -> Response {
-        let Self { text, hover_color, normal_color, rounding, margin, min_size } = self;
+        let Self { text, hover_color, normal_color, text_color, rounding, margin, min_size } = self;
 
         ui.add_space(margin.y);
         let response = ui.horizontal(|ui| {
             ui.add_space(margin.x);
-            let response = ui.add(
-                egui::Button::new(&text)
-                    .fill(Color32::TRANSPARENT)
-                    .stroke(Stroke::new(1.0, normal_color))
-                    .corner_radius(CornerRadius::from(rounding))
-                    .min_size(min_size)
-            );
+            let button = egui::Button::new(egui::RichText::new(&text).color(text_color))
+                .fill(if ui.ctx().input(|i| i.pointer.any_down()) { hover_color } else { normal_color })
+                .stroke(Stroke::new(1.0, normal_color))
+                .corner_radius(CornerRadius::from(rounding))
+                .min_size(min_size);
+
+            let response = ui.add(button);
+
+            if response.hovered() {
+                ui.painter().rect_stroke(
+                    response.rect,
+                    CornerRadius::from(rounding),
+                    Stroke::new(2.0, hover_color),
+                    StrokeKind::Outside,
+                );
+            }
+
             ui.add_space(margin.x);
             response
         }).inner;
 
-        // Draw hover effect
-        if response.hovered() {
-            ui.painter().rect_stroke(
-                response.rect,
-                CornerRadius::from(rounding),
-                Stroke::new(2.0, hover_color),
-                StrokeKind::Outside,  // Draw stroke outside the rect
-            );
+        if response.clicked() {
+            ui.ctx().request_repaint();
         }
 
         response
@@ -189,12 +215,14 @@ mod tests {
         let button = StyledButton::new("Test")
             .hover_color(Color32::RED)
             .normal_color(Color32::BLUE)
+            .text_color(Color32::BLACK)
             .rounding(10.0)
             .margin(Vec2::new(10.0, 5.0));
 
         assert_eq!(button.text, "Test");
         assert_eq!(button.hover_color, Color32::RED);
         assert_eq!(button.normal_color, Color32::BLUE);
+        assert_eq!(button.text_color, Color32::BLACK);
         assert_eq!(button.rounding, 10.0);
         assert_eq!(button.margin, Vec2::new(10.0, 5.0));
     }
