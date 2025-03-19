@@ -4,7 +4,6 @@
 //! where multiple UI components can independently subscribe to and react to events.
 
 use egui::Context;
-use egui_mobius_widgets::StatefulButton;
 use egui_mobius::dispatching::AsyncDispatcher;
 use egui_mobius::factory;
 use egui_mobius::signals::Signal;
@@ -47,11 +46,17 @@ pub struct ChartView {
     history: HashMap<String, Vec<(DateTime<Utc>, f64)>>,
 }
 
-impl ChartView {
-    pub fn new() -> Self {
+impl Default for ChartView {
+    fn default() -> Self {
         Self {
             history: HashMap::new(),
         }
+    }
+}
+
+impl ChartView {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn ui(&self, ui: &mut egui::Ui) {
@@ -82,7 +87,7 @@ impl Updatable<Processed> for ChartView {
         match msg {
             Processed::NewDataPoint { source, value, timestamp } => {
                 self.history.entry(source)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push((timestamp, value));
             }
             Processed::HistoryCleared => {
@@ -98,11 +103,17 @@ pub struct TableView {
     current_values: HashMap<String, (f64, DateTime<Utc>)>,
 }
 
-impl TableView {
-    pub fn new() -> Self {
+impl Default for TableView {
+    fn default() -> Self {
         Self {
             current_values: HashMap::new(),
         }
+    }
+}
+
+impl TableView {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn ui(&self, ui: &mut egui::Ui) {
