@@ -42,16 +42,9 @@ pub trait Updatable<T> {
 }
 
 /// Chart view that displays historical data
+#[derive(Default)]
 pub struct ChartView {
     history: HashMap<String, Vec<(DateTime<Utc>, f64)>>,
-}
-
-impl Default for ChartView {
-    fn default() -> Self {
-        Self {
-            history: HashMap::new(),
-        }
-    }
 }
 
 impl ChartView {
@@ -99,16 +92,9 @@ impl Updatable<Processed> for ChartView {
 }
 
 /// Table view that shows current values
+#[derive(Default)]
 pub struct TableView {
     current_values: HashMap<String, (f64, DateTime<Utc>)>,
-}
-
-impl Default for TableView {
-    fn default() -> Self {
-        Self {
-            current_values: HashMap::new(),
-        }
-    }
 }
 
 impl TableView {
