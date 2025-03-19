@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0-alpha.10] - 2025-03-18
+
+### Changed
+- Renamed "Green Event" button to "Custom Event 2"
+- Unified Custom Event buttons to use same logging color
+- Added RUN/STOP button logging color selection
+
 ## [0.3.0-alpha.9] - 2025-03-18
 
 ### Changed
