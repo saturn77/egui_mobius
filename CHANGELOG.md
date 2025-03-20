@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0-alpha.13] - 2025-03-20
+
+### Added
+- example "reactive":
+  - Reactive example showcasing context and method chaining
+
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.12] - 2025-03-20
 
 ### Added
