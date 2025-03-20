@@ -1,4 +1,4 @@
-//! egui_mobius - A thread-aware signal/slot framework for egui applications
+//! egui_mobius - A thread-aware signal/slot framework for egui applications with reactive capabilities
 //!
 //! egui_mobius provides a robust signal/slot architecture inspired by Qt, designed
 //! specifically for egui applications. It enables clean separation between UI and
@@ -17,85 +17,50 @@
 //! - **Background Operations**: Clean thread separation for non-blocking UI
 //! - **Flexible Dispatching**: Support for both synchronous and asynchronous
 //!   message dispatching with automatic thread management
+//! - **Reactive System**: Value change notifications and auto-updating computed values through a signal registry
 //!
-//! # Basic Example
+//! # Examples
 //!
-//! ```rust
-//! use egui_mobius::factory::create_signal_slot;
-//! use egui_mobius::signals::Signal;
-//! use egui_mobius::slot::Slot;
-//!
-//! // Create a signal-slot pair for string messages
-//! let (signal, mut slot) = create_signal_slot::<String>();
-//!
-//! // Set up a handler for the slot
-//! slot.start(|message| {
-//!     println!("Received: {}", message);
-//! });
-//!
-//! // Send a message through the signal
-//! signal.send("Hello from egui_mobius!".to_string()).unwrap();
-//! ```
-//!
-//! # Advanced Dispatching
-//!
-//! The framework provides two main dispatching mechanisms:
-//!
-//! ## Synchronous Dispatcher
+//! ## Reactive System
 //!
 //! ```rust
-//! use egui_mobius::dispatching::{Dispatcher, SignalDispatcher};
-//!
-//! // Create a dispatcher for handling different message types
-//! let mut dispatcher = Dispatcher::<String>::new();
-//!
-//! // Register a handler for processing messages
-//! dispatcher.register_slot("channel1", |message| {
-//!     println!("Received: {}", message);
+//! use egui_mobius::types::Value;
+//! use egui_mobius::reactive::Derived;
+//! 
+//! let count = Value::new(0);
+//! let doubled = Derived::new(&[count.clone()], move || {
+//!     let val = *count.lock().unwrap();
+//!     val * 2
 //! });
-//!
-//! // Send messages through the dispatcher
-//! dispatcher.send("channel1", "Hello, World!".to_string());
+//! 
+//! assert_eq!(*doubled.get(), 0);
+//! *count.lock().unwrap() = 5;
+//! std::thread::sleep(std::time::Duration::from_millis(200));
+//! assert_eq!(*doubled.get(), 10);
 //! ```
 //!
-//! ## Asynchronous Dispatcher
+//! # Module Overview
 //!
-//! ```rust
-//! use egui_mobius::dispatching::{AsyncDispatcher, SignalDispatcher};
-//! use egui_mobius::factory::create_signal_slot;
-//! use std::time::Duration;
-//!
-//! // Create an async dispatcher
-//! let mut dispatcher = AsyncDispatcher::new();
-//!
-//! // Set up signal/slot for async processing
-//! let (signal, slot) = create_signal_slot::<String>();
-//! let (result_signal, result_slot) = create_signal_slot::<String>();
-//!
-//! // Attach async handler with timeout
-//! dispatcher.attach_async(slot, result_signal, |input| async move {
-//!     tokio::time::sleep(Duration::from_secs(1)).await;
-//!     format!("Processed: {}", input)
-//! });
-//! ```
-//!
-//! The AsyncDispatcher is particularly useful for:
-//! - Long-running background tasks
-//! - Operations that shouldn't block the UI thread
-//! - Parallel processing of multiple messages
-//! - Handling timeouts and cancellation
-//!
-//! # Modules
+//! The framework consists of several key modules:
 //!
 //! - [`signals`]: Signal type for sending messages
 //! - [`slot`]: Slot type for receiving and processing messages
 //! - [`factory`]: Utilities for creating signal-slot pairs
 //! - [`types`]: Core types like `Value<T>` for state management
-//! - [`dispatching`]: Signal dispatching and routing system, including AsyncDispatcher
-//!
+//! - [`dispatching`]: Signal dispatching and routing system
+//! - [`reactive`]: Reactive system with value change notifications and computed values
 
+// Declare modules
 pub mod signals;
 pub mod slot;
+pub mod types;
 pub mod factory;
-pub mod types; 
 pub mod dispatching;
+pub mod reactive;
+
+// Re-export commonly used items
+pub use signals::Signal;
+pub use slot::Slot;
+pub use types::Value;
+pub use reactive::{ValueExt, SignalValue, Derived};
+pub use dispatching::{Dispatcher, SignalDispatcher, AsyncDispatcher};
