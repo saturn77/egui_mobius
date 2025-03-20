@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0-alpha.12] - 2025-03-20
+
+### Added
+- example/clock_async: 
+  - Buffer size control in control panel
+  - VecDeque for log storage (replaces Vec)
+  - LoggerPanel::new with buffer size parameter
+
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.11] - 2025-03-19
 
 ### Added
