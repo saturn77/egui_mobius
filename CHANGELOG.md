@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0-alpha.14] - 2025-03-20
+
+### Added
+
+### Changed
+- Renamed `ReactiveCtx` to `SignalRegistry` for better clarity
+- Added `Default` implementation for `SignalRegistry`
+- Enhanced reactive example documentation with detailed threaded runtime info
+
+### Fixed
+- Fixed ownership issues in reactive system doc tests
+
 ## [0.3.0-alpha.13] - 2025-03-20
 
 ### Added
