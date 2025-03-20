@@ -205,7 +205,7 @@ impl<'a> ControlPanel<'a> {
                         message: "Custom Event".to_string(),
                         color: Some(colors.custom_event),
                     };
-                    self.state.logs.lock().unwrap().push(custom_event);
+                    self.state.logs.lock().unwrap().push_back(custom_event);
                 }
 
                 ui.add_space(5.0);
@@ -226,8 +226,33 @@ impl<'a> ControlPanel<'a> {
                         message: "Custom Event 2".to_string(),
                         color: Some(colors.custom_event),
                     };
-                    self.state.logs.lock().unwrap().push(custom_event);
+                    self.state.logs.lock().unwrap().push_back(custom_event);
                 }
+
+                ui.add_space(10.0);
+
+                // Buffer size control
+                ui.group(|ui| {
+                    ui.label("Log Buffer Size:");
+                    let mut buffer_size = *self.state.buffer_size.lock().unwrap();
+                    if ui.add(egui::DragValue::new(&mut buffer_size)
+                        .range(100..=10000)
+                        .speed(100)
+                        .prefix("Max entries: ")
+                    ).changed() {
+                        *self.state.buffer_size.lock().unwrap() = buffer_size;
+                        
+                        // Log the buffer size change
+                        let colors = self.state.colors.lock().unwrap();
+                        let custom_event = crate::logger::LogEntry {
+                            timestamp: chrono::Local::now(),
+                            source: "ui".to_string(),
+                            message: format!("Log buffer size changed to {}", buffer_size),
+                            color: Some(colors.custom_event),
+                        };
+                        self.state.logs.lock().unwrap().push_back(custom_event);
+                    }
+                });
 
                 ui.add_space(10.0);
 
@@ -259,7 +284,7 @@ impl<'a> ControlPanel<'a> {
                         message: message.to_string(),
                         color: Some(colors.run_stop_log),
                     };
-                    self.state.logs.lock().unwrap().push(custom_event);
+                    self.state.logs.lock().unwrap().push_back(custom_event);
                 }
             });
         });

@@ -1,5 +1,6 @@
 use eframe::egui;
 use crate::state::AppState;
+use crate::logger::LogEntry;
 
 pub struct LoggerPanel<'a> {
     state: &'a AppState,
@@ -61,8 +62,8 @@ impl<'a> LoggerPanel<'a> {
                 ui.add_space(8.0);
 
             // Split entries into two columns
-            let mut time_updates = Vec::new();
-            let mut ui_events = Vec::new();
+            let mut time_updates: Vec<&LogEntry> = Vec::new();
+            let mut ui_events: Vec<&LogEntry> = Vec::new();
 
             for entry in logs.iter().rev() {
                 if !filters.contains(&entry.source) {

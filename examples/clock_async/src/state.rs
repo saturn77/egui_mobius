@@ -5,13 +5,15 @@ use eframe::egui;
 use egui_mobius::signals::Signal;
 use egui_mobius::slot::Slot;
 use egui_mobius::types::Value;
+use std::collections::VecDeque;
 
 pub struct AppState {
     pub slider_value: Value<f32>,
     pub combo_value: Value<String>,
     pub current_time: Value<String>,
-    pub logs: Value<Vec<LogEntry>>,
+    pub logs: Value<VecDeque<LogEntry>>,
     pub log_filters: Value<Vec<String>>,
+    pub buffer_size: Value<usize>,
     pub repaint: egui::Context,
     pub event_signal: Value<Option<Signal<Event>>>,
     pub colors: Value<LogColors>,
@@ -24,8 +26,9 @@ impl AppState {
     pub fn new(repaint: egui::Context, config: Config) -> Self {
         Self {
             current_time: Value::new(String::new()),
-            logs: Value::new(Vec::new()),
+            logs: Value::new(VecDeque::with_capacity(1000)),
             log_filters: Value::new(vec!["ui".to_string(), "clock".to_string()]),
+            buffer_size: Value::new(1000),
             slider_value: Value::new(config.slider_value),
             combo_value: Value::new(config.combo_value),
             repaint,
@@ -57,7 +60,10 @@ impl AppState {
             };
             *current_time.lock().unwrap() = time_str.clone();
             let mut logs = logs.lock().unwrap();
-            logs.push(LogEntry {
+            if logs.len() >= 1000 {
+                logs.pop_front();
+            }
+            logs.push_back(LogEntry {
                 timestamp: now,
                 source: "clock".to_string(),
                 message: format!("Time updated: {}", time_str),
@@ -102,10 +108,11 @@ impl AppState {
         let _ = entry.save_to_file();
 
         let mut logs = self.logs.lock().unwrap();
-        logs.push(entry);
-        if logs.len() > 1000 {
+        logs.push_back(entry);
+        let max_size = *self.buffer_size.lock().unwrap();
+        if logs.len() > max_size {
             let len = logs.len();
-            logs.drain(0..len - 1000);
+            logs.drain(0..len - max_size);
         }
     }
 }
