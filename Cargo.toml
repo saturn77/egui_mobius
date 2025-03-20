@@ -1,5 +1,6 @@
 [workspace]
 members = [ "crates/egui_mobius", "crates/egui_mobius_macros", "crates/egui_mobius_widgets",
+    "crates/egui_mobius_reactive",
     "examples/*",
     "tools/*",
 ]
@@ -15,6 +16,7 @@ resolver = "2"
 egui_mobius   = { path = "crates/egui_mobius" }
 egui_mobius_widgets = { path = "crates/egui_mobius_widgets" }
 egui_mobius_macros = { path = "crates/egui_mobius_macros" }
+egui_mobius_reactive = { path = "crates/egui_mobius_reactive" }
 
 # egui and eframe
 egui = "0.31.1"

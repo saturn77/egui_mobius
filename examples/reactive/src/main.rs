@@ -2,8 +2,7 @@ use std::sync::Arc;
 use egui_mobius::signals::Signal;
 use egui_mobius::factory;
 use egui_mobius::slot::Slot;
-use egui_mobius::types::Value;
-use egui_mobius::reactive::{Derived, SignalRegistry};
+use egui_mobius_reactive::{Value, Derived, SignalRegistry};
 
 // Reactive Core Example
 // =====================
@@ -33,7 +32,7 @@ impl AppContext {
         // Create derived value that automatically updates when count changes
         let count_ref = count.clone();
         let doubled = Derived::new(&[count_ref.clone()], move || {
-            let val = *count_ref.lock().unwrap();
+            let val = *count_ref.lock();
             val * 2
         });
 
@@ -68,12 +67,16 @@ impl AppState {
         // Create derived value that automatically updates when count changes
         let count_ref = count.clone();
         let doubled = Derived::new(&[count_ref.clone()], move || {
-            let val = *count_ref.lock().unwrap();
+            let val = *count_ref.lock();
             val * 2
         });
         
         // Create label that updates when count changes
         let label = Value::new("Click to increment".to_string());
+
+        // Register values with the registry
+        registry.register_signal(Arc::new(count.clone()));
+        registry.register_signal(Arc::new(doubled.clone()));
         
         Self { 
             registry,
@@ -91,7 +94,7 @@ impl eframe::App for AppState {
             ui.heading("Reactive UI with egui_mobius");
 
             // Display the count
-            let count = *self.count.lock().unwrap();
+            let count = *self.count.lock();
             ui.label(format!("Count: {}", count));
 
             // Display the doubled value
@@ -99,8 +102,9 @@ impl eframe::App for AppState {
             ui.label(format!("Doubled: {}", doubled));
 
             // Button to increment count
-            if ui.button(self.label.lock().unwrap().as_str()).clicked() {
-                *self.count.lock().unwrap() += 1;
+            if ui.button(self.label.lock().as_str()).clicked() {
+                let new_count = *self.count.lock() + 1;
+                self.count.set(new_count);
                 if let Err(e) = self.signal.send(Event::IncrementClicked) {
                     eprintln!("Failed to send increment event: {}", e);
                 } 
@@ -141,7 +145,9 @@ fn main() -> eframe::Result<()> {
             
             // Create app state with reactive context
             let registry = SignalRegistry::new();
-            let app_state = AppState::new(registry, event_signal);
+            let event_signal = Arc::new(event_signal);
+            registry.register_signal(event_signal.clone()); // Register the signal
+            let app_state = AppState::new(registry, (*event_signal).clone());
             
             // Start background thread for event processing
             background_event_thread(event_slot);

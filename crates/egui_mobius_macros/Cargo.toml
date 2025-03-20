@@ -1,6 +1,6 @@
 [package]
 name = "egui_mobius_macros"
-version = "0.3.0-alpha.13"
+version = "0.3.0-alpha.14"
 edition = "2024"
 description = "Template for future procedural macros in the egui_mobius framework"
 license = "MIT"
