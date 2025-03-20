@@ -33,10 +33,10 @@
 //!     val * 2
 //! });
 //! 
-//! assert_eq!(*doubled.get(), 0);
+//! assert_eq!(doubled.get(), 0);
 //! *count.lock().unwrap() = 5;
 //! std::thread::sleep(std::time::Duration::from_millis(200));
-//! assert_eq!(*doubled.get(), 10);
+//! assert_eq!(doubled.get(), 10);
 //! ```
 //!
 //! # Module Overview

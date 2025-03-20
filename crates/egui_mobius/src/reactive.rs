@@ -135,6 +135,12 @@ pub struct SignalRegistry {
     signals: Arc<Mutex<Vec<Arc<dyn Any + Send + Sync>>>>,
 }
 
+impl Default for SignalRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SignalRegistry {
     pub fn new() -> Self {
         Self {
