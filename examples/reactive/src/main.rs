@@ -241,11 +241,8 @@ fn main() -> eframe::Result<()> {
             // Set up response handling in UI thread
             let ctx_clone = app_state.ctx.clone();
             response_slot.start(move |event| {
-                match event {
-                    Event::CountChanged(val) => {
-                        ctx_clone.label.set(format!("Count is now {}", val));
-                    },
-                    _ => {},
+                if let Event::CountChanged(val) = event {
+                    ctx_clone.label.set(format!("Count is now {}", val));
                 }
             });
             
