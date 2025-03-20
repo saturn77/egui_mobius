@@ -28,8 +28,9 @@
 //! use egui_mobius::reactive::Derived;
 //! 
 //! let count = Value::new(0);
+//! let count_clone = count.clone();
 //! let doubled = Derived::new(&[count.clone()], move || {
-//!     let val = *count.lock().unwrap();
+//!     let val = *count_clone.lock().unwrap();
 //!     val * 2
 //! });
 //! 
