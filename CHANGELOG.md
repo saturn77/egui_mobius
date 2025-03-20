@@ -16,6 +16,8 @@
 ## [0.3.0-alpha.14] - 2025-03-20
 
 ### Added
+- example "reactive":
+  - Reactive example showcasing context and method chaining
 
 ### Changed
 - Renamed `ReactiveCtx` to `SignalRegistry` for better clarity
