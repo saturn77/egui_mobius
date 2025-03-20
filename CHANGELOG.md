@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0-alpha.15] - 2025-03-20
+
+### Added
+- New `egui_mobius_reactive` crate for thread-safe reactive state management
+- Comprehensive documentation for reactive system
+
+### Changed
+- Updated reactive example to use `Value::set()` for proper change notification
+- Improved example documentation with clearer usage instructions
+
+### Fixed
+- Fixed doubled value not updating in reactive example by using proper update method
+
 ## [0.3.0-alpha.14] - 2025-03-20
 
 ### Added
