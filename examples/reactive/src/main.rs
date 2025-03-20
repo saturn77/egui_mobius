@@ -72,38 +72,28 @@ impl<T: Clone + PartialEq + Send + Sync + 'static> SignalValue<T> {
 
 pub struct Derived<T: Clone> {
     value: Arc<Mutex<T>>,
-    _subs: Vec<Arc<dyn Fn() + Send + Sync>>, // Keep references alive
+    deps: Vec<Box<dyn Fn() -> T + Send + Sync>>,
 }
 
 impl<T: Clone + 'static + Send> Derived<T> {
-    pub fn new<F, A>(sources: &[&SignalValue<A>], compute: F) -> Self
+    pub fn new<F>(compute: F) -> Self
     where
         F: Fn() -> T + Send + Sync + 'static,
-        A: Clone + PartialEq + Send + Sync + 'static,
     {
-        let value = Arc::new(Mutex::new(compute()));
-        let value_clone = value.clone();
-
-        let cb = Arc::new(move || {
-            let mut val = value_clone.lock().unwrap();
-            *val = compute();
-        });
-
-        for src in sources {
-            src.subscribe(Box::new({
-                let cb = cb.clone();
-                move || (cb)()
-            }));
-        }
-
+        let initial = compute();
         Self {
-            value,
-            _subs: vec![cb],
+            value: Arc::new(Mutex::new(initial)),
+            deps: vec![Box::new(compute)],
         }
     }
 
     pub fn get(&self) -> T {
-        self.value.lock().unwrap().clone()
+        let mut value = self.value.lock().unwrap();
+        // Recompute value using all dependencies
+        if !self.deps.is_empty() {
+            *value = self.deps[0]();
+        }
+        value.clone()
     }
 }
 
@@ -121,15 +111,24 @@ macro_rules! signal {
 pub struct ReactiveCtx {
     pub count: Value<i32>,
     pub label: Value<String>,
-    pub doubled: Value<i32>,
+    pub doubled: Derived<i32>,
 }
 
 impl ReactiveCtx {
     pub fn new() -> Arc<Self> {
+        let count = Value::new(0);
+        
+        // Create derived value that automatically updates when count changes
+        let count_ref = count.clone();
+        let doubled = Derived::new(move || {
+            let val = *count_ref.lock().unwrap();
+            val * 2
+        });
+
         Arc::new(Self {
-            count: Value::new(0),
+            count,
             label: Value::new("Count is 0".to_string()),
-            doubled: Value::new(0),
+            doubled,
         })
     }
 }
@@ -170,7 +169,7 @@ impl eframe::App for AppState {
 
             ui.label(format!("Count: {}", *self.ctx.count.lock().unwrap()));
             ui.label(format!("Label: {}", &*self.ctx.label.lock().unwrap()));
-            ui.label(format!("Doubled: {}", *self.ctx.doubled.lock().unwrap()));
+            ui.label(format!("Doubled: {}", self.ctx.doubled.get()));
 
             if ui.button("Increment").clicked() {
                 // Send increment event through the dispatcher
@@ -199,9 +198,10 @@ fn background_event_thread(ctx: Arc<ReactiveCtx>, mut event_slot: Slot<Event>, r
                 Event::IncrementClicked => {
                     // Process in background thread
                     let val = *ctx.count.lock().unwrap();
-                    *ctx.count.lock().unwrap() = val + 1;
-                    *ctx.doubled.lock().unwrap() = (val + 1) * 2;
-                    if let Err(e) = response_signal.send(Event::CountChanged(val + 1)) {
+                    let new_val = val + 1;
+                    *ctx.count.lock().unwrap() = new_val;
+                    // doubled will update automatically through the Derived binding
+                    if let Err(e) = response_signal.send(Event::CountChanged(new_val)) {
                         eprintln!("Failed to send CountChanged event: {}", e);
                     }
                 }
