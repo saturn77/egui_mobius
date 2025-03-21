@@ -5,8 +5,11 @@
 ### Added
 
 ### Changed
+- Improved reactive system documentation with clearer examples
 
 ### Fixed
+- Fixed doctest issues in egui_mobius_reactive
+- Fixed reactive update timing in examples
 
 ## [0.3.0-alpha.15] - 2025-03-20
 
