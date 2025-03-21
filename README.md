@@ -1,5 +1,5 @@
 <div align="center">
-<img width=260 height=200 src="./assets/mobius_strip.png"></img>
+<img width=260 height=200 src="https://raw.githubusercontent.com/saturn77/egui_mobius/master/assets/mobius_strip.png"></img>
 
 # egui_mobius  
 *Because GUI software design is a two sided problem operating on a single surface.*
