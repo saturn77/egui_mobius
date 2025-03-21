@@ -1,14 +1,17 @@
 [package]
-name        = "egui_mobius_widgets"
-version     = "0.3.0-alpha.15"
-edition     = "2021"
-repository  = "https://github.com/saturn77/egui_mobius"
-authors     = ["James Bonanno <atlantix-eda@proton.me>"]
-description = "A modular construction framework for egui applications"
-license     = "MIT"
-keywords    = ["egui", "eframe", "mobius", "framework", "gui"]
-categories  = ["graphics", "ui", "framework", "gui"]
-readme      = "README.md"
+name                   = "egui_mobius_widgets"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "A widget library for egui_mobius"
+edition.workspace      = true
+rust-version.workspace = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+license.workspace      = true
+readme                 = "README.md"
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "framework", "desktop"]
+keywords               = ["egui-framework", "eframe", "egui-example", "desktop", "widget"]
+include                = ["../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
 egui_mobius = { workspace = true }

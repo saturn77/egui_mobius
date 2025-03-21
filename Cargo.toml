@@ -11,12 +11,18 @@ exclude = [
 
 resolver = "2"
 
+[workspace.package]
+edition = "2024"
+license = "MIT"
+rust-version = "1.87"
+version = "0.31.1"
+
 [workspace.dependencies]
 # egui mobius related crates
-egui_mobius   = { path = "crates/egui_mobius" }
-egui_mobius_widgets = { path = "crates/egui_mobius_widgets" }
-egui_mobius_macros = { path = "crates/egui_mobius_macros" }
-egui_mobius_reactive = { path = "crates/egui_mobius_reactive" }
+egui_mobius   = { version = "0.31.1", path = "crates/egui_mobius" }
+egui_mobius_widgets = { version = "0.31.1", path = "crates/egui_mobius_widgets" }
+egui_mobius_macros = { version = "0.31.1", path = "crates/egui_mobius_macros" }
+egui_mobius_reactive = { version = "0.31.1", path = "crates/egui_mobius_reactive" }
 
 # egui and eframe
 egui = "0.31.1"
@@ -55,4 +61,18 @@ crossbeam-channel = "0.5.14"
 inherits = "release"
 lto = "thin"
 
+[workspace.lints.rust]
+unsafe_code = "deny"
 
+elided_lifetimes_in_paths = "warn"
+future_incompatible = { level = "warn", priority = -1 }
+nonstandard_style = { level = "warn", priority = -1 }
+rust_2018_idioms = { level = "warn", priority = -1 }
+rust_2021_prelude_collisions = "warn"
+semicolon_in_expressions_from_macros = "warn"
+trivial_numeric_casts = "warn"
+unexpected_cfgs = "warn"
+unsafe_op_in_unsafe_fn = "warn"                         # `unsafe_op_in_unsafe_fn` may become the default in future Rust versions: https://github.com/rust-lang/rust/issues/71668
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
