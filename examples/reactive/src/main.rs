@@ -1,24 +1,33 @@
 use std::sync::Arc;
-use egui_mobius::signals::Signal;
-use egui_mobius::factory;
-use egui_mobius::slot::Slot;
+use eframe::NativeOptions;
 use egui_mobius_reactive::{Value, Derived, SignalRegistry};
+use egui_mobius::factory;
+use egui_mobius::Signal;
 
 // Reactive Core Example
 // =====================
 // 
 // This example demonstrates the use of the reactive core in `egui_mobius`.
 // It shows how to create reactive signals and bind them to UI elements.
+// This is the first example demonstrating the new reactive core.
 // 
-// This is really a proof of concept, focusing on the idea of "reactive" signals.
-// There is a context, or reactive context, that holds the reactive signals.
-// This context is used to create reactive signals and bind them to UI elements.
-// To me, this is implicit chaining, or reactive chaining.
+// The ValueExt trait is used to create reactive signals and bind them to UI elements,
+// which is in the egui_mobius_reactive crate. Basically it spins up a reactive context
+// or runtime that holds the reactive signals via a thread that is constantly monitoring
+// the reactive signals for changes. There is a Derived trait that allows for the creation
+// of reactive signals that are derived from other reactive signals.
+//
+// In summary, to use the reactive system : 
+// 1. Define a derived type with a closure that defines how the derived value is computed
+//    from the dependencies.  Derived::new(&[dependencies], closure)
+// 2. Register the derived type with the reactive context.
+// 3. Use the derived type in the UI.
 // 
 // 20 March 2025, James B, <atlantix-eda@proton.me>
 
-// === Reactive Context === //
-
+//-------------------------------------------------------------
+// AppContext with Derived type on doubled
+//-------------------------------------------------------------
 pub struct AppContext {
     pub count    : Value<i32>,
     pub label    : Value<String>,
@@ -29,7 +38,14 @@ impl AppContext {
     pub fn new() -> Arc<Self> {
         let count = Value::new(0);
         
-        // Create derived value that automatically updates when count changes
+        // Create derived value that automatically updates when count changes, which in this 
+        // case is the "dependency" of the derived value. The Derived value is a reactive signal
+        // that is automatically updated when the dependency changes.
+        //
+        // The Derived value takes a closure that defines how the derived value is computed 
+        // from the dependencies. In this case, the derived value is simply the count value 
+        // multiplied by 2.
+        
         let count_ref = count.clone();
         let doubled = Derived::new(&[count_ref.clone()], move || {
             let val = *count_ref.lock();
@@ -44,20 +60,24 @@ impl AppContext {
     }
 }
 
-// === Event System === //
+//-------------------------------------------------------------
+// Event Enum - trigger reactive signals
+//-------------------------------------------------------------
 #[derive(Clone, Debug)]
 pub enum Event {
     IncrementClicked,
     CountChanged(i32),
     LabelChanged(String),
 }
-// === AppState === //
+//-------------------------------------------------------------
+// AppState - contains SignalRegistry and Derived<T>
+//-------------------------------------------------------------
 pub struct AppState {
-    pub registry: SignalRegistry,
-    count: Value<i32>,
-    label: Value<String>,
-    doubled: Derived<i32>,
-    signal: Signal<Event>,
+    pub registry : SignalRegistry,
+    count        : Value<i32>,
+    label        : Value<String>,
+    doubled      : Derived<i32>,
+    signal       : Signal<Event>,
 }
 
 impl AppState {
@@ -110,33 +130,16 @@ impl eframe::App for AppState {
                 } 
             } 
         }); 
-    } // End of AppState.update
-} // End of AppState
+    } 
+} 
 
-// === Main Entrypoint === //
-use eframe::NativeOptions;
-
-fn background_event_thread(mut event_slot: Slot<Event>) {
-    std::thread::spawn(move || {
-        event_slot.start(move |event| {
-            match event {
-                Event::IncrementClicked => {
-                    // Event already handled in UI
-                }
-                Event::CountChanged(_) => {
-                    // Event already handled in UI
-                }
-                _ => {}
-            }
-        });
-    });
-}
-
+//-------------------------------------------------------------
+// Main with connections of reactive components
+//-------------------------------------------------------------
 fn main() -> eframe::Result<()> {
-    // Create signal/slot pairs for event handling
-    let (event_signal, event_slot) = factory::create_signal_slot::<Event>();
+
+    let (event_signal, _event_slot) = factory::create_signal_slot::<Event>();
     
-    // Set up UI
     eframe::run_native(
         "egui_mobius Reactive Example",
         NativeOptions::default(),
@@ -148,9 +151,6 @@ fn main() -> eframe::Result<()> {
             let event_signal = Arc::new(event_signal);
             registry.register_signal(event_signal.clone()); // Register the signal
             let app_state = AppState::new(registry, (*event_signal).clone());
-            
-            // Start background thread for event processing
-            background_event_thread(event_slot);
             
             Ok(Box::new(app_state))
         }),
