@@ -1,16 +1,25 @@
 #cargo-features = ["edition2024"]
 [package]
-name        = "egui_mobius"
-version     = "0.3.0-alpha.15"
-edition     = "2024"
-repository  = "https://github.com/saturn77/egui_mobius"
-authors     = ["James Bonanno <atlantix-eda@proton.me>"]
-description = "A modular construction framework for egui applications"
-license     = "MIT"
-keywords    = ["egui", "eframe", "mobius", "framework", "gui", "ui", "graphics"]
-categories  = ["graphics", "ui", "framework", "gui"]
-readme      = "README.md"
+name                   = "egui_mobius"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "A modular construction framework for egui applications"
+edition.workspace      = true
+rust-version.workspace = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+license.workspace      = true
+readme                 = "README.md"
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "framework", "desktop"]
+keywords               = ["egui-framework", "eframe", "egui-example", "desktop"]
+include                = ["../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--generate-link-to-definition"]
 
 [dependencies]
 egui = "0.31.1"
