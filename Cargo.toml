@@ -21,7 +21,6 @@ version = "0.31.1"
 # egui mobius related crates
 egui_mobius   = { version = "0.31.1", path = "crates/egui_mobius" }
 egui_mobius_widgets = { version = "0.31.1", path = "crates/egui_mobius_widgets" }
-egui_mobius_macros = { version = "0.31.1", path = "crates/egui_mobius_macros" }
 egui_mobius_reactive = { version = "0.31.1", path = "crates/egui_mobius_reactive" }
 
 # egui and eframe
