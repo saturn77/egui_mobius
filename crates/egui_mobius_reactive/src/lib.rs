@@ -12,6 +12,8 @@
 //! 
 //! ```rust
 //! use egui_mobius_reactive::{Value, Derived};
+//! use std::thread::sleep;
+//! use std::time::Duration;
 //! 
 //! // Create a basic value
 //! let count = Value::new(0);
@@ -25,6 +27,7 @@
 //! 
 //! // Update the original value and see automatic updates
 //! *count.lock() = 5;
+//! sleep(Duration::from_millis(50));
 //! assert_eq!(doubled.get(), 10);
 //! ```
 //! 
