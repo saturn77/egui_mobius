@@ -1,18 +1,5 @@
-#!/bin/bash
-
-EXAMPLES=(
-    "dashboard"
-    "dashboard_async"
-    "reactive"
-    "realtime_plot"
-    "subscriber"
-    "ui_refresh_events"
-)
-
-for example in "${EXAMPLES[@]}"; do
-    cat > "$example/Cargo.toml" << EOL
 [package]
-name = "$example"
+name = "dashboard_async"
 version = "0.1.0"
 edition = "2024"
 publish = false
@@ -26,6 +13,5 @@ tokio = { version = "1", features = ["full"] }
 serde = "1.0"
 serde_json = "1.0"
 chrono = "0.4"
-rnd = "0.8"
-EOL
-done
+rand = "0.8"
+reqwest = { version = "0.12", features = ["json"] }

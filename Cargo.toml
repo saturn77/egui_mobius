@@ -1,6 +1,13 @@
 [workspace]
 members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
-    "crates/egui_mobius_reactive"
+    "crates/egui_mobius_reactive",
+    "examples/clock_async",
+    "examples/dashboard",
+    "examples/dashboard_async",
+    "examples/reactive",
+    "examples/realtime_plot",
+    "examples/ui_refresh_events",
+    "examples"
 ]
 exclude = [
     # this example has its own workspace
@@ -13,15 +20,16 @@ resolver = "2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
-version = "0.3.0-alpha.16"
+version = "0.3.0-alpha.17"
 
 [workspace.dependencies]
 # egui mobius related crates
-egui_mobius   = { version = "0.3.0-alpha.16", path = "crates/egui_mobius" }
-egui_mobius_widgets = { version = "0.3.0-alpha.16", path = "crates/egui_mobius_widgets" }
-egui_mobius_reactive = { version = "0.3.0-alpha.16", path = "crates/egui_mobius_reactive" }
+egui_mobius   = { version = "0.3.0-alpha.17", path = "crates/egui_mobius" }
+egui_mobius_widgets = { version = "0.3.0-alpha.17", path = "crates/egui_mobius_widgets" }
+egui_mobius_reactive = { version = "0.3.0-alpha.17", path = "crates/egui_mobius_reactive" }
 
 # egui and eframe
+egui_plot = "0.31.0"
 egui = "0.31.1"
 eframe = { version = "0.31.1", default-features = false }
 egui-winit = { version = "0.31.1", features = ["accesskit"] }

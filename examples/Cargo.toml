@@ -12,21 +12,21 @@ path = "lib.rs"
 egui_mobius = { path = "../crates/egui_mobius" }
 egui_mobius_widgets = { path = "../crates/egui_mobius_widgets" }
 egui_mobius_reactive = { path = "../crates/egui_mobius_reactive" }
-egui = "0.31"
-eframe = "0.31"
-tokio = { version = "1", features = ["full"] }
-egui_plot = "0.31"
+egui = "0.31.1"
+eframe = { version = "0.31.1", default-features = false }
+tokio = { version = "1.43.0", features = ["full"] }
+egui_plot = { version = "0.31.0" }
 egui_taffy = "0.7.0"
-rand = "0.8"
-chrono = "0.4"
+rand = "0.9.0"
+chrono = "0.4.40"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-env_logger = "0.11"
-reqwest = { version = "0.11", features = ["json"] }
+env_logger = "0.9"
+reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"
-lazy_static = "1.4"
+lazy_static = "1.5.0"
 
 [[example]]
 name = "clock_async"
@@ -47,10 +47,6 @@ path = "reactive/src/main.rs"
 [[example]]
 name = "realtime_plot"
 path = "realtime_plot/src/main.rs"
-
-[[example]]
-name = "subscriber"
-path = "subscriber/src/main.rs"
 
 [[example]]
 name = "ui_refresh_events"
