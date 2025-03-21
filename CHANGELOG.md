@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0-alpha.18] - 2025-03-21
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.17] - 2025-03-21
 ### Fixed
 - Fixed logo image not displaying on crates.io by using absolute GitHub URL
