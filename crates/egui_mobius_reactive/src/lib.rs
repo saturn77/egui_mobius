@@ -8,7 +8,7 @@
 //! 2. **Derived Values**: Automatically updating computed values that depend on other values
 //! 3. **Signal Registry**: A system for managing signal-slot connections between components
 //! 
-//! # Example
+//! # Quick Start
 //! 
 //! ```rust
 //! use egui_mobius_reactive::{Value, Derived};
@@ -22,31 +22,118 @@
 //!     val * 2
 //! });
 //! 
-//! // Update the original value
+//! // Update the original value and see automatic updates
 //! *count.lock().unwrap() = 5;
-//! 
-//! // The derived value automatically updates
 //! assert_eq!(*doubled.get(), 10);
 //! ```
 //! 
-//! # Features
-//! 
-//! - **Thread Safety**: All state containers are wrapped in `Arc<Mutex<T>>` for safe
-//!   concurrent access
-//! - **Automatic Updates**: Derived values automatically recompute when their dependencies
-//!   change
-//! - **Change Notifications**: Values can notify listeners when they change through the
-//!   `ValueExt` trait
-//! - **Signal-Slot System**: Components can communicate through a type-safe signal-slot
-//!   system
-//! 
-//! # Best Practices
-//! 
-//! 1. Use `Value<T>` for state that needs to be shared between threads
-//! 2. Use `Derived` for computed values that depend on other values
-//! 3. Use `SignalRegistry` for loose coupling between components
-//! 4. Always handle mutex locks appropriately to avoid deadlocks
-//! 5. Consider using the `ValueExt` trait for fine-grained change notifications
+//! # Architecture
+//!
+//! The reactive system is built on three key architectural components that work together
+//! to provide thread-safe, real-time UI updates:
+//!
+//! ## Key Components
+//!
+//! 1. **Thread-Safe Values**:
+//!    - `Value<T>` wraps state in `Arc<Mutex<T>>`
+//!    - Safe concurrent access across UI and worker threads
+//!    - Change notification through `ValueExt` trait
+//!
+//! 2. **Automatic Dependency Tracking**:
+//!    - `Derived<T>` computes values from dependencies
+//!    - Auto-updates when dependencies change
+//!    - Thread-safe computation in background
+//!
+//! 3. **Signal Management**:
+//!    - `SignalRegistry` manages reactive context
+//!    - Handles signal-slot connections
+//!    - Prevents memory leaks
+//!    - Type-safe message passing
+//!
+//! ## Complete Example
+//!
+//! ```rust
+//! use std::sync::Arc;
+//! use egui_mobius_reactive::{Value, Derived, SignalRegistry};
+//!
+//! // Define your application state
+//! pub struct AppState {
+//!     pub registry: SignalRegistry,
+//!     count: Value<i32>,
+//!     label: Value<String>,
+//!     doubled: Derived<i32>,
+//! }
+//!
+//! impl AppState {
+//!     pub fn new(registry: SignalRegistry) -> Self {
+//!         let count = Value::new(0);
+//!         
+//!         // Create a derived value that auto-updates when count changes
+//!         let count_ref = count.clone();
+//!         let doubled = Derived::new(&[count_ref.clone()], move || {
+//!             let val = *count_ref.lock();
+//!             val * 2
+//!         });
+//!         
+//!         // Create UI label
+//!         let label = Value::new("Click to increment".to_string());
+//!
+//!         // Register with SignalRegistry for lifecycle management
+//!         registry.register_signal(Arc::new(count.clone()));
+//!         registry.register_signal(Arc::new(doubled.clone()));
+//!         
+//!         Self { 
+//!             registry,
+//!             count,
+//!             label,
+//!             doubled,
+//!         }
+//!     }
+//!
+//!     pub fn increment(&self) {
+//!         let new_count = *self.count.lock() + 1;
+//!         self.count.set(new_count);
+//!         // Doubled value updates automatically!
+//!     }
+//! }
+//! ```
+//!
+//! # Features & Best Practices
+//!
+//! ## Thread Safety & Performance
+//!
+//! - All values protected by `Arc<Mutex<T>>`
+//! - Each slot runs in its own thread for true async operation
+//! - Clean thread separation for background tasks
+//! - Type-safe message passing between threads
+//!
+//! ## Automatic Updates
+//!
+//! - Derived values update when dependencies change
+//! - No manual synchronization needed
+//! - UI updates trigger reactive updates
+//! - Seamless integration with egui
+//!
+//! ## Memory Management
+//!
+//! - SignalRegistry handles registration and cleanup
+//! - Prevents memory leaks from orphaned signals
+//! - Automatic cleanup of unused values
+//! - Manual cleanup available when needed
+//!
+//! ## Best Practices
+//!
+//! 1. **State Organization**:
+//!    - Keep SignalRegistry at app level
+//!    - Group related values in structs
+//!    - Register all dependent values
+//!
+//! 2. **Thread Safety**:
+//!    - Use Value::lock() for access
+//!    - Clone before moving to closures
+//!    - Let each slot handle its thread
+//!
+
 
 pub mod reactive;
 

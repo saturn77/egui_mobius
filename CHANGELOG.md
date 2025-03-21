@@ -9,6 +9,12 @@
 ### Changed
 - Updated reactive example to use `Value::set()` for proper change notification
 - Improved example documentation with clearer usage instructions
+- Removed duplicate reactive.rs from core crate (now in egui_mobius_reactive)
+- Added comprehensive module-level documentation for factory.rs
+- Updated lib.rs documentation to reflect reactive system move to egui_mobius_reactive crate
+- Enhanced core documentation with real-world examples:
+  - Added thread-safe state sharing pattern with signal-slot example
+  - Added comprehensive AsyncDispatcher usage pattern
 
 ### Fixed
 - Fixed doubled value not updating in reactive example by using proper update method

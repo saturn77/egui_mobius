@@ -1,3 +1,26 @@
+//! Factory module for creating signal-slot pairs in egui_mobius.
+//!
+//! This module provides utility functions for creating type-safe communication channels
+//! between components in an egui_mobius application. It implements the Factory pattern
+//! to create properly configured signal-slot pairs that work with the egui_mobius
+//! message passing system.
+//!
+//! # Example
+//! ```rust
+//! use egui_mobius::factory::create_signal_slot;
+//!
+//! // Create a signal-slot pair for integer messages
+//! let (signal, mut slot) = create_signal_slot::<i32>();
+//!
+//! // Set up the receiving end
+//! slot.start(|value| {
+//!     println!("Received value: {}", value);
+//! });
+//!
+//! // Send a value through the signal
+//! signal.send(42).unwrap();
+//! ```
+
 use std::sync::mpsc::{self, Sender, Receiver};
 use crate::signals::Signal;
 use crate::slot::Slot;

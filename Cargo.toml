@@ -1,7 +1,6 @@
 [workspace]
 members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
-    "crates/egui_mobius_reactive",
-    "tools/release_tools"
+    "crates/egui_mobius_reactive"
 ]
 exclude = [
     # this example has its own workspace
