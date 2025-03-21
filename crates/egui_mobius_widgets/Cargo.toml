@@ -11,7 +11,7 @@ readme                 = "../../README.md"
 repository             = "https://github.com/saturn77/egui_mobius"
 categories             = ["gui", "framework", "desktop"]
 keywords               = ["egui-framework", "eframe", "egui-example", "desktop", "widget"]
-include                = ["../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+include                = ["LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
 egui_mobius = { workspace = true }
