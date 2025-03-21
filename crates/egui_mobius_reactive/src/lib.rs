@@ -26,7 +26,7 @@
 //! });
 //! 
 //! // Update the original value and see automatic updates
-//! *count.lock() = 5;
+//! count.set(5);
 //! sleep(Duration::from_millis(50));
 //! assert_eq!(doubled.get(), 10);
 //! ```
