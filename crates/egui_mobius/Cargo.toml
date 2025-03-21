@@ -8,11 +8,11 @@ edition.workspace      = true
 rust-version.workspace = true
 homepage               = "https://github.com/saturn77/egui_mobius"
 license.workspace      = true
-readme                 = "../../README.md"
+readme                 = "README.md"
 repository             = "https://github.com/saturn77/egui_mobius"
 categories             = ["gui", "framework", "desktop"]
 keywords               = ["egui-framework", "eframe", "egui-example", "desktop"]
-include                = ["../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+include                = ["LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
 [lints]
 workspace = true
@@ -36,7 +36,6 @@ futures = "0.3"
 winit = "0.30.9"
 crossbeam-channel = "0.5.14"
 serde = { version = "1.0.218", optional = true }
-egui_mobius_macros = {workspace = true} # Add the correct version of the crate
 
 [features]
 serde = ["serde/derive"]

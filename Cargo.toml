@@ -1,5 +1,5 @@
 [workspace]
-members = [ "crates/egui_mobius", "crates/egui_mobius_macros", "crates/egui_mobius_widgets",
+members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "crates/egui_mobius_reactive",
     "examples/*",
     "tools/*",
