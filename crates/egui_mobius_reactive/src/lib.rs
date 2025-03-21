@@ -18,12 +18,12 @@
 //! 
 //! // Create a derived value that automatically updates
 //! let doubled = Derived::new(&[count.clone()], move || {
-//!     let val = *count.lock().unwrap();
+//!     let val = *count.lock();
 //!     val * 2
 //! });
 //! 
 //! // Update the original value and see automatic updates
-//! *count.lock().unwrap() = 5;
+//! *count.lock() = 5;
 //! assert_eq!(*doubled.get(), 10);
 //! ```
 //! 
