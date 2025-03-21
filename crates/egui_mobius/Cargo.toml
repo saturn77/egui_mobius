@@ -10,7 +10,7 @@ homepage               = "https://github.com/saturn77/egui_mobius"
 license.workspace      = true
 readme                 = "../../README.md"
 repository             = "https://github.com/saturn77/egui_mobius"
-categories             = ["gui", "framework", "desktop"]
+categories             = ["gui", "development-tools", "development-tools::build-utils"]
 keywords               = ["egui-framework", "eframe", "egui-example", "desktop"]
 include                = ["LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
