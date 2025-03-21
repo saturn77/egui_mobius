@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0-alpha.16] - 2025-03-21
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.15] - 2025-03-20
 
 ### Added

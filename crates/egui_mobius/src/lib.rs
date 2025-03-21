@@ -26,6 +26,7 @@
 //! ```rust
 //! use egui_mobius::factory::create_signal_slot;
 //! use egui_mobius::types::Value;
+//! use egui_mobius::{Signal, Slot};
 //! use std::collections::VecDeque;
 //!
 //! // Define message types for type-safe communication
@@ -157,7 +158,7 @@
 //!
 //! // Create bidirectional channels
 //! let (signal_to_dispatcher, slot_from_ui) = create_signal_slot::<Request>();
-//! let (signal_to_ui, slot_from_dispatcher) = create_signal_slot::<Response>();
+//! let (signal_to_ui, mut slot_from_dispatcher) = create_signal_slot::<Response>();
 //!
 //! // Create and configure the dispatcher
 //! let dispatcher = AsyncDispatcher::<Request, Response>::new();

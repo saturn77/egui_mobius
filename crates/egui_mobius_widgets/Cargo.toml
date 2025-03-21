@@ -1,6 +1,6 @@
 [package]
 name                   = "egui_mobius_widgets"
-version.workspace      = true
+version= "0.3.0-alpha.16"
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "A widget library for egui_mobius"
 edition.workspace      = true
