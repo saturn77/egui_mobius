@@ -24,7 +24,7 @@
 //! 
 //! // Update the original value and see automatic updates
 //! *count.lock() = 5;
-//! assert_eq!(*doubled.get(), 10);
+//! assert_eq!(doubled.get(), 10);
 //! ```
 //! 
 //! # Architecture
