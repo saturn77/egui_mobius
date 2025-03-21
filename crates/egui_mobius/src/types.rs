@@ -109,7 +109,7 @@ impl<T> Clone for Value<T> {
 
 impl<T> Value<T> {
     // TODO avoid exposing `PoisonError` in the API here.
-    pub fn lock(&self) -> Result<ValueGuard<T>, PoisonError<MutexGuard<T>>> {
+    pub fn lock(&self) -> Result<ValueGuard<'_, T>, PoisonError<MutexGuard<'_, T>>> {
         let result = self.0.lock().map(|result| ValueGuard(result));
         result
     }
