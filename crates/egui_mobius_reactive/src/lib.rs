@@ -17,8 +17,9 @@
 //! let count = Value::new(0);
 //! 
 //! // Create a derived value that automatically updates
+//! let count_clone = count.clone();
 //! let doubled = Derived::new(&[count.clone()], move || {
-//!     let val = *count.lock();
+//!     let val = *count_clone.lock();
 //!     val * 2
 //! });
 //! 
