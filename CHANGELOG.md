@@ -3,10 +3,19 @@
 ## [0.3.0-alpha.18] - 2025-03-21
 
 ### Added
+- Added new reactive example showcasing:
+  - Thread-safe state sharing pattern
+  - Comprehensive AsyncDispatcher usage
 
 ### Changed
+- Change toml files for examples so they can be run from the root crate
+- Updated reactive example to use `Value::set()` for proper change notification
+- Updated reactive example documentation with clearer usage instructions
+
 
 ### Fixed
+- Fixed ownership issues in reactive system doc tests
+
 
 ## [0.3.0-alpha.17] - 2025-03-21
 ### Fixed
