@@ -54,7 +54,7 @@ pub struct AppState {
     doubled      : Derived<i32>,
     quad         : Derived<i32>,
     fifth        : Derived<i32>,
-    sum_derived  : Derived<i32>, // New derived value
+    sum_derived  : Derived<i32>, 
     signal       : Signal<Event>,
 }
 

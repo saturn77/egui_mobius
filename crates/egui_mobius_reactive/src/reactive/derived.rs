@@ -3,20 +3,32 @@ use crate::reactive::Value;
 use crate::reactive::value::ValueExt;
 
 /// A computed value that automatically updates when its dependencies change.
+///
+/// # Example
+/// ```rust
+/// use egui_mobius_reactive::{Value, Derived};
+///
+/// let count = Value::new(0);
+/// let doubled = Derived::new(&[count.clone()], move || {
+///     let val = *count.lock();
+///     val * 2
+/// });
+/// assert_eq!(doubled.get(), 0);
+/// ```
 #[derive(Clone)]
 pub struct Derived<T: Clone + Send + Sync + 'static> {
+    /// The current value of the derived signal, stored in a thread-safe `Mutex`.
     value: Arc<Mutex<T>>,
-    }
-
+}
 
 impl<T: Clone + Send + Sync + 'static> Derived<T> {
     /// Creates a new derived value that depends on the given values.
     ///
     /// The compute function is called whenever any of the dependencies change.
-    /// 
+    ///
     /// # Arguments
-    /// * `deps` - List of values this derived value depends on
-    /// * `compute` - Function that computes the derived value from its dependencies
+    /// * `deps` - A slice of values (`Value<T>`) this derived value depends on.
+    /// * `compute` - A function that computes the derived value from its dependencies.
     ///
     /// # Example
     /// ```rust
@@ -27,6 +39,7 @@ impl<T: Clone + Send + Sync + 'static> Derived<T> {
     ///     let val = *count.lock();
     ///     val * 2
     /// });
+    /// assert_eq!(doubled.get(), 0);
     /// ```
     pub fn new<F, D>(deps: &[D], compute: F) -> Self
     where
@@ -57,22 +70,46 @@ impl<T: Clone + Send + Sync + 'static> Derived<T> {
             value: value_clone,
         }
     }
-}
 
-// A powerful trait that allows us to convert a Derived<T> into a Value<T>
-// This is useful for registering the derived value with the SignalRegistry
-// and for creating a Value<T> from a Derived<T> for use in the UI
-impl<T: Clone + Send + Sync + 'static> Into<Value<T>> for Derived<T> {
-    fn into(self) -> Value<T> {
-        let initial_value = self.get(); // Get the current value of the derived signal
-        Value::new(initial_value) // Create a new Value<T> with the derived value
+    /// Gets the current value of the derived signal.
+    ///
+    /// # Returns
+    /// The current value of the derived signal.
+    ///
+    /// # Example
+    /// ```rust
+    /// use egui_mobius_reactive::{Value, Derived};
+    ///
+    /// let count = Value::new(0);
+    /// let doubled = Derived::new(&[count.clone()], move || {
+    ///     *count.lock() * 2
+    /// });
+    /// assert_eq!(doubled.get(), 0);
+    /// ```
+    pub fn get(&self) -> T {
+        self.value.lock().unwrap().clone()
     }
 }
 
-impl<T: Clone + Send + Sync + 'static> Derived<T> {
-    /// Gets the current value of the derived signal.
-    pub fn get(&self) -> T {
-        self.value.lock().unwrap().clone()
+/// Converts a `Derived<T>` into a `Value<T>`.
+///
+/// This is useful for registering the derived value with the `SignalRegistry`
+/// and for creating a `Value<T>` from a `Derived<T>` for use in the UI.
+///
+/// # Example
+/// ```rust
+/// use egui_mobius_reactive::{Value, Derived};
+///
+/// let count = Value::new(0);
+/// let doubled = Derived::new(&[count.clone()], move || {
+///     *count.lock() * 2
+/// });
+/// let doubled_value: Value<i32> = doubled.into();
+/// ```
+impl<T: Clone + Send + Sync + 'static> From<Derived<T>> for Value<T> {
+    fn from(val: Derived<T>) -> Self {
+        let initial_value = val.get(); // Get the current value of the derived signal
+        Value::new(initial_value) // Create a new Value<T> with the derived value
     }
 }
 
@@ -82,6 +119,7 @@ mod tests {
     use std::thread;
     use std::time::Duration;
 
+    /// Tests that a derived value updates correctly when its dependency changes.
     #[test]
     fn test_derived_updates() {
         let count = Value::new(0);
@@ -97,6 +135,7 @@ mod tests {
         assert_eq!(doubled.get(), 10);
     }
 
+    /// Tests that a derived value with multiple dependencies updates correctly.
     #[test]
     fn test_derived_multiple_deps() {
         let a = Value::new(1);
