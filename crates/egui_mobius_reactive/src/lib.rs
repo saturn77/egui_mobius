@@ -142,4 +142,4 @@
 pub mod reactive;
 
 // Re-export commonly used types for convenience
-pub use reactive::{Value, Derived, SignalRegistry};
+pub use reactive::{Value, ValueExt, Derived, SignalRegistry};

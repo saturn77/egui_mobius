@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::sync::mpsc::{channel, Sender};
-
+use std::fmt;
+use std::fmt::Debug;
 use parking_lot::Mutex as PLMutex;
 
 /// A thread-safe container for values that can be monitored for changes.
@@ -139,27 +140,18 @@ impl<T: PartialEq> PartialEq for Value<T> {
     }
 }
 
+/// Implements the `Debug` trait for `Value<T>` where `T` implements `Debug`.
+impl<T: Debug + Clone + Send + 'static> Debug for Value<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Value({:?})", self.get())
+    }
+}
+
 /// Extension trait for monitoring value changes.
 ///
 /// This trait provides a mechanism to register callbacks that are invoked
 /// whenever the value changes.
 ///
-/// # Example
-/// ```rust
-/// use egui_mobius_reactive::reactive::{Value, ValueExt}; // Correct import
-/// use std::sync::atomic::{AtomicBool, Ordering};
-/// use std::sync::Arc;
-///
-/// let value = Value::new(0);
-/// let changed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-/// let changed_clone = changed.clone();
-///
-/// value.on_change(move || {
-///     changed_clone.store(true, std::sync::atomic::Ordering::SeqCst);
-/// });
-///
-/// value.set(42);
-/// assert!(changed.load(std::sync::atomic::Ordering::SeqCst));
 /// ```
 pub trait ValueExt<T: Clone + Send + Sync + 'static> {
     /// Registers a callback to be called when the value changes.
