@@ -1,7 +1,7 @@
 #cargo-features = ["edition2024"]
 [package]
 name                   = "egui_mobius"
-version= "0.3.0-alpha.18"
+version= "0.3.0-alpha.19"
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "A modular construction framework for egui applications"
 edition.workspace      = true

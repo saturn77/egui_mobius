@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0-alpha.19] - 2025-03-22
+
+### Added
+- Added comprehensive `Debug` implementation for `Value<T>` where `T` implements `Debug`.
+- Added missing `cargo doc`-style comments to `Value` and `Derived` modules, including examples for methods like `on_change`, `new`, `get`, and `set`.
+
+### Changed
+- Updated `ValueExt::on_change` doctests to include proper imports and delays to ensure callback execution.
+- Replaced `Into<Value<T>>` implementation for `Derived<T>` with `From<Derived<T>>` for better adherence to Rust best practices.
+- Improved documentation for `ValueExt` and `Derived` to clarify usage and provide working examples.
+
+### Fixed
+- Fixed unresolved import issues in `ValueExt` doctests by correcting the module paths.
+- Fixed assertion failures in `ValueExt::on_change` doctests by adding appropriate delays to ensure callback execution.
+- Fixed doctest failures caused by missing imports and incorrect module paths.
+
 ## [0.3.0-alpha.18] - 2025-03-21
 
 ### Added
@@ -12,15 +28,12 @@
 - Updated reactive example to use `Value::set()` for proper change notification
 - Updated reactive example documentation with clearer usage instructions
 
-
 ### Fixed
 - Fixed ownership issues in reactive system doc tests
-
 
 ## [0.3.0-alpha.17] - 2025-03-21
 ### Fixed
 - Fixed logo image not displaying on crates.io by using absolute GitHub URL
-
 
 ## [0.3.0-alpha.16] - 2025-03-21
 
