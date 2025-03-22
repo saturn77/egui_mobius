@@ -146,20 +146,20 @@ impl<T: PartialEq> PartialEq for Value<T> {
 ///
 /// # Example
 /// ```rust
-/// use egui_mobius_reactive::{Value, ValueExt};
+/// use egui_mobius_reactive::reactive::{Value, ValueExt}; // Correct import
 /// use std::sync::atomic::{AtomicBool, Ordering};
 /// use std::sync::Arc;
 ///
 /// let value = Value::new(0);
-/// let changed = Arc::new(AtomicBool::new(false));
+/// let changed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 /// let changed_clone = changed.clone();
 ///
 /// value.on_change(move || {
-///     changed_clone.store(true, Ordering::SeqCst);
+///     changed_clone.store(true, std::sync::atomic::Ordering::SeqCst);
 /// });
 ///
 /// value.set(42);
-/// assert!(changed.load(Ordering::SeqCst));
+/// assert!(changed.load(std::sync::atomic::Ordering::SeqCst));
 /// ```
 pub trait ValueExt<T: Clone + Send + Sync + 'static> {
     /// Registers a callback to be called when the value changes.
@@ -216,7 +216,9 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Value<T> {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
     use std::time::Duration;
+    use crate::reactive::ValueExt; // Import the ValueExt trait
 
     /// Tests the `get` and `set` methods of the `Value` struct.
     #[test]
