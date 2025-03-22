@@ -97,16 +97,20 @@ impl eframe::App for UiApp {
 How They Work Together
 
 1. UiApp Sends Events:
-When a user interacts with the UI (e.g., clicks a button), UiApp sends an event to the backend using the Dispatcher.
+  
+  When a user interacts with the UI (e.g., clicks a button), UiApp sends an event to the backend using the Dispatcher.
 
-1. Backend Processes Events:
-The backend processes the event and sends a response back to the UiApp.
+2. Backend Processes Events:
+  
+  The backend processes the event and sends a response back to the UiApp.
 
-1. UiApp Updates AppState:
-The response is passed to AppState, which updates the application state (e.g., counter value, logs).
+3. UiApp Updates AppState:
+  
+  The response is passed to AppState, which updates the application state (e.g., counter value, logs).
 
-1. UiApp Renders Updated State:
-The updated state is reflected in the UI during the next render cycle.
+4. UiApp Renders Updated State:
+  
+  The updated state is reflected in the UI during the next render cycle.
 
 ## Example Workflow
 
