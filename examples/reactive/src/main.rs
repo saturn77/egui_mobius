@@ -4,6 +4,7 @@ use egui_mobius_reactive::{Value, Derived, SignalRegistry};
 use egui_mobius::factory;
 use egui_mobius::Signal;
 
+
 // Reactive Core Example
 // =====================
 // 
@@ -23,41 +24,15 @@ use egui_mobius::Signal;
 // 2. Register the derived type with the reactive context.
 // 3. Use the derived type in the UI.
 // 
-// 20 March 2025, James B, <atlantix-eda@proton.me>
 
-//-------------------------------------------------------------
-// AppContext with Derived type on doubled
-//-------------------------------------------------------------
-pub struct AppContext {
-    pub count    : Value<i32>,
-    pub label    : Value<String>,
-    pub doubled  : Derived<i32>,
-}
 
-impl AppContext {
-    pub fn new() -> Arc<Self> {
-        let count = Value::new(0);
-        
-        // Create derived value that automatically updates when count changes, which in this 
-        // case is the "dependency" of the derived value. The Derived value is a reactive signal
-        // that is automatically updated when the dependency changes.
-        //
-        // The Derived value takes a closure that defines how the derived value is computed 
-        // from the dependencies. In this case, the derived value is simply the count value 
-        // multiplied by 2.
-        
-        let count_ref = count.clone();
-        let doubled = Derived::new(&[count_ref.clone()], move || {
-            let val = *count_ref.lock();
-            val * 2
-        });
-
-        Arc::new(Self {
-            count,
-            label: Value::new("Count is 0".to_string()),
-            doubled,
+macro_rules! derived {
+    ($dep:expr, $power:expr) => {
+        Derived::new(&[$dep], move || {
+            let val: i32 = $dep.get();
+            val.pow($power as u32)
         })
-    }
+    };
 }
 
 //-------------------------------------------------------------
@@ -77,33 +52,53 @@ pub struct AppState {
     count        : Value<i32>,
     label        : Value<String>,
     doubled      : Derived<i32>,
+    quad         : Derived<i32>,
+    fifth        : Derived<i32>,
+    sum_derived  : Derived<i32>, // New derived value
     signal       : Signal<Event>,
 }
 
 impl AppState {
     pub fn new(registry: SignalRegistry, signal: Signal<Event>) -> Self {
         let count = Value::new(0);
-        
-        // Create derived value that automatically updates when count changes
+        registry.register_signal(Arc::new(count.clone())); // Register count immediately
+
+        // Create derived values
         let count_ref = count.clone();
-        let doubled = Derived::new(&[count_ref.clone()], move || {
-            let val = *count_ref.lock();
-            val * 2
+        let count_ref2 = count.clone();
+        let count_ref3 = count.clone();
+
+        // Create derived values using the macro
+        let doubled = derived!(count_ref.clone(), 2);
+        registry.register_signal(Arc::new(Value::new(doubled.get()))); // Wrap Derived<i32> in Value<i32> and register
+
+        let quad = derived!(count_ref2.clone(), 4);
+        registry.register_signal(Arc::new(Value::new(quad.get()))); // Wrap Derived<i32> in Value<i32> and register
+
+        let fifth = derived!(count_ref3.clone(), 5);
+        registry.register_signal(Arc::new(Value::new(fifth.get()))); // Wrap Derived<i32> in Value<i32> and register
+
+        // Create a derived value for sum
+        let count_for_sum = count.clone();
+        let doubled_for_sum = doubled.clone();
+        let sum_derived = Derived::new(&[count.clone(), doubled_for_sum.clone().into()], move || {
+            let count_val = count_for_sum.get();
+            let doubled_val = doubled_for_sum.get(); // Use doubled via Arc
+            count_val + doubled_val
         });
-        
-        // Create label that updates when count changes
+        registry.register_signal(Arc::new(Value::new(sum_derived.get()))); // Wrap Derived<i32> in Value<i32> and register
+
         let label = Value::new("Click to increment".to_string());
 
-        // Register values with the registry
-        registry.register_signal(Arc::new(count.clone()));
-        registry.register_signal(Arc::new(doubled.clone()));
-        
-        Self { 
+        Self {
             registry,
             count,
             label,
             doubled,
-            signal 
+            quad,
+            fifth,
+            sum_derived, // Store sum_derived directly
+            signal,
         }
     }
 }
@@ -113,13 +108,46 @@ impl eframe::App for AppState {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Reactive UI with egui_mobius");
 
-            // Display the count
-            let count = *self.count.lock();
-            ui.label(format!("Count: {}", count));
+            // Add spacing between elements
+            ui.add_space(20.0);
 
-            // Display the doubled value
-            let doubled = self.doubled.get();
-            ui.label(format!("Doubled: {}", doubled));
+            // Layout in a horizontal row
+            ui.horizontal(|ui| {
+                // Display the count
+                let count = *self.count.lock();
+                ui.label(format!("Count: {}", count));
+
+                // Add spacing between elements
+                ui.add_space(20.0);
+
+                // Display the doubled value
+                let doubled = self.doubled.get();
+                ui.label(format!("Doubled: {}", doubled));
+
+                // Add spacing between elements
+                ui.add_space(20.0);
+
+                // Display the quad value
+                let quad = self.quad.get();
+                ui.label(format!("Quad: {}", quad));
+
+                // Add spacing between elements
+                ui.add_space(20.0);
+
+                // Display the fifth value
+                let fifth = self.fifth.get();
+                ui.label(format!("Fifth: {}", fifth));
+
+                // Add spacing between elements
+                ui.add_space(20.0);
+
+                // Display the sum value
+                let sum = self.sum_derived.get(); // Corrected field name
+                ui.label(format!("Sum: {}", sum));
+            });
+
+            // Add spacing between elements
+            ui.add_space(20.0);
 
             // Button to increment count
             if ui.button(self.label.lock().as_str()).clicked() {
@@ -127,11 +155,13 @@ impl eframe::App for AppState {
                 self.count.set(new_count);
                 if let Err(e) = self.signal.send(Event::IncrementClicked) {
                     eprintln!("Failed to send increment event: {}", e);
-                } 
-            } 
-        }); 
-    } 
-} 
+                }
+            }
+        });
+    }
+} // end of impl eframe::App for AppState
+
+ 
 
 //-------------------------------------------------------------
 // Main with connections of reactive components

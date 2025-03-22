@@ -47,6 +47,12 @@ impl<T: Clone + Send + 'static> Value<T> {
     }
 }
 
+impl<T: PartialEq> PartialEq for Value<T> {
+    fn eq(&self, other: &Self) -> bool {
+        *self.lock() == *other.lock()
+    }
+}
+
 /// Extension trait for monitoring value changes.
 pub trait ValueExt<T: Clone + Send + Sync + 'static> {
     /// Registers a callback to be called when the value changes.
@@ -82,6 +88,7 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Value<T> {
         cb
     }
 }
+
 
 #[cfg(test)]
 mod tests {

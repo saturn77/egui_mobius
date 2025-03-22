@@ -4,11 +4,12 @@ use crate::reactive::value::ValueExt;
 
 /// A computed value that automatically updates when its dependencies change.
 #[derive(Clone)]
-pub struct Derived<T> {
+pub struct Derived<T: Clone + Send + Sync + 'static> {
     value: Arc<Mutex<T>>,
-}
+    }
 
-impl<T: Clone + Send + 'static> Derived<T> {
+
+impl<T: Clone + Send + Sync + 'static> Derived<T> {
     /// Creates a new derived value that depends on the given values.
     ///
     /// The compute function is called whenever any of the dependencies change.
@@ -27,10 +28,10 @@ impl<T: Clone + Send + 'static> Derived<T> {
     ///     val * 2
     /// });
     /// ```
-    pub fn new<F, D>(deps: &[Value<D>], compute: F) -> Self
+    pub fn new<F, D>(deps: &[D], compute: F) -> Self
     where
         F: Fn() -> T + Send + Sync + Clone + 'static,
-        D: Clone + Send + Sync + PartialEq + 'static,
+        D: Clone + Send + Sync + PartialEq + ValueExt<T> + 'static,
     {
         // Compute initial value
         let initial = compute();
@@ -56,8 +57,20 @@ impl<T: Clone + Send + 'static> Derived<T> {
             value: value_clone,
         }
     }
+}
 
-    /// Gets the current value.
+// A powerful trait that allows us to convert a Derived<T> into a Value<T>
+// This is useful for registering the derived value with the SignalRegistry
+// and for creating a Value<T> from a Derived<T> for use in the UI
+impl<T: Clone + Send + Sync + 'static> Into<Value<T>> for Derived<T> {
+    fn into(self) -> Value<T> {
+        let initial_value = self.get(); // Get the current value of the derived signal
+        Value::new(initial_value) // Create a new Value<T> with the derived value
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> Derived<T> {
+    /// Gets the current value of the derived signal.
     pub fn get(&self) -> T {
         self.value.lock().unwrap().clone()
     }
