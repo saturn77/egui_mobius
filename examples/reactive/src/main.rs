@@ -89,7 +89,7 @@ impl AppState {
             Arc::new(count_clone4.clone()) as Arc<dyn ReactiveValue>,
             Arc::new(doubled_clone.clone()) as Arc<dyn ReactiveValue>,
         ], move || {
-            &count_clone4.get() + &doubled_clone.get()
+            count_clone4.get() + doubled_clone.get()
         });
 
         let _sum_derived_arc = register_effect!(registry, "sum_derived", sum_derived, {
