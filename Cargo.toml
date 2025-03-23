@@ -2,6 +2,7 @@
 members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "crates/egui_mobius_reactive",
     "examples/clock_async",
+    "examples/clock_reactive",
     "examples/dashboard",
     "examples/dashboard_async",
     "examples/reactive",
