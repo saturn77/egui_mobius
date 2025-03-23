@@ -23,14 +23,18 @@ type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
 /// ```rust
 /// use egui_mobius_reactive::{Dynamic, Derived};
 /// use std::sync::Arc;
+/// use std::thread;
+/// use std::time::Duration;
 ///
 /// let count = Dynamic::new(0);
 /// let count_arc = Arc::new(count.clone());
-/// let doubled = Derived::new(&[count_arc], move || {
-///     let val = *count.lock();
+/// let doubled = Derived::new(&[count_arc.clone()], move || {
+///     let val = *count_arc.lock();
 ///     val * 2
 /// });
-/// assert_eq!(doubled.get(), 0);
+/// count.set(5);  // Update the source value
+/// thread::sleep(Duration::from_millis(50));
+/// assert_eq!(doubled.get(), 10);  // Derived value updates automatically
 /// ```
 #[derive(Clone)]
 pub struct Derived<T: Clone + Send + Sync + 'static> {
@@ -40,6 +44,25 @@ pub struct Derived<T: Clone + Send + Sync + 'static> {
     subscribers: Subscribers,
 }
 
+/// Implementation of the `Derived` struct.
+/// 
+/// # Example
+/// ```rust
+/// use egui_mobius_reactive::{Dynamic, Derived};
+/// use std::sync::Arc;
+/// use std::thread;
+/// use std::time::Duration;
+///
+/// let count = Dynamic::new(0);
+/// let count_arc = Arc::new(count.clone());
+/// let doubled = Derived::new(&[count_arc.clone()], move || {
+///     let val = *count_arc.lock();
+///     val * 2
+/// });
+/// count.set(5);  // Update the source value
+/// thread::sleep(Duration::from_millis(50));
+/// assert_eq!(doubled.get(), 10);  // Derived value updates automatically
+/// ```
 impl<T: Clone + Send + Sync + 'static> Derived<T> {
     /// Creates a new derived value that depends on the given reactive sources.
     pub fn new<F>(deps: &[Arc<dyn ReactiveValue>], compute: F) -> Self
