@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0-alpha.21] - 2025-03-22
+
+### Added
+- Added `Debug` implementation for `Value<T>` where `T` implements `Debug`.
+- Added missing `cargo doc`-style comments to `Value` and `Derived` modules, including examples for methods like `on_change`, `new`, `get`, and `set`.
+- Added comprehensive tests for `Value` and `Derived` to ensure thread safety and callback functionality.
+- Added `From<Derived<T>>` implementation for `Value<T>` to allow conversion from `Derived<T>` to `Value<T>`.
+
+### Changed
+- Updated `ValueExt::on_change` doctests to include proper imports and delays to ensure callback execution.
+
+### Fixed
+- Fixed doctest failures in `Value` and `Derived` caused by missing imports and incorrect module paths.
+
 ## [0.3.0-alpha.20] - 2025-03-22
 
 ### Added
