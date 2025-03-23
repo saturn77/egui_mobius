@@ -2,6 +2,8 @@ use std::sync::{Arc, Mutex};
 use crate::reactive::Value;
 use crate::reactive::core::ReactiveValue;
 
+type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
+
 /// A computed value that automatically updates when its dependencies change.
 ///
 /// # Example
@@ -22,7 +24,7 @@ pub struct Derived<T: Clone + Send + Sync + 'static> {
     /// The current value of the derived signal, stored in a thread-safe `Mutex`.
     value: Arc<Mutex<T>>,
     /// List of subscribers to notify when the value changes.
-    subscribers: Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>,
+    subscribers: Subscribers,
 }
 
 impl<T: Clone + Send + Sync + 'static> Derived<T> {
@@ -33,7 +35,7 @@ impl<T: Clone + Send + Sync + 'static> Derived<T> {
     {
         let initial = compute();
         let value = Arc::new(Mutex::new(initial));
-        let subscribers: Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>> = Arc::new(Mutex::new(Vec::new()));
+        let subscribers: Subscribers = Arc::new(Mutex::new(Vec::new()));
 
         let compute = Arc::new(compute);
         let value_clone = value.clone();

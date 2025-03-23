@@ -205,8 +205,8 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Value<T> {
 
 impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Value<T> {
     fn subscribe(&self, f: Box<dyn Fn() + Send + Sync>) {
-        // Just wrap the boxed closure in a regular one
-        self.on_change(move || f());
+        // Directly pass the function `f` instead of wrapping it in a closure
+        self.on_change(f);
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
