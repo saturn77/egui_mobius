@@ -133,54 +133,90 @@ impl AppState {
 impl eframe::App for AppState {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Reactive UI with egui_mobius");
-            ui.add_space(20.0);
-
-            ui.horizontal(|ui| {
-                let count = *self.count.lock();
-                ui.label(format!("Count: {}", count));
-                ui.add_space(20.0);
-                ui.label(format!("Doubled: {}", self.doubled.get()));
-                ui.add_space(20.0);
-                ui.label(format!("Quad: {}", self.quad.get()));
-                ui.add_space(20.0);
-                ui.label(format!("Fifth: {}", self.fifth.get()));
-                ui.add_space(20.0);
-                ui.label(format!("Sum: {}", self.sum_derived.get()));
+            ui.vertical_centered(|ui| {
+                ui.heading("Reactive UI with egui_mobius");
             });
-
             ui.add_space(20.0);
-            ui.label("Reactive List:");
-            for item in self.list.get_all() {
-                ui.label(format!("- {}", item));
-            }
-            ui.label(format!("List Sum: {}", self.list_sum.get()));
+
+            // Counter Section with collapsing header
+            egui::CollapsingHeader::new("📊 Counter Values")
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        if ui.button(self.label.lock().as_str()).clicked() {
+                            let new_count = *self.count.lock() + 1;
+                            self.count.set(new_count);
+                            if let Err(e) = self.signal.send(Event::IncrementClicked) {
+                                eprintln!("Failed to send increment event: {}", e);
+                            }
+                        }
+                    });
+                    
+                    egui::Grid::new("counter_grid")
+                        .striped(true)
+                        .spacing([40.0, 4.0])
+                        .show(ui, |ui| {
+                            let count = *self.count.lock();
+                            ui.label("Count:");
+                            ui.label(format!("{}", count));
+                            ui.end_row();
+                            
+                            ui.label("Doubled:");
+                            ui.label(format!("{}", self.doubled.get()));
+                            ui.end_row();
+                            
+                            ui.label("Quad:");
+                            ui.label(format!("{}", self.quad.get()));
+                            ui.end_row();
+                            
+                            ui.label("Fifth:");
+                            ui.label(format!("{}", self.fifth.get()));
+                            ui.end_row();
+                            
+                            ui.label("Sum:");
+                            ui.label(format!("{}", self.sum_derived.get()));
+                            ui.end_row();
+                        });
+                });
 
             ui.add_space(10.0);
-            if ui.button("Add Item to List").clicked() {
-                let new_item = *self.count.lock();
-                self.list.push(new_item);
-            }
-
-            if ui.button("Remove Last Item").clicked() {
-                let all = self.list.get_all();
-                if !all.is_empty() {
-                    self.list.remove(all.len() - 1);
-                }
-            }
-
-            if ui.button("Clear List").clicked() {
-                self.list.clear();
-            }
-
-            ui.add_space(20.0);
-            if ui.button(self.label.lock().as_str()).clicked() {
-                let new_count = *self.count.lock() + 1;
-                self.count.set(new_count);
-                if let Err(e) = self.signal.send(Event::IncrementClicked) {
-                    eprintln!("Failed to send increment event: {}", e);
-                }
-            }
+            ui.separator();
+            
+            // Reactive List Section with collapsing header
+            egui::CollapsingHeader::new("📋 Reactive List")
+                .default_open(true)
+                .show(ui, |ui| {
+                    // List controls in a horizontal layout
+                    ui.horizontal(|ui| {
+                        if ui.button("➕ Add Item").clicked() {
+                            let new_item = *self.count.lock();
+                            self.list.push(new_item);
+                        }
+                        if ui.button("➖ Remove Last").clicked() {
+                            let all = self.list.get_all();
+                            if !all.is_empty() {
+                                self.list.remove(all.len() - 1);
+                            }
+                        }
+                        if ui.button("🗑️ Clear All").clicked() {
+                            self.list.clear();
+                        }
+                    });
+                    
+                    ui.add_space(8.0);
+                    
+                    // List items in a frame with custom styling
+                    egui::Frame::new()
+                        .fill(ui.visuals().extreme_bg_color)
+                        .inner_margin(8.0)
+                        .show(ui, |ui| {
+                            for item in self.list.get_all() {
+                                ui.label(format!("• {}", item));
+                            }
+                            ui.separator();
+                            ui.strong(format!("Sum: {}", self.list_sum.get()));
+                        });
+                });
         });
 
         // Debug Panel for Reactive Graph
