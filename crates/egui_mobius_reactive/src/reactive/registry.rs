@@ -2,6 +2,9 @@ use std::sync::{Arc, Mutex};
 use crate::reactive::ReactiveValue;
 use std::any::Any;
 
+/// Alias for shared reactive signal type
+pub type SharedReactive = Arc<dyn ErasedReactiveValue>;
+
 /// Trait alias for ReactiveValue + Any
 pub trait ErasedReactiveValue: ReactiveValue + Any {}
 impl<T: ReactiveValue + Any> ErasedReactiveValue for T {}
@@ -15,7 +18,7 @@ impl<T: ReactiveValue + Any> ErasedReactiveValue for T {}
 /// - Debugging and visualizing the reactive graph
 #[derive(Clone, Default)]
 pub struct SignalRegistry {
-    signals: Arc<Mutex<Vec<(String, Arc<dyn ErasedReactiveValue>)>>>,
+    signals: Arc<Mutex<Vec<(String, SharedReactive)>>>,
 }
 
 impl SignalRegistry {
@@ -27,12 +30,12 @@ impl SignalRegistry {
     }
 
     /// Register a named signal.
-    pub fn register_named_signal(&self, name: &str, signal: Arc<dyn ErasedReactiveValue>) {
+    pub fn register_named_signal(&self, name: &str, signal: SharedReactive) {
         self.signals.lock().unwrap().push((name.to_string(), signal));
     }
 
     /// List all registered signals and their names.
-    pub fn list_signals(&self) -> Vec<(String, Arc<dyn ErasedReactiveValue>)> {
+    pub fn list_signals(&self) -> Vec<(String, SharedReactive)> {
         self.signals.lock().unwrap().clone()
     }
 
@@ -44,7 +47,7 @@ impl SignalRegistry {
     /// - Ensures compatibility with threads and long-term storage
     /// - Required for safely storing trait objects like `Arc<dyn ReactiveValue>`
     /// - All common reactive types (`Value<T>`, `Derived<T>`, `ReactiveList<T>`) satisfy `'static`
-    pub fn effect<F>(&self, deps: &[Arc<dyn ErasedReactiveValue>], f: F)
+    pub fn effect<F>(&self, deps: &[SharedReactive], f: F)
     where
         F: Fn() + 'static + Send + Sync,
     {
