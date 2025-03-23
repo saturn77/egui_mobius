@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0-alpha.22] - 2025-03-23
+
+### Added
+- Created clock_reactive example, which is the same functionality of clock_async
+- Features of clock_reactive include smaller code base and reactive state management
+- Provides counterpoint to the clock_async example
+
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.21] - 2025-03-22
 
 ### Added
