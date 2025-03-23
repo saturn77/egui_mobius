@@ -19,15 +19,23 @@
 // contains the temperature data and the history of the temperature data.
 //
 //-------------------------------------------------------------------------
-use eframe::egui;
+use eframe::{egui::{self, Vec2}, epaint::ColorImage};
 use egui_mobius::{factory, signals::Signal, slot::Slot};
 use egui_plot::{Line, Plot, PlotPoints, Legend};
 use egui_mobius::types::Value;
 use std::thread;
 use std::time::Duration;
 
+
 // Define some global constants
 const MAX_HISTORY_LEN: usize = 300;
+
+// Thermal simulation constants
+const THERMAL_TIME_CONSTANT: f64 = 20.0; // seconds
+const MAX_HEATSINK_TEMP: f64 = 100.0; // °C
+const MIN_HEATSINK_TEMP: f64 = 25.0; // °C
+const POWER_DISSIPATION: f64 = 100.0; // Watts per MOSFET
+const THERMAL_RESISTANCE: f64 = 0.5; // °C/W
 
 //----------------------------------------------------------------------------
 // **Event Type**
@@ -54,6 +62,7 @@ struct UiApp {
     fabric_data : Fabric,
     ui_signal   : Signal<Event>,
     ui_slot     : Slot<Event>,
+    circuit_texture: Option<egui::TextureHandle>,
 }
 struct Fabric {
     inlet_temp      : Value<f64>,
@@ -73,18 +82,21 @@ struct Fabric {
 //----------------------------------------------------------------------------
 impl UiApp {
     fn new(ui_signal: Signal<Event>, ui_slot: Slot<Event>) -> Self {
+        // Load the circuit image
+        let circuit_texture = None; // Will be loaded on first frame
         Self {
             fabric_data: Fabric {
-                inlet_temp: Value::new(100.0),
-                exhaust_temp: Value::new(200.0),
-                ambient_temp: Value::new(25.0),
-                inlet_history: Value::new(vec![100.0; MAX_HISTORY_LEN]),
-                exhaust_history: Value::new(vec![200.0; MAX_HISTORY_LEN]),
-                ambient_history: Value::new(vec![25.0; MAX_HISTORY_LEN]),
-                y_bounds: Value::new((0.0, 500.0)), // Default y-axis range
+                inlet_temp: Value::new(MIN_HEATSINK_TEMP),
+                exhaust_temp: Value::new(MIN_HEATSINK_TEMP),
+                ambient_temp: Value::new(MIN_HEATSINK_TEMP),
+                inlet_history: Value::new(vec![MIN_HEATSINK_TEMP; MAX_HISTORY_LEN]),
+                exhaust_history: Value::new(vec![MIN_HEATSINK_TEMP; MAX_HISTORY_LEN]),
+                ambient_history: Value::new(vec![MIN_HEATSINK_TEMP; MAX_HISTORY_LEN]),
+                y_bounds: Value::new((0.0, MAX_HEATSINK_TEMP + 20.0)), // Add margin to max temp
             },
             ui_signal,
             ui_slot,
+            circuit_texture,
         }
     }
 }
@@ -110,30 +122,76 @@ impl eframe::App for UiApp {
         let y_bounds = fabric_data.y_bounds.lock().unwrap();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Real-Time Temperature Data");
-
-            // Sliders for temperature input
+            ui.heading("SiC MOSFET Half-Bridge Thermal Simulation");
+            ui.add_space(20.0);
+            
+            // Create a horizontal layout for controls and image
             ui.horizontal(|ui| {
-                ui.label("Inlet Temperature (°C):");
-                if ui.add(egui::Slider::new(&mut *inlet_temp, 0.0..=500.0)).changed() {
-                    let _ = self.ui_signal.send(Event::DataUpdated { inlet: *inlet_temp, exhaust: *exhaust_temp, ambient: *ambient_temp });
-                }
-            });
+                // Left side - Controls
+                ui.vertical(|ui| {
+                    // Sliders for temperature input
+                    ui.group(|ui| {
+                        ui.heading("Temperature Controls");
+                        ui.add_space(10.0);
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Inlet Temperature (°C):");
+                            if ui.add(egui::Slider::new(&mut *inlet_temp, 0.0..=500.0)).changed() {
+                                let _ = self.ui_signal.send(Event::DataUpdated { inlet: *inlet_temp, exhaust: *exhaust_temp, ambient: *ambient_temp });
+                            }
+                        });
 
-            ui.horizontal(|ui| {
-                ui.label("Exhaust Temperature (°C):");
-                if ui.add(egui::Slider::new(&mut *exhaust_temp, 0.0..=500.0)).changed() {
-                    let _ = self.ui_signal.send(Event::DataUpdated { inlet: *inlet_temp, exhaust: *exhaust_temp, ambient: *ambient_temp });
-                }
-            });
+                        ui.horizontal(|ui| {
+                            ui.label("Exhaust Temperature (°C):");
+                            if ui.add(egui::Slider::new(&mut *exhaust_temp, 0.0..=500.0)).changed() {
+                                let _ = self.ui_signal.send(Event::DataUpdated { inlet: *inlet_temp, exhaust: *exhaust_temp, ambient: *ambient_temp });
+                            }
+                        });
 
-            ui.horizontal(|ui| {
-                ui.label("Ambient Temperature (°C):");
-                if ui.add(egui::Slider::new(&mut *ambient_temp, 0.0..=100.0)).changed() {
-                    let _ = self.ui_signal.send(Event::DataUpdated { inlet: *inlet_temp, exhaust: *exhaust_temp, ambient: *ambient_temp });
-                }
-            });
+                        ui.horizontal(|ui| {
+                            ui.label("Ambient Temperature (°C):");
+                            if ui.add(egui::Slider::new(&mut *ambient_temp, 0.0..=100.0)).changed() {
+                                let _ = self.ui_signal.send(Event::DataUpdated { inlet: *inlet_temp, exhaust: *exhaust_temp, ambient: *ambient_temp });
+                            }
+                        });
+                    });
+                });
+                
+                ui.add_space(20.0);
+                
+                // Right side - Circuit Image
+                ui.vertical(|ui| {
+                    // Load the circuit image if not loaded
+                    if self.circuit_texture.is_none() {
+                        let image = include_bytes!("../assets/half_bridge.png");
+                        let image = image::load_from_memory(image).unwrap();
+                        let size = [image.width() as _, image.height() as _];
+                        let image_buffer = image.to_rgba8();
+                        let pixels = image_buffer.as_flat_samples();
+                        let color_image = ColorImage::from_rgba_unmultiplied(
+                            size,
+                            pixels.as_slice(),
+                        );
+                        self.circuit_texture = Some(ctx.load_texture(
+                            "circuit-diagram",
+                            color_image,
+                            Default::default(),
+                        ));
+                    }
 
+                    // Display the circuit image
+                    if let Some(texture) = &self.circuit_texture {
+                        let max_size = 200.0;
+                        ui.group(|ui| {
+                            ui.heading("Circuit Diagram");
+                            ui.add_space(10.0);
+                            ui.add(egui::Image::new(texture).max_size(Vec2::new(max_size * 2.0, max_size)));
+                        });
+                    }
+                });
+            });
+            
+            ui.add_space(20.0);
             ui.separator();
 
             // Temperature plot with legend
@@ -153,7 +211,6 @@ impl eframe::App for UiApp {
                     plot_ui.line(Line::new(ambient_points).name("Ambient Temp (°C)").color(egui::Color32::GREEN));
                 });
         });
-
         ctx.request_repaint_after(Duration::from_secs(1));
     }
 }
@@ -173,22 +230,43 @@ macro_rules! append_and_maintain_fifo {
         }
     };
 }
-// **Producer Thread: Sends new temperature data every second**
+// **Producer Thread: Simulates SiC MOSFET thermal behavior**
 fn producer_thread(signal: Signal<Event>, fabric_data: &Fabric) {
     let inlet = fabric_data.inlet_temp.clone();
     let exhaust = fabric_data.exhaust_temp.clone();
     let ambient = fabric_data.ambient_temp.clone();
+    
+    let mut time = 0.0;
+    let update_interval = 1.0; // seconds
 
     thread::spawn(move || {
         loop {
-            let inlet_val = *inlet.lock().unwrap();
-            let exhaust_val = *exhaust.lock().unwrap();
+            // Simulate thermal behavior
             let ambient_val = *ambient.lock().unwrap();
+            
+            // Calculate steady-state temperature based on power dissipation
+            let steady_state_temp = ambient_val + (POWER_DISSIPATION * 2.0 * THERMAL_RESISTANCE);
+            
+            // Exponential approach to steady state
+            let inlet_val = ambient_val + (steady_state_temp - ambient_val) * 
+                (1.0 - (-time / THERMAL_TIME_CONSTANT).exp());
+            
+            // Exhaust temperature is slightly higher due to thermal gradient
+            let exhaust_val = inlet_val + (POWER_DISSIPATION * THERMAL_RESISTANCE * 0.2);
+            
+            // Update shared values
+            *inlet.lock().unwrap() = inlet_val;
+            *exhaust.lock().unwrap() = exhaust_val;
 
-            if signal.send(Event::DataUpdated { inlet: inlet_val, exhaust: exhaust_val, ambient: ambient_val }).is_err() {
+            if signal.send(Event::DataUpdated { 
+                inlet: inlet_val, 
+                exhaust: exhaust_val, 
+                ambient: ambient_val 
+            }).is_err() {
                 eprintln!("Failed to send data update from producer.");
             }
 
+            time += update_interval;
             thread::sleep(Duration::from_secs(1));
         }
     });

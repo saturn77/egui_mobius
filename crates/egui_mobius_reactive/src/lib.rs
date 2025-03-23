@@ -20,7 +20,8 @@
 //! 
 //! // Create a derived value that automatically updates
 //! let count_clone = count.clone();
-//! let doubled = Derived::new(&[count.clone()], move || {
+//! use std::sync::Arc;
+//! let doubled = Derived::new(&[Arc::new(count.clone())], move || {
 //!     let val = *count_clone.lock();
 //!     val * 2
 //! });
@@ -71,21 +72,16 @@
 //! impl AppState {
 //!     pub fn new(registry: SignalRegistry) -> Self {
 //!         let count = Value::new(0);
-//!         
-//!         // Create a derived value that auto-updates when count changes
 //!         let count_ref = count.clone();
-//!         let doubled = Derived::new(&[count_ref.clone()], move || {
+//!         let doubled = Derived::new(&[Arc::new(count.clone())], move || {
 //!             let val = *count_ref.lock();
 //!             val * 2
 //!         });
-//!         
-//!         // Create UI label
 //!         let label = Value::new("Click to increment".to_string());
 //!
-//!         // Register with SignalRegistry for lifecycle management
-//!         registry.register_signal(Arc::new(count.clone()));
-//!         registry.register_signal(Arc::new(doubled.clone()));
-//!         
+//!         registry.register_named_signal("count", Arc::new(count.clone()));
+//!         registry.register_named_signal("doubled", Arc::new(doubled.clone()));
+//!
 //!         Self { 
 //!             registry,
 //!             count,
@@ -138,8 +134,8 @@
 //!    - Let each slot handle its thread
 //!
 
-
 pub mod reactive;
+pub use crate::reactive::{Value, ValueExt, Derived, ReactiveList, ReactiveValue, SignalRegistry};
 
 // Re-export commonly used types for convenience
-pub use reactive::{Value, ValueExt, Derived, SignalRegistry};
+//pub use reactive::{Value, ValueExt, Derived, SignalRegistry, ReactiveValue, ReactiveList};

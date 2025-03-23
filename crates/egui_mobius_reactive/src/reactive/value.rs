@@ -4,7 +4,7 @@ use std::sync::mpsc::{channel, Sender};
 use std::fmt;
 use std::fmt::Debug;
 use parking_lot::Mutex as PLMutex;
-
+use crate::reactive::ReactiveValue;
 /// A thread-safe container for values that can be monitored for changes.
 ///
 /// The `Value` struct allows you to store a value in a thread-safe manner and
@@ -203,6 +203,23 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Value<T> {
         cb
     }
 }
+
+
+
+impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Value<T> {
+    fn subscribe(&self, f: Box<dyn Fn() + Send + Sync>) {
+        // Just wrap the boxed closure in a regular one
+        self.on_change(move || f());
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+
+
+
 
 #[cfg(test)]
 mod tests {

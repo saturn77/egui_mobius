@@ -30,13 +30,15 @@
 //!
 //! // Create a derived value that depends on count
 //! let count_for_compute = count.clone();
-//! let doubled = Derived::new(&[count.clone()], move || {
+//! 
+//! let doubled = Derived::new(&[Arc::new(count.clone())], move || {
 //!     let val = *count_for_compute.lock();
 //!     val * 2
 //! });
 //!
 //! // Register the values with the registry
-//! registry.register_signal(Arc::new(count.clone()));
+//! registry.register_named_signal("count", Arc::new(count.clone()));
+//! registry.register_named_signal("doubled", Arc::new(doubled.clone()));
 //!
 //! // Values automatically update when dependencies change
 //! assert_eq!(doubled.get(), 0);
@@ -59,10 +61,12 @@
 mod registry;
 mod value;
 mod derived;
+mod core; 
 
 pub use registry::SignalRegistry;
 pub use value::{Value, ValueExt};
 pub use derived::Derived;
+pub use core::{ReactiveValue, ReactiveList};
 
 // Re-export types needed for the public API
 pub use std::sync::{Arc, Mutex};

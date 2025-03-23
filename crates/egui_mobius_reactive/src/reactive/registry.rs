@@ -1,5 +1,10 @@
 use std::sync::{Arc, Mutex};
+use crate::reactive::ReactiveValue;
 use std::any::Any;
+
+/// Trait alias for ReactiveValue + Any
+pub trait ErasedReactiveValue: ReactiveValue + Any {}
+impl<T: ReactiveValue + Any> ErasedReactiveValue for T {}
 
 /// A registry that manages reactive values and their dependencies.
 ///
@@ -7,10 +12,10 @@ use std::any::Any;
 /// This is useful for:
 /// - Ensuring values aren't dropped while they're still needed
 /// - Managing the lifecycle of reactive values
-/// - Future extensions (e.g., debugging, visualization of dependency graphs)
+/// - Debugging and visualizing the reactive graph
 #[derive(Clone, Default)]
 pub struct SignalRegistry {
-    signals: Arc<Mutex<Vec<Arc<dyn Any + Send + Sync>>>>,
+    signals: Arc<Mutex<Vec<(String, Arc<dyn ErasedReactiveValue>)>>>,
 }
 
 impl SignalRegistry {
@@ -21,11 +26,43 @@ impl SignalRegistry {
         }
     }
 
-    /// Registers a signal with the registry.
+    /// Register a named signal.
+    pub fn register_named_signal(&self, name: &str, signal: Arc<dyn ErasedReactiveValue>) {
+        self.signals.lock().unwrap().push((name.to_string(), signal));
+    }
+
+    /// List all registered signals and their names.
+    pub fn list_signals(&self) -> Vec<(String, Arc<dyn ErasedReactiveValue>)> {
+        self.signals.lock().unwrap().clone()
+    }
+
+    /// Attach an effect that runs whenever any of the given dependencies change.
     ///
-    /// This ensures the signal isn't dropped while it's still needed.
-    pub fn register_signal<T: 'static + Send + Sync>(&self, signal: Arc<T>) {
-        self.signals.lock().unwrap().push(signal);
+    /// # Notes on `'static` bound for dependencies:
+    /// - `'static` **does not mean the value lives forever**
+    /// - It means the type must **own all its data**, not borrow it
+    /// - Ensures compatibility with threads and long-term storage
+    /// - Required for safely storing trait objects like `Arc<dyn ReactiveValue>`
+    /// - All common reactive types (`Value<T>`, `Derived<T>`, `ReactiveList<T>`) satisfy `'static`
+    pub fn effect<F>(&self, deps: &[Arc<dyn ErasedReactiveValue>], f: F)
+    where
+        F: Fn() + 'static + Send + Sync,
+    {
+        let f = Arc::new(Mutex::new(f));
+
+        for dep in deps {
+            let f = f.clone();
+            dep.subscribe(Box::new(move || {
+                if let Ok(f) = f.lock() {
+                    f();
+                }
+            }));
+        }
+
+        // Run once initially
+        if let Ok(f) = f.lock() {
+            f();
+        }
     }
 }
 
@@ -39,16 +76,16 @@ mod tests {
     #[test]
     fn test_registry_keeps_signals_alive() {
         let registry = SignalRegistry::new();
-        
+
         let count = Value::new(0);
         let count_for_compute = count.clone();
-        let doubled = Derived::new(&[count.clone()], move || {
+        let doubled = Derived::new(&[Arc::new(count.clone())], move || {
             *count_for_compute.lock() * 2
         });
 
         // Register the values
-        registry.register_signal(Arc::new(count.clone()));
-        registry.register_signal(Arc::new(doubled.clone()));
+        registry.register_named_signal("count", Arc::new(count.clone()));
+        registry.register_named_signal("doubled", Arc::new(doubled.clone()));
 
         // Values should still work after registration
         assert_eq!(doubled.get(), 0);
