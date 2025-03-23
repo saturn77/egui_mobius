@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.0-alpha.20] - 2025-03-22
+
+### Added
+- Added `Default` implementation for `ReactiveList<T>` to simplify initialization.
+- Introduced `type Subscribers` alias to improve readability and reduce type complexity in the reactive system.
+- Added Clippy fixes for redundant closures and complex type definitions.
+- Enhanced `ReactiveValue` trait with improved examples and documentation for `subscribe` and `as_any` methods.
+- Added comprehensive tests for `ReactiveList` and `Value` to ensure thread safety and callback functionality.
+
+### Changed
+- Refactored `ReactiveList` to use `type Subscribers` for managing callback subscribers, improving code clarity.
+- Simplified `subscribe` method in `ReactiveValue` by removing redundant closures.
+- Improved documentation for `ReactiveList` and `Value` with clearer examples and explanations.
+- Updated `on_change` and `subscribe` methods to ensure proper thread-safe callback execution.
+
+### Fixed
+- Fixed Clippy warnings related to redundant closures and complex type definitions.
+- Fixed `Default` implementation for `ReactiveList<T>` to ensure proper trait bounds (`Clone + Send + Sync + 'static`) are enforced.
+- Resolved doctest failures in `ReactiveList` and `Value` caused by missing imports and incorrect module paths.
+- Fixed potential deadlock issues in `ReactiveList` by ensuring proper lock handling in `notify_subscribers`.
+  
 ## [0.3.0-alpha.19] - 2025-03-22
 
 ### Added
