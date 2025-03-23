@@ -29,6 +29,8 @@ pub trait ReactiveValue: Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }
 
+type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
+
 /// A reactive list that notifies subscribers when items are added, removed, or cleared.
 ///
 /// Each modification to the internal `Vec<T>` triggers all registered callbacks.
@@ -43,7 +45,7 @@ pub trait ReactiveValue: Send + Sync {
 /// ```
 pub struct ReactiveList<T> {
     items: Arc<Mutex<Vec<T>>>,
-    subscribers: Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>,
+    subscribers: Subscribers,
 }
 
 impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
@@ -178,7 +180,8 @@ impl<T: Clone + Send + Sync + 'static> ReactiveValue for ReactiveList<T> {
     /// list.subscribe(Box::new(|| println!("List changed!")));
     /// ```
     fn subscribe(&self, f: Box<dyn Fn() + Send + Sync>) {
-        self.on_change(move || f());
+        // Directly pass the function `f` instead of wrapping it in a closure
+        self.on_change(f);
     }
 
     /// Returns a reference to self as `dyn Any`.
@@ -191,5 +194,18 @@ impl<T: Clone + Send + Sync + 'static> ReactiveValue for ReactiveList<T> {
     /// ```
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl<T> Default for ReactiveList<T> {
+    /// Creates a default instance of `ReactiveList`.
+    ///
+    /// # Example
+    /// ```rust
+    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// let list: ReactiveList<i32> = ReactiveList::default();
+    /// ```
+    fn default() -> Self {
+        Self::new()
     }
 }
