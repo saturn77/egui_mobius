@@ -2,6 +2,19 @@ use std::sync::{Arc, Mutex};
 use crate::reactive::Dynamic;
 use crate::reactive::core::ReactiveValue;
 
+/// Type alias for a list of subscribers.
+///
+/// This is used to store callbacks that should be executed when the derived value changes.
+/// 
+/// # Example
+/// ```rust
+/// use egui_mobius_reactive::reactive::Derived;
+/// use egui_mobius_reactive::ReactiveValue;
+/// use std::sync::Arc;
+///
+/// let count = Arc::new(Derived::new(&[], || 0));
+/// count.subscribe(Box::new(|| println!("Value changed!"))); // Add a subscriber
+/// ```
 type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
 
 /// A computed value that automatically updates when its dependencies change.

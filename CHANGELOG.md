@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0-alpha.23] - 2025-03-23
+
+### Added
+- Added Dynamic<T> to reactive system - replacing the `Value<T>` type that was in the reactive system to avoid confusion with the `Value` type in egui_mobius crate
+- Updated all downstream tests and examples to use `Dynamic<T>`
+- Added `From<Derived<T>>` implementation for `Dynamic<T>` to allow conversion from `Derived<T>` to `Dynamic<T>`
+
+### Changed
+- Updated `ValueExt::on_change` doctests to include proper imports and delays to ensure callback execution.
+
+### Fixed
+
+
 ## [0.3.0-alpha.22] - 2025-03-23
 
 ### Added
