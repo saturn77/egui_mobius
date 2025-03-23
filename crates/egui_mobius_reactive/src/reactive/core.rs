@@ -197,7 +197,9 @@ impl<T: Clone + Send + Sync + 'static> ReactiveValue for ReactiveList<T> {
     }
 }
 
-impl<T> Default for ReactiveList<T> {
+// Removed redundant implementation of Default for ReactiveList<T>
+
+impl<T: Clone + Send + Sync + 'static> Default for ReactiveList<T> {
     /// Creates a default instance of `ReactiveList`.
     ///
     /// # Example
