@@ -5,30 +5,30 @@ use std::fmt::{self, Debug};
 use parking_lot::Mutex as PLMutex;
 use crate::reactive::ReactiveValue;
 
-/// A thread-safe container for values that can be monitored for changes.
+/// A thread-safe container for dynamic values that can be monitored for changes.
 ///
-/// The `Value` struct allows you to store a value in a thread-safe manner and
+/// The `Dynamic` struct allows you to store a value in a thread-safe manner and
 /// provides mechanisms to monitor changes to the value.
 ///
 /// # Example
 /// ```rust
-/// use egui_mobius_reactive::Value;
+/// use egui_mobius_reactive::Dynamic;
 ///
-/// let value = Value::new(42);
+/// let value = Dynamic::new(42);
 /// assert_eq!(value.get(), 42);
 ///
 /// value.set(84);
 /// assert_eq!(value.get(), 84);
 /// ```
 #[derive(Clone)]
-pub struct Value<T> {
+pub struct Dynamic<T> {
     /// The inner value stored in a thread-safe `Mutex`.
     pub(crate) inner: Arc<Mutex<T>>,
     /// A list of notifiers (channels) to notify listeners when the value changes.
     notifiers: Arc<PLMutex<Vec<Sender<()>>>>,
 }
 
-impl<T> Value<T> {
+impl<T> Dynamic<T> {
     /// Gets a lock on the inner value.
     ///
     /// This method provides direct access to the inner value by locking the `Mutex`.
@@ -38,9 +38,9 @@ impl<T> Value<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::Value;
+    /// use egui_mobius_reactive::Dynamic;
     ///
-    /// let value = Value::new(42);
+    /// let value = Dynamic::new(42);
     /// let mut guard = value.lock();
     /// *guard = 84;
     /// assert_eq!(*guard, 84);
@@ -50,20 +50,20 @@ impl<T> Value<T> {
     }
 }
 
-impl<T: Clone + Send + 'static> Value<T> {
-    /// Creates a new `Value` with the given initial value.
+impl<T: Clone + Send + 'static> Dynamic<T> {
+    /// Creates a new `Dynamic` with the given initial value.
     ///
     /// # Arguments
-    /// * `initial` - The initial value to store in the `Value`.
+    /// * `initial` - The initial value to store in the `Dynamic`.
     ///
     /// # Returns
-    /// A new `Value` instance.
+    /// A new `Dynamic` instance.
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::Value;
+    /// use egui_mobius_reactive::Dynamic;
     ///
-    /// let value = Value::new(42);
+    /// let value = Dynamic::new(42);
     /// assert_eq!(value.get(), 42);
     /// ```
     pub fn new(initial: T) -> Self {
@@ -80,9 +80,9 @@ impl<T: Clone + Send + 'static> Value<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::Value;
+    /// use egui_mobius_reactive::Dynamic;
     ///
-    /// let value = Value::new(42);
+    /// let value = Dynamic::new(42);
     /// assert_eq!(value.get(), 42);
     /// ```
     pub fn get(&self) -> T {
@@ -98,9 +98,9 @@ impl<T: Clone + Send + 'static> Value<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::Value;
+    /// use egui_mobius_reactive::Dynamic;
     ///
-    /// let value = Value::new(42);
+    /// let value = Dynamic::new(42);
     /// value.set(84);
     /// assert_eq!(value.get(), 84);
     /// ```
@@ -115,21 +115,21 @@ impl<T: Clone + Send + 'static> Value<T> {
     }
 }
 
-impl<T: PartialEq> PartialEq for Value<T> {
+impl<T: PartialEq> PartialEq for Dynamic<T> {
     /// Compares two `Value` instances for equality.
     ///
     /// # Arguments
-    /// * `other` - The other `Value` instance to compare with.
+    /// * `other` - The other `Dynamic` instance to compare with.
     ///
     /// # Returns
     /// `true` if the inner values are equal, `false` otherwise.
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::Value;
+    /// use egui_mobius_reactive::Dynamic;
     ///
-    /// let value1 = Value::new(42);
-    /// let value2 = Value::new(42);
+    /// let value1 = Dynamic::new(42);
+    /// let value2 = Dynamic::new(42);
     /// assert_eq!(value1, value2);
     /// ```
     fn eq(&self, other: &Self) -> bool {
@@ -137,10 +137,10 @@ impl<T: PartialEq> PartialEq for Value<T> {
     }
 }
 
-/// Implements the `Debug` trait for `Value<T>` where `T` implements `Debug`.
-impl<T: Debug + Clone + Send + 'static> Debug for Value<T> {
+/// Implements the `Debug` trait for `Dynamic<T>` where `T` implements `Debug`.
+impl<T: Debug + Clone + Send + 'static> Debug for Dynamic<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Value({:?})", self.get())
+        write!(f, "Dynamic({:?})", self.get())
     }
 }
 
@@ -163,9 +163,9 @@ pub trait ValueExt<T: Clone + Send + Sync + 'static> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::{Value, ValueExt};
+    /// use egui_mobius_reactive::{Dynamic, ValueExt};
     ///
-    /// let value = Value::new(0);
+    /// let value = Dynamic::new(0);
     /// value.on_change(move || {
     ///     println!("Value changed!");
     /// });
@@ -176,7 +176,7 @@ pub trait ValueExt<T: Clone + Send + Sync + 'static> {
         F: Fn() + Send + Sync + 'static;
 }
 
-impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Value<T> {
+impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Dynamic<T> {
     fn on_change<F>(&self, callback: F) -> Arc<F>
     where
         F: Fn() + Send + Sync + 'static,
@@ -203,7 +203,7 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Value<T> {
 
 
 
-impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Value<T> {
+impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Dynamic<T> {
     fn subscribe(&self, f: Box<dyn Fn() + Send + Sync>) {
         // Directly pass the function `f` instead of wrapping it in a closure
         self.on_change(f);
@@ -226,20 +226,20 @@ mod tests {
     use std::time::Duration;
     use crate::reactive::ValueExt; // Import the ValueExt trait
 
-    /// Tests the `get` and `set` methods of the `Value` struct.
+    /// Tests the `get` and `set` methods of the `Dynamic` struct.
     #[test]
     fn test_value_get_set() {
-        let value = Value::new(42);
+        let value = Dynamic::new(42);
         assert_eq!(value.get(), 42);
 
         value.set(84);
         assert_eq!(value.get(), 84);
     }
 
-    /// Tests the `on_change` method of the `Value` struct.
+    /// Tests the `on_change` method of the `Dynamic` struct.
     #[test]
     fn test_value_change_notification() {
-        let value = Value::new(0);
+        let value = Dynamic::new(0);
         let changed = Arc::new(AtomicBool::new(false));
         let changed_clone = changed.clone();
 

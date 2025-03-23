@@ -46,7 +46,7 @@ impl SignalRegistry {
     /// - It means the type must **own all its data**, not borrow it
     /// - Ensures compatibility with threads and long-term storage
     /// - Required for safely storing trait objects like `Arc<dyn ReactiveValue>`
-    /// - All common reactive types (`Value<T>`, `Derived<T>`, `ReactiveList<T>`) satisfy `'static`
+    /// - All common reactive types (`Dynamic<T>`, `Derived<T>`, `ReactiveList<T>`) satisfy `'static`
     pub fn effect<F>(&self, deps: &[SharedReactive], f: F)
     where
         F: Fn() + 'static + Send + Sync,
@@ -72,15 +72,15 @@ impl SignalRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reactive::{Value, Derived};
+    use crate::reactive::{Dynamic, Derived};
     use std::thread;
     use std::time::Duration;
 
-    #[test]
+    #[test] 
     fn test_registry_keeps_signals_alive() {
         let registry = SignalRegistry::new();
 
-        let count = Value::new(0);
+        let count = Dynamic::new(0);
         let count_for_compute = count.clone();
         let doubled = Derived::new(&[Arc::new(count.clone())], move || {
             *count_for_compute.lock() * 2

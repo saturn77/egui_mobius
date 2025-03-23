@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use eframe::NativeOptions;
-use egui_mobius_reactive::{Value, Derived, SignalRegistry, ReactiveList, ReactiveValue};
+use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry, ReactiveList, ReactiveValue};
 use egui_mobius::factory;
 use egui_mobius::Signal;
 
@@ -60,8 +60,8 @@ pub enum Event {
 
 pub struct AppState {
     pub registry : SignalRegistry,
-    count        : Value<i32>,
-    label        : Value<String>,
+    count        : Dynamic<i32>,
+    label        : Dynamic<String>,
     doubled      : Derived<i32>,
     quad         : Derived<i32>,
     fifth        : Derived<i32>,
@@ -73,7 +73,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(registry: SignalRegistry, signal: Signal<Event>) -> Self {
-        let count = Value::new(0);
+        let count = Dynamic::new(0);
         let count_clone = count.clone();
         let count_clone2 = count.clone();
         let count_clone3 = count.clone();
@@ -112,7 +112,7 @@ impl AppState {
         });
         register_signal(&registry, "list_sum", Arc::new(list_sum.clone()));
 
-        let label = Value::new("Click to increment".to_string());
+        let label = Dynamic::new("Click to increment".to_string());
         register_signal(&registry, "label", Arc::new(label.clone()));
 
         Self {
@@ -224,13 +224,13 @@ impl eframe::App for AppState {
             ui.label("⚙️ Registered Signals:");
             for (name, signal) in self.registry.list_signals() {
                 let any = signal.as_any();
-                if let Some(val) = any.downcast_ref::<Value<i32>>() {
+                if let Some(val) = any.downcast_ref::<Dynamic<i32>>() {
                     ui.label(format!("- {}: {}", name, val.get()));
                 } else if let Some(val) = any.downcast_ref::<Derived<i32>>() {
                     ui.label(format!("- {} (derived): {}", name, val.get()));
                 } else if let Some(val) = any.downcast_ref::<ReactiveList<i32>>() {
                     ui.label(format!("- {} (list): {:?}", name, val.get_all()));
-                } else if let Some(val) = any.downcast_ref::<Value<String>>() {
+                } else if let Some(val) = any.downcast_ref::<Dynamic<String>>() {
                     ui.label(format!("- {}: \"{}\"", name, val.get()));
                 } else {
                     ui.label(format!("- {} (?)", name));

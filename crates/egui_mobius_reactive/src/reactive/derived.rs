@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use crate::reactive::Value;
+use crate::reactive::Dynamic;
 use crate::reactive::core::ReactiveValue;
 
 type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
@@ -8,10 +8,10 @@ type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
 ///
 /// # Example
 /// ```rust
-/// use egui_mobius_reactive::{Value, Derived};
+/// use egui_mobius_reactive::{Dynamic, Derived};
 /// use std::sync::Arc;
 ///
-/// let count = Value::new(0);
+/// let count = Dynamic::new(0);
 /// let count_arc = Arc::new(count.clone());
 /// let doubled = Derived::new(&[count_arc], move || {
 ///     let val = *count.lock();
@@ -71,10 +71,10 @@ impl<T: Clone + Send + Sync + 'static> Derived<T> {
     }
 }
 
-impl<T: Clone + Send + Sync + 'static> From<Derived<T>> for Value<T> {
+impl<T: Clone + Send + Sync + 'static> From<Derived<T>> for Dynamic<T> {
     fn from(val: Derived<T>) -> Self {
         let initial_value = val.get();
-        Value::new(initial_value)
+        Dynamic::new(initial_value)
     }
 }
 
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_derived_updates() {
-        let count = Value::new(0);
+        let count = Dynamic::new(0);
         let count_for_compute = count.clone();
         let doubled = Derived::new(&[Arc::new(count.clone())], move || {
             *count_for_compute.lock() * 2
@@ -111,8 +111,8 @@ mod tests {
 
     #[test]
     fn test_derived_multiple_deps() {
-        let a = Value::new(1);
-        let b = Value::new(2);
+        let a = Dynamic::new(1);
+        let b = Dynamic::new(2);
         let a_for_compute = a.clone();
         let b_for_compute = b.clone();
         let sum = Derived::new(&[Arc::new(a.clone()), Arc::new(b.clone())], move || {

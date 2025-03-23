@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::reactive::{Value, Derived, SignalRegistry};
+use crate::reactive::{Dynamic, Derived, SignalRegistry};
 use crate::reactive::value::ValueExt;
 
 /// Example showing how to use the reactive system in a real application.

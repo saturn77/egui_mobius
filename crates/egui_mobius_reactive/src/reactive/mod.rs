@@ -12,7 +12,7 @@
 //!
 //! The reactive system consists of three main components:
 //!
-//! 1. `Value<T>` - A thread-safe container for values that can be monitored for changes
+//! 1. `Dynamic<T>` - A thread-safe container for values that can be monitored for changes
 //! 2. `Derived<T>` - Computed values that automatically update when their dependencies change
 //! 3. `SignalRegistry` - A registry that manages reactive values and their dependencies
 //!
@@ -20,13 +20,13 @@
 //!
 //! ```rust
 //! use std::sync::Arc;
-//! use egui_mobius_reactive::{Value, Derived, SignalRegistry};
+//! use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry};
 //!
 //! // Create a registry to manage reactive values
 //! let registry = SignalRegistry::new();
 //!
 //! // Create a value that can be monitored for changes
-//! let count = Value::new(0);
+//! let count = Dynamic::new(0);
 //!
 //! // Create a derived value that depends on count
 //! let count_for_compute = count.clone();
@@ -64,7 +64,7 @@ mod derived;
 mod core; 
 
 pub use registry::SignalRegistry;
-pub use value::{Value, ValueExt};
+pub use value::{Dynamic, ValueExt};
 pub use derived::Derived;
 pub use core::{ReactiveValue, ReactiveList};
 

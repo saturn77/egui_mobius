@@ -1,7 +1,7 @@
 {
-  "slider_value": 69.0,
-  "combo_value": "Option B",
-  "time_format": "24h",
+  "slider_value": 42.0,
+  "combo_value": "Option C",
+  "time_format": "12h",
   "colors": {
     "clock": [
       100,
@@ -16,27 +16,27 @@
       255
     ],
     "option_a": [
-      100,
-      150,
-      200,
+      134,
+      225,
+      155,
       255
     ],
     "option_b": [
-      150,
-      100,
-      200,
+      87,
+      223,
+      118,
       255
     ],
     "option_c": [
-      200,
-      100,
-      150,
+      74,
+      166,
+      69,
       255
     ],
     "time_format": [
-      180,
-      180,
-      100,
+      169,
+      226,
+      208,
       255
     ],
     "custom_event": [

@@ -1,21 +1,21 @@
 use crate::types::{ClockMessage, Config, LogColors, ButtonColors, LogEntry};
 use chrono::Local;
 use eframe::egui;
-use egui_mobius_reactive::{Value, Derived, ReactiveValue};
+use egui_mobius_reactive::{Dynamic, Derived, ReactiveValue};
 use std::collections::VecDeque;
 use std::sync::Arc;
 pub struct AppState {
-    pub slider_value: Value<f32>,
-    pub combo_value: Value<String>,
-    pub current_time: Value<String>,
-    pub logs: Value<VecDeque<LogEntry>>,
-    pub log_filters: Value<Vec<String>>,
-    pub buffer_size: Value<usize>,
+    pub slider_value: Dynamic<f32>,
+    pub combo_value: Dynamic<String>,
+    pub current_time: Dynamic<String>,
+    pub logs: Dynamic<VecDeque<LogEntry>>,
+    pub log_filters: Dynamic<Vec<String>>,
+    pub buffer_size: Dynamic<usize>,
     pub repaint: egui::Context,
-    pub colors: Value<LogColors>,
-    pub button_colors: Value<ButtonColors>,
-    pub button_started: Value<bool>,
-    pub use_24h: Value<bool>,
+    pub colors: Dynamic<LogColors>,
+    pub button_colors: Dynamic<ButtonColors>,
+    pub button_started: Dynamic<bool>,
+    pub use_24h: Dynamic<bool>,
     
     // Derived values
     pub filtered_logs: Derived<VecDeque<LogEntry>>,
@@ -26,17 +26,17 @@ pub struct AppState {
 impl AppState {
     pub fn new(repaint: egui::Context, config: Config) -> Self {
         // Create base values
-        let logs: Value<VecDeque<LogEntry>> = Value::new(VecDeque::with_capacity(1000));
+        let logs: Dynamic<VecDeque<LogEntry>> = Dynamic::new(VecDeque::with_capacity(1000));
         let logs_clone = logs.clone();
         let logs_clone_2 = logs.clone();
         let logs_clone_3 = logs.clone();
         
-        let log_filters: Value<Vec<String>> = Value::new(vec!["ui".to_string(), "clock".to_string()]);
+        let log_filters: Dynamic<Vec<String>> = Dynamic::new(vec!["ui".to_string(), "clock".to_string()]);
         let log_filters_clone = log_filters.clone();
-        let current_time: Value<String> = Value::new(String::new());
+        let current_time: Dynamic<String> = Dynamic::new(String::new());
         let current_time_clone = current_time.clone();
         let current_time_clone_2 = current_time.clone();
-        let use_24h: Value<bool> = Value::new(config.time_format == "24h");
+        let use_24h: Dynamic<bool> = Dynamic::new(config.time_format == "24h");
         let use_24h_clone = use_24h.clone();
         let use_24h_clone_2 = use_24h.clone();
         
@@ -87,14 +87,14 @@ impl AppState {
             current_time,
             logs,
             log_filters,
-            buffer_size: Value::new(1000),
-            slider_value: Value::new(config.slider_value),
-            combo_value: Value::new(config.combo_value),
+            buffer_size: Dynamic::new(1000),
+            slider_value: Dynamic::new(config.slider_value),
+            combo_value: Dynamic::new(config.combo_value),
             repaint,
-            colors: Value::new(config.colors),
-            button_colors: Value::new(config.button_colors),
-            button_started: Value::new(false),
-            use_24h: Value::new(config.time_format == "24h"),
+            colors: Dynamic::new(config.colors),
+            button_colors: Dynamic::new(config.button_colors),
+            button_started: Dynamic::new(false),
+            use_24h: Dynamic::new(config.time_format == "24h"),
             filtered_logs,
             log_count,
             formatted_time,

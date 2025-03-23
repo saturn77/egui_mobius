@@ -4,19 +4,19 @@
 //! thread-safe, real-time UI updates in egui applications. It is built on three main
 //! concepts:
 //! 
-//! 1. **Values**: Thread-safe containers for state that can notify listeners of changes
+//! 1. **Dynamic Values**: Thread-safe containers for state that can notify listeners of changes
 //! 2. **Derived Values**: Automatically updating computed values that depend on other values
 //! 3. **Signal Registry**: A system for managing signal-slot connections between components
 //! 
 //! # Quick Start
 //! 
 //! ```rust
-//! use egui_mobius_reactive::{Value, Derived};
+//! use egui_mobius_reactive::{Dynamic, Derived};
 //! use std::thread::sleep;
 //! use std::time::Duration;
 //! 
 //! // Create a basic value
-//! let count = Value::new(0);
+//! let count = Dynamic::new(0);
 //! 
 //! // Create a derived value that automatically updates
 //! let count_clone = count.clone();
@@ -40,7 +40,7 @@
 //! ## Key Components
 //!
 //! 1. **Thread-Safe Values**:
-//!    - `Value<T>` wraps state in `Arc<Mutex<T>>`
+//!    - `Dynamic<T>` wraps state in `Arc<Mutex<T>>`
 //!    - Safe concurrent access across UI and worker threads
 //!    - Change notification through `ValueExt` trait
 //!
@@ -59,25 +59,25 @@
 //!
 //! ```rust
 //! use std::sync::Arc;
-//! use egui_mobius_reactive::{Value, Derived, SignalRegistry};
+//! use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry};
 //!
 //! // Define your application state
 //! pub struct AppState {
 //!     pub registry: SignalRegistry,
-//!     count: Value<i32>,
-//!     label: Value<String>,
+//!     count: Dynamic<i32>,
+//!     label: Dynamic<String>,
 //!     doubled: Derived<i32>,
 //! }
 //!
 //! impl AppState {
 //!     pub fn new(registry: SignalRegistry) -> Self {
-//!         let count = Value::new(0);
+//!         let count = Dynamic::new(0);
 //!         let count_ref = count.clone();
 //!         let doubled = Derived::new(&[Arc::new(count.clone())], move || {
 //!             let val = *count_ref.lock();
 //!             val * 2
 //!         });
-//!         let label = Value::new("Click to increment".to_string());
+//!         let label = Dynamic::new("Click to increment".to_string());
 //!
 //!         registry.register_named_signal("count", Arc::new(count.clone()));
 //!         registry.register_named_signal("doubled", Arc::new(doubled.clone()));
@@ -129,13 +129,11 @@
 //!    - Register all dependent values
 //!
 //! 2. **Thread Safety**:
-//!    - Use Value::lock() for access
+//!    - Use Dynamic::lock() for access
 //!    - Clone before moving to closures
 //!    - Let each slot handle its thread
 //!
 
 pub mod reactive;
-pub use crate::reactive::{Value, ValueExt, Derived, ReactiveList, ReactiveValue, SignalRegistry};
+pub use crate::reactive::{Dynamic, ValueExt, Derived, ReactiveList, ReactiveValue, SignalRegistry};
 
-// Re-export commonly used types for convenience
-//pub use reactive::{Value, ValueExt, Derived, SignalRegistry, ReactiveValue, ReactiveList};
