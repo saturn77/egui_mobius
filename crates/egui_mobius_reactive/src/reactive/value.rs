@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::sync::mpsc::{channel, Sender};
-use std::fmt;
-use std::fmt::Debug;
+use std::thread;
+use std::fmt::{self, Debug};
 use parking_lot::Mutex as PLMutex;
 use crate::reactive::ReactiveValue;
+
 /// A thread-safe container for values that can be monitored for changes.
 ///
 /// The `Value` struct allows you to store a value in a thread-safe manner and
@@ -107,14 +107,11 @@ impl<T: Clone + Send + 'static> Value<T> {
     pub fn set(&self, value: T) {
         let mut guard = self.inner.lock().unwrap();
         *guard = value;
-        drop(guard); // Release lock before notifications
 
         // Notify all listeners
-        let notifiers = self.notifiers.lock();
-        for notifier in notifiers.iter() {
+        for notifier in self.notifiers.lock().iter() {
             let _ = notifier.send(()); // Ignore errors from closed channels
         }
-        drop(notifiers); // Explicitly release lock
     }
 }
 
