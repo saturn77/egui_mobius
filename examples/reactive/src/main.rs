@@ -8,14 +8,47 @@ use egui_mobius::Signal;
 // =====================
 // This example demonstrates the use of the reactive core in `egui_mobius`.
 // It shows how to create reactive signals and bind them to UI elements.
-
-macro_rules! derived {
-    ($dep:expr, $power:expr) => {
-        Derived::new(&[Arc::new($dep) as Arc<dyn ReactiveValue>], move || {
+macro_rules! register_derived {
+    ($registry:expr, $name:expr, $dep:expr, $power:expr) => {{
+        let derived = Derived::new(&[Arc::new($dep.clone()) as Arc<dyn ReactiveValue>], move || {
             let val: i32 = $dep.get();
             val.pow($power as u32)
-        })
-    };
+        });
+        $registry.register_named_signal($name, Arc::new(derived.clone()));
+        derived
+    }};
+}
+
+macro_rules! register_list {
+    ($registry:expr, $name:expr, $list:expr, $effect:block) => {{
+        let list_arc = Arc::new($list.clone());
+        $registry.effect(&[list_arc.clone()], {
+            let _list = list_arc.clone();
+            move || $effect
+        });
+        $registry.register_named_signal($name, list_arc.clone());
+        list_arc
+    }};
+}
+
+macro_rules! register_effect {
+    ($registry:expr, $name:expr, $signal:expr, $effect:block) => {{
+        let signal_arc = Arc::new($signal.clone());
+        $registry.effect(&[signal_arc.clone()], {
+            let _signal = signal_arc.clone();
+            move || $effect
+        });
+        $registry.register_named_signal($name, signal_arc.clone());
+        signal_arc
+    }};
+}
+
+fn register_signal<T: ReactiveValue + 'static>(
+    registry: &SignalRegistry,
+    name: &str,
+    signal: Arc<T>,
+) {
+    registry.register_named_signal(name, signal);
 }
 
 #[derive(Clone, Debug)]
@@ -41,63 +74,46 @@ pub struct AppState {
 impl AppState {
     pub fn new(registry: SignalRegistry, signal: Signal<Event>) -> Self {
         let count = Value::new(0);
-        registry.register_named_signal("count", Arc::new(count.clone()));
+        let count_clone = count.clone();
+        let count_clone2 = count.clone();
+        let count_clone3 = count.clone();
+        let count_clone4 = count.clone();
+        register_signal(&registry, "count", Arc::new(count.clone()));
 
-        let count_ref = count.clone();
-        let count_ref2 = count.clone();
-        let count_ref3 = count.clone();
+        let doubled = register_derived!(registry, "doubled", count_clone.clone(), 2);
+        let doubled_clone = doubled.clone();
+        let quad = register_derived!(registry, "quad", count_clone2.clone(), 4);
+        let fifth = register_derived!(registry, "fifth", count_clone3.clone(), 5);
 
-        let doubled = derived!(count_ref.clone(), 2);
-        registry.register_named_signal("doubled", Arc::new(doubled.clone()));
-
-        let quad = derived!(count_ref2.clone(), 4);
-        registry.register_named_signal("quad", Arc::new(Value::new(quad.get())));
-
-        let fifth = derived!(count_ref3.clone(), 5);
-        registry.register_named_signal("fifth", Arc::new(Value::new(fifth.get())));
-
-        let count_for_sum = count.clone();
-        let doubled_for_sum = doubled.clone();
         let sum_derived = Derived::new(&[
-            Arc::new(count.clone()) as Arc<dyn ReactiveValue>,
-            Arc::new(doubled_for_sum.clone()) as Arc<dyn ReactiveValue>
+            Arc::new(count_clone4.clone()) as Arc<dyn ReactiveValue>,
+            Arc::new(doubled_clone.clone()) as Arc<dyn ReactiveValue>,
         ], move || {
-            let count_val = count_for_sum.get();
-            let doubled_val = doubled_for_sum.get();
-            count_val + doubled_val
+            &count_clone4.get() + &doubled_clone.get()
         });
 
-        let sum_derived_arc = Arc::new(sum_derived.clone());
-        registry.effect(&[sum_derived_arc.clone()], {
-            let sum_derived = sum_derived_arc.clone();
-            move || {
-                println!("💥 sum_derived changed: {}", sum_derived.get());
-            }
+        let _sum_derived_arc = register_effect!(registry, "sum_derived", sum_derived, {
+            println!("💥 sum_derived changed");
         });
-        registry.register_named_signal("sum_derived", sum_derived_arc.clone());
 
         let list = ReactiveList::new();
+        let list_clone = list.clone();
+        let list_clone2 = list.clone();
         list.push(42);
         list.push(7);
         list.push(13);
 
-        let list_arc = Arc::new(list.clone());
-        registry.effect(&[list_arc.clone()], {
-            let list = list_arc.clone();
-            move || {
-                println!("📋 list changed: {:?}", list.get_all());
-            }
+        let list_arc = register_list!(registry, "list", list_clone2, {
+            println!("📋 list changed: {:?}", list_clone2.get_all());
         });
-        registry.register_named_signal("list", list_arc.clone());
 
-        let list_for_sum = list.clone();
         let list_sum = Derived::new(&[list_arc.clone() as Arc<dyn ReactiveValue>], move || {
-            list_for_sum.get_all().iter().sum()
+            list_clone.get_all().iter().sum()
         });
-        registry.register_named_signal("list_sum", Arc::new(list_sum.clone()));
+        register_signal(&registry, "list_sum", Arc::new(list_sum.clone()));
 
         let label = Value::new("Click to increment".to_string());
-        registry.register_named_signal("label", Arc::new(label.clone()));
+        register_signal(&registry, "label", Arc::new(label.clone()));
 
         Self {
             registry,
