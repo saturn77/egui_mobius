@@ -160,10 +160,8 @@ impl AppState {
                 Some(colors.option_c)
             } else if message.contains("Process") {
                 Some(colors.run_stop_log)
-            } else if message.contains("Custom Event") {
-                Some(colors.custom_event)
             } else {
-                Some(colors.custom_event)  // Default for UI events
+                Some(colors.custom_event)  // Default for UI events and Custom Events
             }
         } else {
             None
