@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0-alpha.24] - 2025-03-26
+
+### Added
+
+### Changed
+- Updated docstrings in lib.rs for egui_mobius_reactive, better description and example
+### Fixed
+- Clippy lint issues in types.rs & styled_buttons.rs 
+
 ## [0.3.0-alpha.23] - 2025-03-23
 
 ### Added
