@@ -23,6 +23,9 @@ Cargo.lock
 # Added by cargo
 /target
 
+# Rust Rover
+.idea/
+
 # Local configurations and logs
 **/.local/
 **/default_config.json
