@@ -31,64 +31,34 @@
 //!
 //! ## Simple Example: Dynamic and Derived State
 //!
-//! Here's how you can use `Dynamic` and `Derived` to build reactive state management in your application:
+//! Here's how you can use `Dynamic` and `Derived` to build reactive state
+//! management in your application. Note the use of the SignalRegistry struct
+//! to keep the values from being dropped later in the function.
 //!
 //! ```rust
-//! use egui_mobius_reactive::{Dynamic, Derived};
+//! use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry};
 //! use std::sync::Arc;
 //!
 //! fn main() {
-//!     // Define a basic dynamic state variable
-//!     let count = Dynamic::new(0);
+//!   let registry = SignalRegistry::new();
 //!
-//!     // Define a derived value that automatically recalculates when `count` changes
-//!     let count_clone = count.clone();
-//!     let doubled = Derived::new(&[Arc::new(count.clone())], move || {
-//!         let val = *count_clone.lock();
-//!         val * 2
-//!     });
+//!   let count = Dynamic::new(0);
+//!   let count_for_compute = count.clone();
+//!   let doubled = Derived::new(&[Arc::new(count.clone())], move || {
+//!       *count_for_compute.lock() * 2
+//!   });
 //!
-//!     // Mutate the `Dynamic` state
-//!     count.set(5);
+//!   // Register the values
+//!   registry.register_named_signal("count", Arc::new(count.clone()));
+//!   registry.register_named_signal("doubled", Arc::new(doubled.clone()));
 //!
-//!     // Assert the updated, automatically calculated value
-//!     assert_eq!(doubled.get(), 10);
+//!   // Values should still work after registration
+//!   assert_eq!(doubled.get(), 0);
+//!   count.set(5);
+//!   std::thread::sleep(std::time::Duration::from_millis(10));
+//!   assert_eq!(doubled.get(), 10);
 //! }
 //! ```
-//!
-//! ## Advanced Example: Using the Signal Registry
-//!
-//! The `signal_registry` plays a central role in managing reactive values and their dependencies across the system. It ensures that:
-//! - Reactive values aren't dropped while they're still needed.
-//! - The lifecycle of reactive values is managed effectively.
-//! - Debugging and visualization of the reactive graph are streamlined.
-//!
-//! Here's an example of how to register and use signals in the registry:
-//!
-//! ```rust
-//! use egui_mobius_reactive::{signal_registry, Signal};
-//! use std::sync::Arc;
-//!
-//! fn main() {
-//!     // Create a new signal registry
-//!     let mut registry = signal_registry();
-//!
-//!     // Register a named signal for "count"
-//!     let count_signal = Signal::new(10);
-//!     registry.register_signal("count", count_signal.clone());
-//!
-//!     // Retrieve and use the signal
-//!     let retrieved_signal = registry.get_signal("count").expect("Signal 'count' not found");
-//!
-//!     // Update the signal
-//!     retrieved_signal.set(20);
-//!
-//!     // Ensure the registry reflects the updated value
-//!     assert_eq!(*retrieved_signal.lock(), 20);
-//! }
-//! ```
-//!
-//! In this example, the `signal_registry` allows you to centralize the management of reactive state, providing a single point of control and access for reactive values in the ecosystem. This is particularly helpful when building large, complex reactive systems.
 //!
 //! ## Crate Links
 //!
