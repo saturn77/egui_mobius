@@ -175,7 +175,7 @@ impl StyledButton {
         let Self { text, hover_color, normal_color, text_color, rounding, margin, min_size } = self;
 
         ui.add_space(margin.y);
-        let response = ui.horizontal(|ui| {
+        ui.horizontal(|ui| {
             ui.add_space(margin.x);
             let button = egui::Button::new(egui::RichText::new(&text).color(text_color))
                 .fill(egui::Color32::TRANSPARENT)
@@ -202,11 +202,8 @@ impl StyledButton {
 
             ui.add_space(margin.x);
             response
-        }).inner;
+        }).inner
 
-
-
-        response
     }
 }
 
