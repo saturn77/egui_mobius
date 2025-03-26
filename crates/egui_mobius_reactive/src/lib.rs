@@ -39,25 +39,25 @@
 //! use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry};
 //! use std::sync::Arc;
 //!
-//! fn main() {
-//!   let registry = SignalRegistry::new();
 //!
-//!   let count = Dynamic::new(0);
-//!   let count_for_compute = count.clone();
-//!   let doubled = Derived::new(&[Arc::new(count.clone())], move || {
-//!       *count_for_compute.lock() * 2
-//!   });
+//!  let registry = SignalRegistry::new();
 //!
-//!   // Register the values
-//!   registry.register_named_signal("count", Arc::new(count.clone()));
-//!   registry.register_named_signal("doubled", Arc::new(doubled.clone()));
+//!  let count = Dynamic::new(0);
+//!  let count_for_compute = count.clone();
+//!  let doubled = Derived::new(&[Arc::new(count.clone())], move || {
+//!     *count_for_compute.lock() * 2
+//!  });
 //!
-//!   // Values should still work after registration
-//!   assert_eq!(doubled.get(), 0);
-//!   count.set(5);
-//!   std::thread::sleep(std::time::Duration::from_millis(10));
-//!   assert_eq!(doubled.get(), 10);
-//! }
+//!  // Register the values
+//!  registry.register_named_signal("count", Arc::new(count.clone()));
+//!  registry.register_named_signal("doubled", Arc::new(doubled.clone()));
+//!
+//!  // Values should still work after registration
+//!  assert_eq!(doubled.get(), 0);
+//!  count.set(5);
+//!  std::thread::sleep(std::time::Duration::from_millis(10));
+//!  assert_eq!(doubled.get(), 10);
+//!
 //! ```
 //!
 //! ## Crate Links
