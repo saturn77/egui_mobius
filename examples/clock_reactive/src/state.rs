@@ -71,7 +71,7 @@ pub struct AppState {
 
 
 impl AppState {
-    pub fn new(repaint: egui::Context, config: Config) -> Self {
+    pub fn new(_repaint: egui::Context, config: Config) -> Self {
         // Create base values
         let logs: Dynamic<VecDeque<LogEntry>> = Dynamic::new(VecDeque::with_capacity(1000));
         let logs_clone = logs.clone();
