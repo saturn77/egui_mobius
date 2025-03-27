@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0-alpha.25] - 2025-03-27
+
+### Added
+- Added new MobiusReactive runtime, enabling an async runtime for egui_mobius, runtime.rs
+- Added start_async method on Slot type, updated in slot.rs
+### Changed
+- Changed the clock_reactive example to be fully reactive + async, by making use of new MobiusRuntime
+
+### Fixed
+
 ## [0.3.0-alpha.24] - 2025-03-26
 
 ### Added
