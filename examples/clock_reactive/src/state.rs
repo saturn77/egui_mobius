@@ -1,14 +1,14 @@
-///! State management for the Clock example
-///! 
-///! This module contains the AppState struct which holds all the reactive state for the Clock example.
-///! The AppState struct contains all the reactive values and derived values that are used to manage 
-///! the state of the application.
-///! 
-///! Dynamic<T> is a reactive value that can be updated and read from any part of the application.
-///! Derived<T> is a reactive value that is derived from other reactive values. It is recomputed
-///! whenever any of the dependent reactive values change.
-///!
-///!
+/// State management for the Clock example
+/// 
+/// This module contains the AppState struct which holds all the reactive state for the Clock example.
+/// The AppState struct contains all the reactive values and derived values that are used to manage 
+/// the state of the application.
+/// 
+/// Dynamic<T> is a reactive value that can be updated and read from any part of the application.
+/// Derived<T> is a reactive value that is derived from other reactive values. It is recomputed
+/// whenever any of the dependent reactive values change.
+///
+///
 use crate::types::{ClockMessage, Config, LogColors, ButtonColors, LogEntry};
 use chrono::Local;
 use eframe::egui;

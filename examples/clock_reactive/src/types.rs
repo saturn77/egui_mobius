@@ -64,6 +64,7 @@ impl LogEntry {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum ClockMessage {
     TimeUpdated(String),
