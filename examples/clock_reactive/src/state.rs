@@ -19,17 +19,17 @@ use std::sync::Arc;
 /// AppState struct holds all the reactive state for the clock_reactive example.
 ///
 /// Dynamic<T> Member of AppState:
-/// - slider_value: Dynamic<f32>
-/// - combo_value: Dynamic<String>
-/// - current_time: Dynamic<String>
-/// - logs: Dynamic<VecDeque<LogEntry>>
-/// - log_filters: Dynamic<Vec<String>>
-/// - buffer_size: Dynamic<usize>
-/// - repaint: egui::Context
-/// - colors: Dynamic<LogColors>
-/// - button_colors: Dynamic<ButtonColors>
-/// - button_started: Dynamic<bool>
-/// - use_24h: Dynamic<bool>
+///  - slider_value: Dynamic<f32>
+///  - combo_value: Dynamic<String>
+///  - current_time: Dynamic<String>
+///  - logs: Dynamic<VecDeque<LogEntry>>
+///  - log_filters: Dynamic<Vec<String>>
+///  - buffer_size: Dynamic<usize>
+///  - repaint: egui::Context
+///  - colors: Dynamic<LogColors>
+///  - button_colors: Dynamic<ButtonColors>
+///  - button_started: Dynamic<bool>
+///  - use_24h: Dynamic<bool>
 /// The logs are what is displayed in the log window. The log_filters are used to filter the logs
 /// based on the source of the log. The buffer_size is the maximum number of logs to keep in the
 /// logs buffer. The slider_value and combo_value are used to display the current values of the
@@ -40,9 +40,10 @@ use std::sync::Arc;
 /// is used to keep track of whether the clock should display time in 24h format or 12h format.
 ///
 /// Derived<T> Member of AppState:
-/// - filtered_logs: Derived<VecDeque<LogEntry>>
-/// - log_count: Derived<usize>
-/// - formatted_time: Derived<String>
+///  - filtered_logs: Derived<VecDeque<LogEntry>>
+///  - log_count: Derived<usize>
+///  - formatted_time: Derived<String>
+/// 
 /// The filtered_logs is a derived value that filters the logs based on the log_filters. The log_count
 /// is a derived value that keeps track of the number of logs in the logs buffer. The formatted_time
 /// is a derived value that formats the current time based on the use_24h value.
