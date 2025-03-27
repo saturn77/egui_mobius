@@ -232,9 +232,12 @@ pub mod slot;
 pub mod types;
 pub mod factory;
 pub mod dispatching;
+pub mod runtime;
 
 // Re-export commonly used items
+pub use dispatching::{AsyncDispatcher, Dispatcher, SignalDispatcher};
+pub use factory::create_signal_slot;
+pub use runtime::{EventRoute, MobiusHandle, MobiusRuntime};
 pub use signals::Signal;
+pub use types::{Edge, Value};
 pub use slot::Slot;
-pub use types::Value;
-pub use dispatching::{Dispatcher, SignalDispatcher, AsyncDispatcher};

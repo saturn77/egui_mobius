@@ -73,18 +73,27 @@ where
     {
         let receiver = Arc::clone(&self.receiver);
         tokio::spawn(async move {
-            let messages: Vec<T> = {
-                let guard = receiver.lock().unwrap();
-                guard.try_iter().collect()
-            };
-
-            for msg in messages {
-                let fut = handler(msg);
-                tokio::spawn(async move {
-                    if let Err(err) = AssertUnwindSafe(fut).catch_unwind().await {
-                        eprintln!("⚠️  async handler panicked: {:?}", err);
+            loop {
+                let msg = {
+                    let guard = receiver.lock().unwrap();
+                    if let Ok(msg) = guard.try_recv() {
+                        Some(msg)
+                    } else {
+                        None
                     }
-                });
+                };
+
+                if let Some(msg) = msg {
+                    let fut = handler(msg);
+                    tokio::spawn(async move {
+                        if let Err(err) = AssertUnwindSafe(fut).catch_unwind().await {
+                            eprintln!("⚠️  async handler panicked: {:?}", err);
+                        }
+                    });
+                }
+                
+                // Give other tasks a chance to run
+                tokio::task::yield_now().await;
             }
         });
     }

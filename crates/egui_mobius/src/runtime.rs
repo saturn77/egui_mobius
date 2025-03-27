@@ -54,11 +54,11 @@ impl<E: Send + 'static> MobiusHandle<E> {
 }
 
 pub struct MobiusRuntime<E: Send + Clone + 'static> {
-    slot: Slot<E>,
-    handlers: HashMap<String, DynEventHandler<E>>,
-    processed: mpsc::Sender<Processed>,
-    state: RuntimeState,
-    shutdown_notify: Arc<Notify>,
+    pub slot: Slot<E>,
+    pub handlers: HashMap<String, DynEventHandler<E>>,
+    pub processed: mpsc::Sender<Processed>,
+    pub state: RuntimeState,
+    pub shutdown_notify: Arc<Notify>,
 }
 
 enum Event {
