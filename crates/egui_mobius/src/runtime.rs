@@ -7,12 +7,11 @@ use tokio::sync::Notify;
 use futures::FutureExt;
 
 use crate::slot::Slot;
-use crate::signals::Signal;
 
 #[derive(Debug, Clone)]
 pub enum Processed {
-    Loading(String),
-    Success(String),
+    Loading(()),
+    Success(()),
 }
 
 pub type DynEventHandler<E> = Arc<dyn Fn(E) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
@@ -26,7 +25,6 @@ pub trait EventRoute {
 pub enum RuntimeState {
     Idle,
     Running,
-    ShuttingDown,
     Done,
 }
 
@@ -46,7 +44,7 @@ impl<E> Clone for MobiusHandle<E> {
 
 impl<E: Send + 'static> MobiusHandle<E> {
     pub async fn send(&self, event: E) {
-        self.sender.send(event);
+        let _ = self.sender.send(event);
         tokio::task::yield_now().await;
     }
 
@@ -133,10 +131,9 @@ impl<E: EventRoute + Send + Clone + 'static> MobiusRuntime<E> {
                 }
                 let route = event.route().to_string();
                 if let Some(handler) = handlers.get(&route) {
-                    let route_clone = route.clone();
-                    let _ = processed_tx.send(Processed::Loading(route_clone.clone()));
+                    let _ = processed_tx.send(Processed::Loading(()));
                     handler(event).await;
-                    let _ = processed_tx.send(Processed::Success(route_clone));
+                    let _ = processed_tx.send(Processed::Success(()));
                 }
             }
         });
@@ -159,12 +156,12 @@ mod tests {
 
     const TEST_TIMEOUT: Duration = Duration::from_secs(1);
     const PING_ROUTE: &str = "ping";
-    const PONG_RESPONSE: &str = "pong";
+
 
     #[derive(Clone)]
     enum TestEvent {
         Ping,
-        Message(String),
+        Message(()),
     }
 
     impl EventRoute for TestEvent {
@@ -210,7 +207,7 @@ mod tests {
     async fn should_handle_unregistered_message_gracefully() {
         let (runtime, handle, _processed_rx) = MobiusRuntime::new();
         let rt = tokio::spawn(runtime.run());
-        handle.send(TestEvent::Message("hi".into())).await;
+        handle.send(TestEvent::Message(())).await;
         handle.shutdown();
         tokio::time::sleep(Duration::from_millis(100)).await;
         let _ = rt.abort();
