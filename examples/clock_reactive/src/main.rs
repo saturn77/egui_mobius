@@ -9,7 +9,6 @@ use eframe::egui;
 use egui_taffy::{taffy, tui};
 use taffy::prelude::{length, percent, Style};
 use egui_taffy::TuiBuilderLogic;
-use env_logger;
 use crate::state::AppState;
 use crate::ui::{ControlPanel, LoggerPanel};
 use crate::runtime_integration::RuntimeManager;

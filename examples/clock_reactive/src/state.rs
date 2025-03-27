@@ -30,6 +30,7 @@ use std::sync::Arc;
 ///  - button_colors: Dynamic<ButtonColors>
 ///  - button_started: Dynamic<bool>
 ///  - use_24h: Dynamic<bool>
+/// 
 /// The logs are what is displayed in the log window. The log_filters are used to filter the logs
 /// based on the source of the log. The buffer_size is the maximum number of logs to keep in the
 /// logs buffer. The slider_value and combo_value are used to display the current values of the
@@ -147,56 +148,57 @@ impl AppState {
         }
     }
 
-    /// handle_message is not really used but is kept here to show 
-    /// how to handle messages in the AppState struct, particularly if 
-    /// using the EventTrait from the MobiusReactive crate.
-    pub fn handle_message(&self, msg: ClockMessage) {
-        let now = Local::now();
-        let use_24h = self.use_24h.get();
-        let time_str = if use_24h {
-            now.format("%H:%M:%S").to_string()
-        } else {
-            now.format("%I:%M:%S %p").to_string().trim_start_matches('0').to_string()
-        };
-        //self.formatted_time.set(time_str);
+    // handle_message is not really used but is kept here to show 
+    // how to handle messages in the AppState struct, particularly if 
+    // using the EventTrait from the MobiusReactive crate.
+    
+    // pub fn handle_message(&self, msg: ClockMessage) {
+    //     let now = Local::now();
+    //     let use_24h = self.use_24h.get();
+    //     let time_str = if use_24h {
+    //         now.format("%H:%M:%S").to_string()
+    //     } else {
+    //         now.format("%I:%M:%S %p").to_string().trim_start_matches('0').to_string()
+    //     };
+    //     //self.formatted_time.set(time_str);
 
-        match msg {
-            ClockMessage::TimeUpdated(time) => {
-                // self.current_time.set(time.clone());
-                // println!("Time updated: {}", time);
-                // let mut current_logs = self.logs.get();
-                // if current_logs.len() >= 1000 {
-                //     current_logs.pop_front();
-                // }
-                // current_logs.push_back(LogEntry {
-                //     timestamp: Local::now(),
-                //     source: "clock".to_string(),
-                //     message: format!("Time updated: {}", time),
-                //     color: Some(egui::Color32::from_rgb(100, 200, 255)), // Light Blue
-                // });
-                // self.logs.set(current_logs);
-            }
+    //     match msg {
+    //         ClockMessage::TimeUpdated(time) => {
+    //             // self.current_time.set(time.clone());
+    //             // println!("Time updated: {}", time);
+    //             // let mut current_logs = self.logs.get();
+    //             // if current_logs.len() >= 1000 {
+    //             //     current_logs.pop_front();
+    //             // }
+    //             // current_logs.push_back(LogEntry {
+    //             //     timestamp: Local::now(),
+    //             //     source: "clock".to_string(),
+    //             //     message: format!("Time updated: {}", time),
+    //             //     color: Some(egui::Color32::from_rgb(100, 200, 255)), // Light Blue
+    //             // });
+    //             // self.logs.set(current_logs);
+    //         }
 
-            ClockMessage::Start => {
-                self.button_started.set(true);
-                self.button_colors.set(ButtonColors {
-                    run_state: egui::Color32::from_rgb(0, 255, 0),
-                    stop_state: egui::Color32::GRAY,
-                });
-            }
-            ClockMessage::Stop => {
-                self.button_started.set(false);
-                self.button_colors.set(ButtonColors {
-                    run_state: egui::Color32::GRAY,
-                    stop_state: egui::Color32::from_rgb(255, 0, 0),
-                });
-            }
-            ClockMessage::Clear => {
-                self.logs.set(VecDeque::new());
-            }
-        }
-        self.repaint.request_repaint();
-    }
+    //         ClockMessage::Start => {
+    //             self.button_started.set(true);
+    //             self.button_colors.set(ButtonColors {
+    //                 run_state: egui::Color32::from_rgb(0, 255, 0),
+    //                 stop_state: egui::Color32::GRAY,
+    //             });
+    //         }
+    //         ClockMessage::Stop => {
+    //             self.button_started.set(false);
+    //             self.button_colors.set(ButtonColors {
+    //                 run_state: egui::Color32::GRAY,
+    //                 stop_state: egui::Color32::from_rgb(255, 0, 0),
+    //             });
+    //         }
+    //         ClockMessage::Clear => {
+    //             self.logs.set(VecDeque::new());
+    //         }
+    //     }
+    //     self.repaint.request_repaint();
+    // }
 
 
     pub fn save_config(&self) {
