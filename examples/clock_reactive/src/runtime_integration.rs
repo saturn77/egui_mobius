@@ -92,38 +92,38 @@ impl RuntimeManager {
         // the messages are not utilized at this moment, but are shown here 
         // for reference as aslo as a template for future use.
 
-        let state1 = self.state.clone();
-        runtime.register_handler("time_updated", move |msg| {
-            let state = state1.clone();
-            async move {
-                log::debug!("Received time update message");
-                state.handle_message(msg);
-            }
-        });
+        // let state1 = self.state.clone();
+        // runtime.register_handler("time_updated", move |msg| {
+        //     let state = state1.clone();
+        //     async move {
+        //         log::debug!("Received time update message");
+        //         state.handle_message(msg);
+        //     }
+        // });
 
-        let state2 = self.state.clone();
-        runtime.register_handler("start", move |msg| {
-            let state = state2.clone();
-            async move {
-                state.handle_message(msg);
-            }
-        });
+        // let state2 = self.state.clone();
+        // runtime.register_handler("start", move |msg| {
+        //     let state = state2.clone();
+        //     async move {
+        //         state.handle_message(msg);
+        //     }
+        // });
 
-        let state3 = self.state.clone();
-        runtime.register_handler("stop", move |msg| {
-            let state = state3.clone();
-            async move {
-                state.handle_message(msg);
-            }
-        });
+        // let state3 = self.state.clone();
+        // runtime.register_handler("stop", move |msg| {
+        //     let state = state3.clone();
+        //     async move {
+        //         state.handle_message(msg);
+        //     }
+        // });
 
-        let state4 = self.state.clone();
-        runtime.register_handler("clear", move |msg| {
-            let state = state4.clone();
-            async move {
-                state.handle_message(msg);
-            }
-        });
+        // let state4 = self.state.clone();
+        // runtime.register_handler("clear", move |msg| {
+        //     let state = state4.clone();
+        //     async move {
+        //         state.handle_message(msg);
+        //     }
+        // });
 
         // Start runtime
         let rt = tokio::spawn(async move {

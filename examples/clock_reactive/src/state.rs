@@ -9,7 +9,7 @@
 /// whenever any of the dependent reactive values change.
 ///
 ///
-use crate::types::{ClockMessage, Config, LogColors, ButtonColors, LogEntry};
+use crate::types::{Config, LogColors, ButtonColors, LogEntry};
 use chrono::Local;
 use eframe::egui;
 use egui_mobius_reactive::{Dynamic, Derived, ReactiveValue};
