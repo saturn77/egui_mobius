@@ -130,7 +130,7 @@ impl RuntimeManager {
             runtime.run().await;
         });
 
-        // Start background clock
+        // Optional Control - Start background clock (presently not used)
         let (tx, _rx) = mpsc::channel();
         let shutdown_clone = shutdown.clone();
         tokio::spawn(async move {
@@ -142,7 +142,7 @@ impl RuntimeManager {
         self.runtime = Some(rt);
         self.handle = Some(handle);
         
-        // Start the clock in running state
+        // Optional Control - Start the clock in running state (presently not used)
         if let Some(handle) = &self.handle {
             let _ = handle.send(ClockMessage::Start);
         }

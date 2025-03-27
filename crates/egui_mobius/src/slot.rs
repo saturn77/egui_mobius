@@ -76,11 +76,7 @@ where
             loop {
                 let msg = {
                     let guard = receiver.lock().unwrap();
-                    if let Ok(msg) = guard.try_recv() {
-                        Some(msg)
-                    } else {
-                        None
-                    }
+                    guard.try_recv().ok() // Simplified using `.ok()`
                 };
 
                 if let Some(msg) = msg {
@@ -91,7 +87,7 @@ where
                         }
                     });
                 }
-                
+
                 // Give other tasks a chance to run
                 tokio::task::yield_now().await;
             }
