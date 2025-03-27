@@ -137,7 +137,7 @@ impl AppState {
             buffer_size    : Dynamic::new(1000),
             slider_value   : Dynamic::new(config.slider_value),
             combo_value    : Dynamic::new(config.combo_value),
-            repaint,
+            //repaint,
             colors         : Dynamic::new(config.colors),
             button_colors  : Dynamic::new(config.button_colors),
             button_started : Dynamic::new(false),
