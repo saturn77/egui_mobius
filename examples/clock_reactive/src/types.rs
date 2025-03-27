@@ -66,7 +66,10 @@ impl LogEntry {
 
 #[derive(Debug, Clone)]
 pub enum ClockMessage {
-    TimeUpdated(()),
+    TimeUpdated(String),
+    Start,
+    Stop,
+    Clear,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,11 +126,11 @@ impl Default for ButtonColors {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub slider_value: f32,
-    pub combo_value: String,
-    pub time_format: String,
-    pub colors: LogColors,
-    pub button_colors: ButtonColors,
+    pub slider_value  : f32,
+    pub combo_value   : String,
+    pub time_format   : String,
+    pub colors        : LogColors,
+    pub button_colors : ButtonColors,
 }
 
 impl Default for Config {

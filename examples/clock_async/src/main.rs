@@ -68,7 +68,7 @@ impl eframe::App for UiApp {
                             flex_direction: taffy::FlexDirection::Column,
                             gap: length(8.0),
                             flex_grow: 0.0,
-                            flex_shrink: 0.0,
+                            flex_shrink: 1.0,
                             flex_basis: length(300.0),
                             padding: length(16.0),
                             ..Default::default()
@@ -86,7 +86,7 @@ impl eframe::App for UiApp {
                             flex_direction: taffy::FlexDirection::Column,
                             gap: length(8.0),
                             flex_grow: 1.0,
-                            flex_shrink: 0.0,
+                            flex_shrink: 1.0,
                             padding: length(16.0),
                             size: taffy::Size {
                                 width: length(800.0),

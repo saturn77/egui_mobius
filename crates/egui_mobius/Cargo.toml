@@ -36,6 +36,7 @@ futures = "0.3"
 winit = "0.30.9"
 crossbeam-channel = "0.5.14"
 serde = { version = "1.0.218", optional = true }
+log = "0.4.26"
 
 [features]
 serde = ["serde/derive"]

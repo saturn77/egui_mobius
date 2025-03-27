@@ -1,84 +1,148 @@
-# Clock Reactive Example
 
-This example demonstrates the use of the reactive core in `egui_mobius` to create a simple reactive clock application. It showcases how to use reactive signals, derived values, and bindings to dynamically update the UI in response to changes in state.
+# **Clock Reactive Example**
 
----
+The `clock_reactive` example demonstrates the power of combining **`egui_mobius_reactive`** and the new **async runtime (`MobiusRuntime`)** to build modern, reactive, and asynchronous applications with a clean and modular architecture.
 
-## Comparing clock_reactive to clock_async 
+![alt text](../../assets/clock_reactive.png)
 
-**clock_async:**
-
-- Focus: More feature-rich, explicit async event handling.
-
- - Pros: Greater control, better for complex async tasks, clearer separation of concerns.
-
- - Cons: More code, more boilerplate, higher learning curve.
-
-**clock_reactive:**
-
- - Focus: Simplified, reactive programming model.
-
- - Pros: Less code, automatic state updates, easier maintenance.
-
- - Cons: Less explicit flow, potentially harder to debug.
-
-
-## Features
-
-- **Reactive Signals**: Uses `Value` and `Derived` to manage and react to state changes.
-- **Dynamic UI Updates**: Automatically updates the UI when signals or derived values change.
-- **Debug Panel**: Displays the current state of all registered signals for debugging purposes.
+This example showcases how to:
+- Use the **`MobiusRuntime`** for managing asynchronous event-driven workflows.
+- Leverage **`egui_mobius_reactive`** for reactive state management and seamless integration with the `egui` GUI framework.
+- Build a **framework for modern apps** that are both **reactive and asynchronous.**
 
 ---
 
-## How It Works
+## **Features**
 
-The `clock_reactive` example uses the following components:
+- **Asynchronous Runtime**:
+  - The `MobiusRuntime` provides a flexible and scalable async runtime for handling events and tasks.
+  - Built on top of `tokio`, it supports non-blocking operations and clean shutdown mechanisms.
 
-1. **Signals**:
-   - `Value<T>`: Represents a reactive value that can be updated and observed.
-   - `Derived<T>`: Represents a computed value that automatically updates when its dependencies change.
+- **Reactive State Management**:
+  - The `egui_mobius_reactive` crate enables reactive state updates, ensuring that UI components automatically respond to changes in application state.
 
-2. **Reactive List**:
-   - Demonstrates how to use `ReactiveList` to manage a dynamic list of items and react to changes.
+- **Modular Architecture**:
+  - Events are routed dynamically using the `EventRoute` trait, allowing for clean separation of concerns.
+  - Handlers are registered by route, making it easy to extend and maintain the application.
 
-3. **UI Bindings**:
-   - Binds signals and derived values to UI elements, ensuring the UI updates automatically when the state changes.
-
-4. **Debug Panel**:
-   - Lists all registered signals and their current values for debugging purposes.
-
----
-
-## Example Workflow
-
-### Counter Section
-1. **Increment Counter**:
-   - Clicking the button increments the counter value.
-   - Derived values (`doubled`, `quad`, `fifth`, etc.) update automatically based on the counter.
-
-2. **Display Derived Values**:
-   - The UI displays the current counter value and its derived values (e.g., doubled, quad, fifth).
-
-### Reactive List Section
-1. **Add/Remove Items**:
-   - Add the current counter value to the list.
-   - Remove the last item or clear the entire list.
-
-2. **Display List Items**:
-   - The UI displays all items in the list and their sum.
-
-### Debug Panel
-- Displays all registered signals and their current values, including:
-  - Reactive values (`Value<T>`)
-  - Derived values (`Derived<T>`)
-  - Reactive lists (`ReactiveList<T>`)
+- **Real-Time Clock Example**:
+  - The `clock_reactive` example demonstrates a real-time clock that updates every second, showcasing the integration of async tasks with reactive state updates.
 
 ---
 
-## Running the Example
+## **Framework Advantages**
 
-To run the `clock_reactive` example, use the following command:
+While this is an example, this is also a framework that is designed for developing
+modern applications that often require: 
 
+- **Asynchronous workflows**: Handle events, tasks, and background operations without blocking the UI.
+- **Reactive state management**: Automatically update the UI in response to state changes.
+- **Scalability**: Modular design makes it easy to extend and maintain.
+
+Whether you're building a dashboard, a real-time monitoring tool, or any other interactive application, this framework provides the tools you need to succeed.
+
+---
+
+## **How It Works**
+
+### **1. MobiusRuntime**
+The `MobiusRuntime` is an async runtime that manages event-driven workflows. It:
+- Routes events dynamically using the `EventRoute` trait.
+- Allows you to register async handlers for specific event routes.
+- Provides clean shutdown mechanisms for graceful termination.
+
+### **2. egui_mobius_reactive**
+The `egui_mobius_reactive` crate integrates reactive state management with the `egui` GUI framework. It:
+- Enables seamless two-way binding between application state and UI components.
+- Simplifies the process of building reactive UIs.
+
+### **3. Clock Example**
+The `clock_reactive` example combines these two components to create a real-time clock:
+- The `MobiusRuntime` periodically emits a `Tick` event.
+- The `egui_mobius_reactive` state is updated in response to the `Tick` event.
+- The UI automatically updates to display the current time.
+
+---
+
+## **Getting Started**
+
+### **1. Clone the Repository**
+```bash
+git clone https://github.com/your-repo/egui_mobius.git
+cd egui_mobius/examples/clock_reactive
+```
+
+### **2. Build and Run**
+Ensure you have Rust installed, then run:
 ```bash
 cargo run --example clock_reactive
+```
+
+### **3. Explore the Code **
+- **`main.rs`**: Entry point for the application.
+- **`runtime.rs`**: Implementation of the `MobiusRuntime`.
+- **`state.rs`**: Reactive state management using `egui_mobius_reactive`.
+
+---
+
+## **Code Highlights**
+
+### **Registering Event Handlers**
+Handlers are registered with the `MobiusRuntime` using the `register_handler` method:
+```rust
+runtime.register_handler("tick", move |_event| {
+    let state = state.clone();
+    async move {
+        state.update_time();
+    }
+});
+```
+
+### **Reactive State Updates**
+The `egui_mobius_reactive` crate ensures that UI components automatically respond to state changes. For example, the `formatted_time` value is derived reactively from `current_time` and `use_24h`:
+
+```rust
+let deps = [
+    Arc::new(current_time_clone) as Arc<dyn ReactiveValue>,
+    Arc::new(use_24h_clone) as Arc<dyn ReactiveValue>
+];
+let formatted_time = Derived::new(
+    &deps,
+    move || {
+        let time = current_time_clone_2.get();
+        let use_24h = use_24h_clone_2.get();
+        if use_24h {
+            time.clone()
+        } else {
+            time.trim_start_matches('0').to_string()
+        }
+    }
+);
+```
+
+This ensures that whenever `current_time` or `use_24h` changes, the `formatted_time` value is automatically updated, and the UI reflects the new state.
+
+---
+
+## **Future Directions**
+
+This framework is a foundation for building modern, reactive applications. Future enhancements may include:
+- **Advanced state management**: Support for more complex state hierarchies.
+- **Improved performance**: Optimizations for large-scale applications.
+- **Additional examples**: Demonstrating use cases like real-time data visualization and multi-threaded workflows.
+
+---
+
+## **Contributing**
+
+We welcome contributions! If you have ideas for improvements or new features, feel free to open an issue or submit a pull request.
+
+---
+
+## **License**
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+---
+
+Let me know if you'd like further refinements or additional details! 🚀

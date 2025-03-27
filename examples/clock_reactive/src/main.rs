@@ -1,21 +1,22 @@
 mod state;
 mod types;
 mod ui;
+mod runtime_integration;
 
+use std::sync::Arc;
 use eframe::egui;
-use std::time::Duration;
 
-use types::ClockMessage;
 use egui_taffy::{taffy, tui};
 use taffy::prelude::{length, percent, Style};
 use egui_taffy::TuiBuilderLogic;
-use egui_mobius::Signal;
-
+use env_logger;
 use crate::state::AppState;
 use crate::ui::{ControlPanel, LoggerPanel};
+use crate::runtime_integration::RuntimeManager;
 
 struct ClockApp {
-    state: AppState,
+    state    : Arc<AppState>,
+    _runtime : RuntimeManager,
 }
 
 impl eframe::App for ClockApp {
@@ -77,23 +78,14 @@ impl eframe::App for ClockApp {
     }
 }
 
-fn background_generator_thread(clock_signal: Signal<ClockMessage>, ctx: egui::Context) {
-    std::thread::spawn(move || {
-        loop {
-            if let Err(e) = clock_signal.send(ClockMessage::TimeUpdated(())) {
-                eprintln!("Failed to send TimeUpdated message: {:?}", e);
-            }
-            std::thread::sleep(Duration::from_secs(1));
-            ctx.request_repaint();
-        }
-    });
-}
-
-
 fn main() -> eframe::Result<()> {
-    // Create signal and slot for clock updates
-    let (clock_signal, clock_slot) = egui_mobius::factory::create_signal_slot::<ClockMessage>();
-    
+    env_logger::init();
+    // Create runtime with a multi-thread scheduler
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
+    // Enter the runtime context
+    let _guard = rt.enter();
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([800.0, 600.0])
@@ -102,26 +94,28 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
 
+    // Store runtime in the app to keep it alive
     eframe::run_native(
         "Clock Reactive Example",
         options,
         Box::new(move |cc| {
             let ctx = cc.egui_ctx.clone();
-            
-            // Start clock updates with UI context
-            background_generator_thread(clock_signal.clone(), ctx.clone());
 
-            // Load config from file or use defaults
             let config = std::fs::read_to_string("config.json")
                 .ok()
                 .and_then(|json| serde_json::from_str(&json).ok())
                 .unwrap_or_default();
 
-            // Create app state
-            let state = AppState::new(ctx.clone(), config);
-            state.set_clock_slot(clock_slot);
+            let state = Arc::new(AppState::new(ctx.clone(), config));
+            let mut runtime = RuntimeManager::new(state.clone());
 
-            Ok(Box::new(ClockApp { state }))
+            // Start the runtime from within the runtime context
+            runtime.start(ctx);
+
+            Ok(Box::new(ClockApp {
+                state,
+                _runtime: runtime,
+            }))
         })
     )
 }

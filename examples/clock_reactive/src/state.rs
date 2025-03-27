@@ -1,27 +1,72 @@
+///! State management for the Clock example
+///! 
+///! This module contains the AppState struct which holds all the reactive state for the Clock example.
+///! The AppState struct contains all the reactive values and derived values that are used to manage 
+///! the state of the application.
+///! 
+///! Dynamic<T> is a reactive value that can be updated and read from any part of the application.
+///! Derived<T> is a reactive value that is derived from other reactive values. It is recomputed
+///! whenever any of the dependent reactive values change.
+///!
+///!
 use crate::types::{ClockMessage, Config, LogColors, ButtonColors, LogEntry};
 use chrono::Local;
 use eframe::egui;
 use egui_mobius_reactive::{Dynamic, Derived, ReactiveValue};
 use std::collections::VecDeque;
 use std::sync::Arc;
+
+/// AppState struct holds all the reactive state for the clock_reactive example.
+///
+/// Dynamic<T> Member of AppState:
+/// - slider_value: Dynamic<f32>
+/// - combo_value: Dynamic<String>
+/// - current_time: Dynamic<String>
+/// - logs: Dynamic<VecDeque<LogEntry>>
+/// - log_filters: Dynamic<Vec<String>>
+/// - buffer_size: Dynamic<usize>
+/// - repaint: egui::Context
+/// - colors: Dynamic<LogColors>
+/// - button_colors: Dynamic<ButtonColors>
+/// - button_started: Dynamic<bool>
+/// - use_24h: Dynamic<bool>
+/// The logs are what is displayed in the log window. The log_filters are used to filter the logs
+/// based on the source of the log. The buffer_size is the maximum number of logs to keep in the
+/// logs buffer. The slider_value and combo_value are used to display the current values of the
+/// slider and combo box. The current_time is the current time displayed in the clock window.
+/// The repaint is used to request a repaint of the UI. The colors are the colors used to display
+/// the different types of logs. The button_colors are the colors used to display the run and stop
+/// buttons. The button_started is used to keep track of the state of the run/stop button. The use_24h
+/// is used to keep track of whether the clock should display time in 24h format or 12h format.
+///
+/// Derived<T> Member of AppState:
+/// - filtered_logs: Derived<VecDeque<LogEntry>>
+/// - log_count: Derived<usize>
+/// - formatted_time: Derived<String>
+/// The filtered_logs is a derived value that filters the logs based on the log_filters. The log_count
+/// is a derived value that keeps track of the number of logs in the logs buffer. The formatted_time
+/// is a derived value that formats the current time based on the use_24h value.
+///
+#[derive(Clone)]
 pub struct AppState {
-    pub slider_value: Dynamic<f32>,
-    pub combo_value: Dynamic<String>,
-    pub current_time: Dynamic<String>,
-    pub logs: Dynamic<VecDeque<LogEntry>>,
-    pub log_filters: Dynamic<Vec<String>>,
-    pub buffer_size: Dynamic<usize>,
-    pub repaint: egui::Context,
-    pub colors: Dynamic<LogColors>,
-    pub button_colors: Dynamic<ButtonColors>,
-    pub button_started: Dynamic<bool>,
-    pub use_24h: Dynamic<bool>,
+    pub slider_value   : Dynamic<f32>,
+    pub combo_value    : Dynamic<String>,
+    pub current_time   : Dynamic<String>,
+    pub logs           : Dynamic<VecDeque<LogEntry>>,
+    pub log_filters    : Dynamic<Vec<String>>,
+    pub buffer_size    : Dynamic<usize>,
+    pub repaint        : egui::Context,
+    pub colors         : Dynamic<LogColors>,
+    pub button_colors  : Dynamic<ButtonColors>,
+    pub button_started : Dynamic<bool>,
+    pub use_24h        : Dynamic<bool>,
     
     // Derived values
-    pub filtered_logs: Derived<VecDeque<LogEntry>>,
-    pub log_count: Derived<usize>,
-    pub formatted_time: Derived<String>,
+    pub filtered_logs  : Derived<VecDeque<LogEntry>>,
+    pub log_count      : Derived<usize>,
+    pub formatted_time : Derived<String>,
 }
+
 
 impl AppState {
     pub fn new(repaint: egui::Context, config: Config) -> Self {
@@ -87,57 +132,79 @@ impl AppState {
             current_time,
             logs,
             log_filters,
-            buffer_size: Dynamic::new(1000),
-            slider_value: Dynamic::new(config.slider_value),
-            combo_value: Dynamic::new(config.combo_value),
+            buffer_size    : Dynamic::new(1000),
+            slider_value   : Dynamic::new(config.slider_value),
+            combo_value    : Dynamic::new(config.combo_value),
             repaint,
-            colors: Dynamic::new(config.colors),
-            button_colors: Dynamic::new(config.button_colors),
-            button_started: Dynamic::new(false),
-            use_24h: Dynamic::new(config.time_format == "24h"),
+            colors         : Dynamic::new(config.colors),
+            button_colors  : Dynamic::new(config.button_colors),
+            button_started : Dynamic::new(false),
+            use_24h        : Dynamic::new(config.time_format == "24h"),
             filtered_logs,
             log_count,
             formatted_time,
         }
     }
 
-    pub fn set_clock_slot(&self, mut slot: egui_mobius::Slot<ClockMessage>) {
-        let ctx = self.repaint.clone();
-        let current_time = self.current_time.clone();
-        let logs = self.logs.clone();
-        let use_24h = self.use_24h.clone();
+    /// handle_message is not really used but is kept here to show 
+    /// how to handle messages in the AppState struct, particularly if 
+    /// using the EventTrait from the MobiusReactive crate.
+    pub fn handle_message(&self, msg: ClockMessage) {
+        let now = Local::now();
+        let use_24h = self.use_24h.get();
+        let time_str = if use_24h {
+            now.format("%H:%M:%S").to_string()
+        } else {
+            now.format("%I:%M:%S %p").to_string().trim_start_matches('0').to_string()
+        };
+        //self.formatted_time.set(time_str);
 
-        slot.start(move |msg| {
-            let ClockMessage::TimeUpdated(()) = msg;
-            let now = Local::now();
-            let time_str = if use_24h.get() {
-                now.format("%H:%M:%S").to_string()
-            } else {
-                now.format("%I:%M:%S %p").to_string().trim_start_matches('0').to_string()
-            };
-            current_time.set(time_str.clone());
-            let mut current_logs = logs.get();
-            if current_logs.len() >= 1000 {
-                current_logs.pop_front();
+        match msg {
+            ClockMessage::TimeUpdated(time) => {
+                // self.current_time.set(time.clone());
+                // println!("Time updated: {}", time);
+                // let mut current_logs = self.logs.get();
+                // if current_logs.len() >= 1000 {
+                //     current_logs.pop_front();
+                // }
+                // current_logs.push_back(LogEntry {
+                //     timestamp: Local::now(),
+                //     source: "clock".to_string(),
+                //     message: format!("Time updated: {}", time),
+                //     color: Some(egui::Color32::from_rgb(100, 200, 255)), // Light Blue
+                // });
+                // self.logs.set(current_logs);
             }
-            current_logs.push_back(LogEntry {
-                timestamp: now,
-                source: "clock".to_string(),
-                message: format!("Time updated: {}", time_str),
-                color: Some(egui::Color32::from_rgb(100, 200, 255)), // Light Blue
-            });
-            logs.set(current_logs);
-            ctx.request_repaint();
-        });
+
+            ClockMessage::Start => {
+                self.button_started.set(true);
+                self.button_colors.set(ButtonColors {
+                    run_state: egui::Color32::from_rgb(0, 255, 0),
+                    stop_state: egui::Color32::GRAY,
+                });
+            }
+            ClockMessage::Stop => {
+                self.button_started.set(false);
+                self.button_colors.set(ButtonColors {
+                    run_state: egui::Color32::GRAY,
+                    stop_state: egui::Color32::from_rgb(255, 0, 0),
+                });
+            }
+            ClockMessage::Clear => {
+                self.logs.set(VecDeque::new());
+            }
+        }
+        self.repaint.request_repaint();
     }
+
 
     pub fn save_config(&self) {
         let config = Config {
-            slider_value: self.slider_value.get(),
-            combo_value: self.combo_value.get(),
-            time_format: if self.use_24h.get() { "24h" } else { "12h" }.to_string(),
-            colors: self.colors.get(),
-            button_colors: self.button_colors.get(),
+            slider_value  : self.slider_value.get(),
+            combo_value   : self.combo_value.get(),
+            time_format   : if self.use_24h.get() { "24h" } else { "12h" }.to_string(),
+            colors        : self.colors.get(),
+            button_colors : self.button_colors.get(),
         };
 
         // Move config saving to background thread to avoid blocking UI
