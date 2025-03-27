@@ -3,6 +3,10 @@
 
 The `clock_reactive` example demonstrates the power of combining **`egui_mobius_reactive`** and the new **async runtime (`MobiusRuntime`)** to build modern, reactive, and asynchronous applications with a clean and modular architecture.
 
+```bash
+cargo run -p clock_reactive
+```
+
 ![alt text](../../assets/clock_reactive.png)
 
 This example showcases how to:
@@ -64,37 +68,17 @@ The `clock_reactive` example combines these two components to create a real-time
 
 ---
 
-## **Getting Started**
-
-### **1. Clone the Repository**
-```bash
-git clone https://github.com/your-repo/egui_mobius.git
-cd egui_mobius/examples/clock_reactive
-```
-
-### **2. Build and Run**
-Ensure you have Rust installed, then run:
-```bash
-cargo run --example clock_reactive
-```
-
-### **3. Explore the Code **
-- **`main.rs`**: Entry point for the application.
-- **`runtime.rs`**: Implementation of the `MobiusRuntime`.
-- **`state.rs`**: Reactive state management using `egui_mobius_reactive`.
-
----
-
 ## **Code Highlights**
 
 ### **Registering Event Handlers**
 Handlers are registered with the `MobiusRuntime` using the `register_handler` method:
 ```rust
-runtime.register_handler("tick", move |_event| {
-    let state = state.clone();
-    async move {
-        state.update_time();
-    }
+let state2 = self.state.clone();
+runtime.register_handler("start", move |msg| {
+   let state = state2.clone();
+   async move {
+      state.handle_message(msg);
+   }
 });
 ```
 
