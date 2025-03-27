@@ -57,7 +57,7 @@ pub struct AppState {
     pub logs           : Dynamic<VecDeque<LogEntry>>,
     pub log_filters    : Dynamic<Vec<String>>,
     pub buffer_size    : Dynamic<usize>,
-    pub repaint        : egui::Context,
+    //pub repaint        : egui::Context,
     pub colors         : Dynamic<LogColors>,
     pub button_colors  : Dynamic<ButtonColors>,
     pub button_started : Dynamic<bool>,

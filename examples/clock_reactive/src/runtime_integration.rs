@@ -46,7 +46,7 @@ impl RuntimeManager {
             return;
         }
 
-        let (mut runtime, handle, _processed_rx) = MobiusRuntime::new();
+        let (runtime, handle, _processed_rx) = MobiusRuntime::new();
         let handle = Arc::new(handle);
         let _handle_clone = handle.clone();
         let shutdown = self.shutdown.clone();
@@ -143,9 +143,9 @@ impl RuntimeManager {
         self.handle = Some(handle);
         
         // Optional Control - Start the clock in running state (presently not used)
-        if let Some(handle) = &self.handle {
-            let _ = handle.send(ClockMessage::Start);
-        }
+        // if let Some(handle) = &self.handle {
+        //     let _ = handle.send(ClockMessage::Start);
+        // }
     }
 
     pub fn stop(&mut self) {
