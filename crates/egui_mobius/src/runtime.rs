@@ -61,29 +61,6 @@ pub struct MobiusRuntime<E: Send + Clone + 'static> {
     pub shutdown_notify: Arc<Notify>,
 }
 
-enum Event {
-    Add(i32),
-    Sub(i32),
-}
-
-impl EventRoute for Event {
-    fn route(&self) -> &str {
-        match self {
-            Event::Add(_) => "add",
-            Event::Sub(_) => "sub",
-        }
-    }
-}
-
-impl Clone for Event {
-    fn clone(&self) -> Self {
-        match self {
-            Event::Add(x) => Event::Add(*x),
-            Event::Sub(x) => Event::Sub(*x),
-        }
-    }
-}
-
 impl<E: EventRoute + Send + Clone + 'static> MobiusRuntime<E> {
     pub fn new() -> (Self, MobiusHandle<E>, mpsc::Receiver<Processed>) {
         let (processed_tx, processed_rx) = mpsc::channel();
