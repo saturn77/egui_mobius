@@ -29,7 +29,7 @@ Long-running tasks run in dedicated threads through a clean signal-slot communic
 ## Modular Architecture
 The signal-slot system naturally encourages a clean separation between UI and business logic. Start with a simple frontend-backend split using type-safe messaging between modules. As your application grows, this pattern scales elegantly to support multiple specialized components while maintaining clear boundaries and interfaces.
 
-## Production Ready
+## Applications 
 Built with real-world applications in mind, egui_mobius incorporates proven patterns from mature frameworks. Integration with Taffy brings powerful layout capabilities, enabling responsive designs with flexbox-style controls that adapt to your application's needs.
 
 
