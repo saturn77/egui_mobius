@@ -37,7 +37,7 @@ Built with real-world applications in mind, egui_mobius incorporates proven patt
 
 There are numerous examples in this repo to provide a point of reference, and the recommended examples to explore are `clock_reactive`, `clock_async`, and `ui_refresh_events` to give a good overview of the different paradigms.
 
-However, the **fastest way** to get started with egui_mobius is through our template repository at https://github.com/saturn77/egui_mobius_template.
+However, the **fastest way** to get started with egui_mobius is through our [template repository](https://github.com/saturn77/egui_mobius_template).
 
 ```bash
 git clone https://github.com/saturn77/egui_mobius_template.git
