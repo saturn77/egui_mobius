@@ -14,47 +14,46 @@
 
 </div>
 
-egui_mobius is a layer 2 solution that transforms egui's immediate mode foundation into a complete application development platform. It bridges the gap between egui's efficient rendering and the architectural needs of production applications through a Qt-inspired signal-slot system, sophisticated state management, and clean separation of UI and business logic.
+egui_mobius is a layer 2 solution that transforms egui's immediate mode foundation into a complete application development platform. It enhances egui's efficient rendering with sophisticated state management, clean separation of UI and business logic, and a powerful signal-slot system. 
 
-# Features
+# Core Features
 
-Inspired by production-grade GUI frameworks, egui_mobius addresses the key challenges of building maintainable Rust applications while preserving egui's performance and simplicity:
+egui_mobius enhances egui with **multiple** powerful paradigms for building modern GUI applications. From reactive programming and async runtime capabilities to a thread-aware signal-slot architecture, each paradigm serves different needs and can be used independently or in combination. While the initial development of egui_mobius focused on the signal-slot architecture, the reactive and async paradigms have come to the forefront with the most recent releases of egui_mobius. 
 
-* **Enhanced State Management:**
-  Thread-safe state persistence with automatic UI updates via Value<T>. Preserves widget state (sliders, radio buttons, buttons) between updates while maintaining proper ownership and thread safety through optimized Mutex guards. Includes dedicated color management for UI elements and logging.
+## Reactive Programming
+At its core, egui_mobius brings reactive programming to egui through its `Value<T>` and `Derived<T>` primitives. Developer ergonomics are enhanced with this architecture, allowing encapsulation of a reactive state management system. This is typical of a reactive styled component, where the main state application logic can simply update state and the component will respond. Thread-safe state management ensures your application remains responsive and data-consistent across UI and background operations.
 
-* **Thread-Aware Signal-Slot Architecture:**
-  Unlike the Signal types in frameworks like Leptos or Dioxus, egui_mobius's slots maintain their own threads, enabling true hybrid synchronous/asynchronous operation. This approach allows slots to handle both immediate UI updates and long-running background tasks without blocking.
+## Async Runtime
+Long-running tasks run in dedicated threads through a clean signal-slot communication system, keeping your UI responsive. The `MobiusRuntime` is built on Tokio, and provides robust handling of background operations while maintaining type safety and clear data flow between components. When combined with reactive programming, the async runtime provides a powerful framework for building responsive and responsive applications.
 
-* **Modern Dispatcher System:**
-  A streamlined dispatching module is at the heart of egui_mobius. The AsyncDispatcher provides efficient async workload handling using Tokio, while the standard Dispatcher offers synchronous event processing. Both implementations share a clean, unified interface for managing signal-slot connections, enabling seamless handling of UI events and background operations.
+## Modular Architecture
+The signal-slot system naturally encourages a clean separation between UI and business logic. Start with a simple frontend-backend split using type-safe messaging between modules. As your application grows, this pattern scales elegantly to support multiple specialized components while maintaining clear boundaries and interfaces.
 
-* **True Concurrent Processing:**
-  Each slot's dedicated thread enables genuine parallel execution, not just asynchronous scheduling. Background tasks like clock updates run independently of the UI thread, with type-safe message passing ensuring thread-safe communication.
-
-* **Structured Code Organization:**
-  Clear separation of concerns through dedicated modules. Background operations (like clock generation) are cleanly extracted into standalone functions, improving maintainability and testability.
-
-* **Event Traceability:**
-  Type-safe message passing between UI and background threads enables clear tracking of event flow. The signal-slot architecture naturally supports adding custom logging and debugging capabilities.
-
-* **Production-Focused Design:**
-  Being built with real-world applications in mind, incorporating architectural patterns from mature GUI frameworks. While still evolving, the signal-slot system provides a foundation for managing complex UI state and background operations.
-
-* **Taffy Layout Integration:**
-  Full support for Taffy's powerful layout engine, enabling complex, responsive layouts with flexbox-style controls. Seamlessly integrates with egui's native layout system while providing additional capabilities for sophisticated UI designs.
+## Production Ready
+Built with real-world applications in mind, egui_mobius incorporates proven patterns from mature frameworks. Integration with Taffy brings powerful layout capabilities, enabling responsive designs with flexbox-style controls that adapt to your application's needs.
 
 
-## Versioning
+# Getting Started
 
-egui_mobius follows semantic versioning and is currently in its alpha phase (0.3.0-alpha.25). This version represents:
+There are numerous examples in this repo to provide a point of reference, and the recommended examples to explore are `clock_reactive`, `clock_async`, and `ui_refresh_events` to give a good overview of the different paradigms.
 
-- A mature architectural foundation with thread-aware slots
-- Production-ready core features including type-safe messaging
-- Ongoing API refinements based on real-world usage
-- Full compatibility with egui 0.31.1
+However, the **fastest way** to get started with egui_mobius is through our template repository at https://github.com/saturn77/egui_mobius_template.
 
-See [VERSIONING.md](VERSIONING.md) for our complete version strategy and compatibility matrix.
+```bash
+git clone https://github.com/saturn77/egui_mobius_template.git
+cd egui_mobius_template
+```
+
+The template provides three comprehensive examples showcasing different architectural patterns:
+
+* **Reactive** - Basic reactive UI demo showing fundamental state management
+* **Reactive-Async** - Sophisticated async task handling with background operations
+* **Signals-Slots** - Full-featured RLC Circuit Simulator demonstrating signal-slot architecture
+
+Each example comes with detailed documentation and demonstrates best practices for building production-ready applications with egui_mobius.
+
+## Version Status
+egui_mobius follows semantic versioning and is currently in alpha (0.3.0-alpha.25). While in alpha, we maintain API stability within minor versions. See [VERSIONING.md](VERSIONING.md) for details.
 
 ## Contributing  
 * Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request.  
