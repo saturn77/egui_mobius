@@ -1,7 +1,54 @@
+///! Core types and traits for building **egui_mobius_reactive** applications. 
+
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
-/// Trait implemented by all reactive types (`Value`, `Derived`, `ReactiveList`) that can be observed for changes.
+/// Subscribers
+/// 
+/// A vector of boxed Fn() function trait objects wrapped in an Arc<Mutex>.
+/// This becomes this vector of **callbacks** that are 
+/// triggered when a `Dynamic<T>` or `Derived<T>` changes, or any other
+/// reactive type that implements the `ReactiveValue` trait.
+/// 
+/// Subscribers are very similar to Slots in the Signal-Slot pattern, in that
+/// both are used to invoke a callback when a value is change (in the case of Subscribers)
+/// or when a signal has been received (in the case of Slots).
+///
+pub type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
+
+/// Trait implemented by all reactive types (`Dynamic`, `Derived`, `ReactiveList`) 
+/// that can be observed for changes.
+///
+/// This trait provides a common interface for subscribing to changes in reactive types
+/// and includes a method for downcasting to the concrete type when needed.
+///
+/// # Polymorphism and Downcasting
+///
+/// The `ReactiveValue` trait is designed to be implemented for multiple concrete types,
+/// such as `Dynamic<T>`, `Derived<T>`, and `ReactiveList<T>`. These types can be stored
+/// as trait objects (e.g., `Box<dyn ReactiveValue>`) to enable polymorphism. However,
+/// when you need to access type-specific functionality or data, you can use the `as_any`
+/// method to recover the concrete type.
+///
+/// The `as_any` method returns a reference to the object as `dyn Any`, which allows for
+/// type-safe downcasting to the original concrete type.
+///
+/// # Example
+///
+/// ```rust
+/// use std::any::Any;
+/// use egui_mobius_reactive::reactive::{ReactiveValue, ReactiveList};
+///
+/// let list: ReactiveList<i32> = ReactiveList::new();
+/// let reactive_value: &dyn ReactiveValue = &list; // Store as a trait object
+///
+/// // Downcast to the concrete type
+/// if let Some(concrete_list) = reactive_value.as_any().downcast_ref::<ReactiveList<i32>>() {
+///     println!("Successfully downcasted! Items: {:?}", concrete_list.get_all());
+/// } else {
+///     println!("Downcast failed!");
+/// }
+/// ```
 pub trait ReactiveValue: Send + Sync {
     /// Subscribes a callback to be triggered when the value changes.
     ///
@@ -18,18 +65,35 @@ pub trait ReactiveValue: Send + Sync {
 
     /// Returns a reference to the object as `dyn Any`.
     ///
-    /// This allows for downcasting to the concrete type.
+    /// This method enables downcasting from a `ReactiveValue` trait object to its
+    /// concrete type. This is useful when you need to access type-specific functionality
+    /// or data that is not part of the `ReactiveValue` trait.
+    ///
+    /// # Polymorphism
+    ///
+    /// The `ReactiveValue` trait allows for polymorphic behavior by enabling different
+    /// reactive types to be treated uniformly. However, when you need to recover the
+    /// original concrete type, you can use `as_any` in combination with `downcast_ref`
+    /// or `downcast_mut` from the `Any` trait.
     ///
     /// # Example
+    ///
     /// ```rust
     /// use egui_mobius_reactive::reactive::{ReactiveValue, ReactiveList};
     /// let list: ReactiveList<i32> = ReactiveList::new();
     /// let any_ref = list.as_any();
+    ///
+    /// // Downcast to the concrete type
+    /// if let Some(concrete_list) = any_ref.downcast_ref::<ReactiveList<i32>>() {
+    ///     println!("Successfully downcasted! Items: {:?}", concrete_list.get_all());
+    /// } else {
+    ///     println!("Downcast failed!");
+    /// }
     /// ```
     fn as_any(&self) -> &dyn Any;
 }
 
-type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
+
 
 /// A reactive list that notifies subscribers when items are added, removed, or cleared.
 ///
@@ -44,8 +108,8 @@ type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
 /// list.on_change(|| println!("List changed!"));
 /// ```
 pub struct ReactiveList<T> {
-    items: Arc<Mutex<Vec<T>>>,
-    subscribers: Subscribers,
+    items       : Arc<Mutex<Vec<T>>>,
+    subscribers : Subscribers,
 }
 
 impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {

@@ -59,12 +59,12 @@
 //! - Derived values are only recomputed when their dependencies actually change
 
 mod registry;
-mod value;
+mod dynamic;
 mod derived;
 mod core; 
 
 pub use registry::SignalRegistry;
-pub use value::{Dynamic, ValueExt};
+pub use dynamic::{Dynamic, ValueExt};
 pub use derived::Derived;
 pub use core::{ReactiveValue, ReactiveList};
 

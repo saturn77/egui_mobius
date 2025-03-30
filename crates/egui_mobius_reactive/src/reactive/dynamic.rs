@@ -257,4 +257,28 @@ mod tests {
         thread::sleep(Duration::from_millis(50));
         assert!(changed.load(Ordering::SeqCst));
     }
+
+    /// Tests the ReactiveValue trait implementation for Dynamic.
+    #[test]
+    fn test_reactive_value_trait() {
+        let value = Dynamic::new(0);
+        let changed = Arc::new(AtomicBool::new(false));
+        let changed_clone = changed.clone();
+
+        // Subscribe to value changes
+        value.subscribe(Box::new(move || {
+            changed_clone.store(true, Ordering::SeqCst);
+        }));
+
+        // Initial state
+        assert!(!changed.load(Ordering::SeqCst));
+
+        // Change the value
+        value.set(42);
+
+        // Wait for thread startup and change detection
+        thread::sleep(Duration::from_millis(50));
+        assert!(changed.load(Ordering::SeqCst));
+    }
+
 }

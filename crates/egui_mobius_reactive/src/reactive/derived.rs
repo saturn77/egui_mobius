@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use crate::reactive::Dynamic;
 use crate::reactive::core::ReactiveValue;
-
+use crate::reactive::core::Subscribers;
 /// Type alias for a list of subscribers.
 ///
 /// This is used to store callbacks that should be executed when the derived value changes.
@@ -15,7 +15,7 @@ use crate::reactive::core::ReactiveValue;
 /// let count = Arc::new(Derived::new(&[], || 0));
 /// count.subscribe(Box::new(|| println!("Value changed!"))); // Add a subscriber
 /// ```
-type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
+
 
 /// A computed value that automatically updates when its dependencies change.
 ///
@@ -129,6 +129,28 @@ mod tests {
     use super::*;
     use std::thread;
     use std::time::Duration;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    /// Test the ReactiveValue implementation for the Derived struct.
+    /// 
+    #[test]
+    fn test_derived_reactive_value() {
+        let count = Dynamic::new(0);
+        let count_for_compute = count.clone();
+        let doubled = Derived::new(&[Arc::new(count.clone())], move || {
+            *count_for_compute.lock() * 2
+        });
+
+        let called = Arc::new(AtomicBool::new(false));
+        let called_clone = called.clone();
+        doubled.subscribe(Box::new(move || {
+            called_clone.store(true, Ordering::Relaxed);
+        }));
+
+        count.set(5);
+        thread::sleep(Duration::from_millis(50));
+        assert!(called.load(Ordering::Relaxed));
+    }
 
     #[test]
     fn test_derived_updates() {
@@ -164,5 +186,25 @@ mod tests {
         b.set(3);
         thread::sleep(Duration::from_millis(50));
         assert_eq!(sum.get(), 8);
+    }
+
+    /// Use susbsribe method to essentially duplicate the on_change method.
+    #[test]
+    fn test_derived_subscribe() {
+        let count = Dynamic::new(0);
+        let count_for_compute = count.clone();
+        let doubled = Derived::new(&[Arc::new(count.clone())], move || {
+            *count_for_compute.lock() * 2
+        });
+
+        let called = Arc::new(AtomicBool::new(false));
+        let called_clone = called.clone();
+        doubled.subscribe(Box::new(move || {
+            called_clone.store(true, Ordering::Relaxed);
+        }));
+
+        count.set(5);
+        thread::sleep(Duration::from_millis(50));
+        assert!(called.load(Ordering::Relaxed));
     }
 }

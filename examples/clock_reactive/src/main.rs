@@ -2,7 +2,6 @@ mod state;
 mod types;
 mod ui;
 mod runtime_integration;
-
 use std::sync::Arc;
 use eframe::egui;
 
