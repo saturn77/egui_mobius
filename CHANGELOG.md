@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0-alpha.26] - 2025-03-29
+
+### Added
+
+### Changed
+- Modified readme.md to reflect the evolving focus on egui_mobius_reactive and the async runtime
+- Updated the getting started description
+- Added links to the new egui_mobius_template repository
+### Fixed
+
 ## [0.3.0-alpha.25] - 2025-03-27
 
 ### Added
