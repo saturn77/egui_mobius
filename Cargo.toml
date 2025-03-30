@@ -8,7 +8,6 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/reactive",
     "examples/realtime_plot",
     "examples/ui_refresh_events",
-    "examples/treeview",
     "examples"
 ]
 exclude = [
@@ -37,7 +36,6 @@ eframe = { version = "0.31.1", default-features = false }
 egui-winit = { version = "0.31.1", features = ["accesskit"] }
 egui_extras = "0.31.1"
 egui_taffy = "0.7.0"
-egui_treeview = "0.31.1"
 # random number generation, useful for testing and examples
 rand = "0.9.0"
 
