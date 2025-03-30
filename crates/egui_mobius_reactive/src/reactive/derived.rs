@@ -15,8 +15,6 @@ use crate::reactive::core::Subscribers;
 /// let count = Arc::new(Derived::new(&[], || 0));
 /// count.subscribe(Box::new(|| println!("Value changed!"))); // Add a subscriber
 /// ```
-
-
 /// A computed value that automatically updates when its dependencies change.
 ///
 /// # Example

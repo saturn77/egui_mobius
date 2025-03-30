@@ -1,5 +1,4 @@
-///! Core types and traits for building **egui_mobius_reactive** applications. 
-
+//! Core types and traits for building **egui_mobius_reactive** applications. 
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
