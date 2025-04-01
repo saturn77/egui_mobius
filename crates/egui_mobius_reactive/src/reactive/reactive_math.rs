@@ -1,4 +1,60 @@
 //! Extended Reactive Math Helpers for `egui_mobius_reactive`
+//!
+//! This module provides extended mathematical and logical operations for reactive types,
+//! including `Dynamic` and `Derived`. It supports arithmetic, comparison, and string
+//! operations for both `i32` and `f64` types, as well as boolean and string-specific
+//! operations.
+//!
+//! ## Features
+//!
+//! - **Arithmetic Operations**: Add, Subtract, Multiply, Divide for `Dynamic` and `Derived` types.
+//! - **Mixed-Type Support**: Operations between `Dynamic` and `Derived` values.
+//! - **Boolean Logic**: Negation (`!`) for `Dynamic<bool>`.
+//! - **String Operations**: Concatenation and appending for `Dynamic<String>`.
+//! - **Math Extensions**: Traits like `ReactiveMath` and `ReactiveMathF64` provide additional
+//!   mathematical operations such as `powi`, `powf`, `abs`, `min`, `max`, and `rem`.
+//! - **List Operations**: Sum for `ReactiveList` of `i32` and `f64`.
+//!
+//! ## Examples
+//!
+//! ### Arithmetic Operations
+//! ```rust
+//! use egui_mobius_reactive::{Dynamic, ReactiveMath};
+//!
+//! let a = Dynamic::new(5);
+//! let b = Dynamic::new(3);
+//!
+//! let sum = a.clone() + b.clone(); // 5 + 3 = 8
+//! let diff = a.clone() - b.clone(); // 5 - 3 = 2
+//! let prod = a.clone() * b.clone(); // 5 * 3 = 15
+//! let quot = a.clone() / b.clone(); // 5 / 3 = 1
+//!
+//! assert_eq!(sum.get(), 8);
+//! assert_eq!(diff.get(), 2);
+//! assert_eq!(prod.get(), 15);
+//! assert_eq!(quot.get(), 1);
+//! ```
+//!
+//! ### Boolean Logic
+//! ```rust
+//! use egui_mobius_reactive::{Dynamic, ReactiveLogic};
+//!
+//! let flag = Dynamic::new(true);
+//! let toggled = flag.not();
+//!
+//! assert_eq!(toggled.get(), false);
+//! ```
+//!
+//! ### String Operations
+//! ```rust
+//! use egui_mobius_reactive::{Dynamic, ReactiveString};
+//!
+//! let a = Dynamic::new("Hello, ".to_string());
+//! let b = Dynamic::new("world!".to_string());
+//!
+//! let result = a + b;
+//! assert_eq!(result.get(), "Hello, world!");
+//! ```
 
 use std::sync::Arc;
 use std::ops::{Add, Sub, Mul, Div, Not};
@@ -183,13 +239,27 @@ impl Add for Dynamic<String> {
 }
 
 // ReactiveMath for i32
+/// Provides additional mathematical operations for `Dynamic<i32>` values.
 pub trait ReactiveMath {
+    /// Returns a `Derived<i32>` that is double the value of `self`.
     fn doubled(&self) -> Derived<i32>;
+
+    /// Returns a `Derived<i32>` that is the negated value of `self`.
     fn negated(&self) -> Derived<i32>;
+
+    /// Returns a `Derived<i32>` that is `self` raised to the power of `exp`.
     fn powi(&self, exp: u32) -> Derived<i32>;
+
+    /// Returns a `Derived<i32>` that is the absolute value of `self`.
     fn abs(&self) -> Derived<i32>;
+
+    /// Returns a `Derived<i32>` that is the minimum of `self` and `other`.
     fn min(&self, other: &Dynamic<i32>) -> Derived<i32>;
+
+    /// Returns a `Derived<i32>` that is the maximum of `self` and `other`.
     fn max(&self, other: &Dynamic<i32>) -> Derived<i32>;
+
+    /// Returns a `Derived<i32>` that is the remainder of `self` divided by `other`.
     fn rem(&self, other: &Dynamic<i32>) -> Derived<i32>;
 }
 
