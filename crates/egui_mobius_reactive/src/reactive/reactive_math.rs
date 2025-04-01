@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn test_mixed_type_i32_min_max_rem() {
         let a = Dynamic::new(10);
-        let b = a.clone().negated();
+        let b = Dynamic::new(-a.get());
 
         let min = a.clone().min(&b.clone());
         let max = a.clone().max(&b.clone());
@@ -413,7 +413,7 @@ mod tests {
     #[test]
     fn test_mixed_type_f64_min_max_rem() {
         let x = Dynamic::new(9.0);
-        let y = x.clone().negated();
+        let y = Dynamic::new(-x.get());
 
         let min = x.clone().min(&y.clone());
         let max = x.clone().max(&y.clone());
