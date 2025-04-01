@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0-alpha.27] - 2025-04-01
+
+### Added
+-- Added reactive_math for easier handling of math operation involving Derived<T> and Dynamic<T>
+
+### Changed
+-- Updated the examples for reactive and clock_reactive
+
+### Fixed
+
 ## [0.3.0-alpha.26] - 2025-03-29
 
 ### Added
