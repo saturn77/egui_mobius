@@ -36,7 +36,7 @@ pub type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
 ///
 /// ```rust
 /// use std::any::Any;
-/// use egui_mobius_reactive::reactive::{ReactiveValue, ReactiveList};
+/// use egui_mobius_reactive::{ReactiveValue, ReactiveList};
 ///
 /// let list: ReactiveList<i32> = ReactiveList::new();
 /// let reactive_value: &dyn ReactiveValue = &list; // Store as a trait object
@@ -56,7 +56,7 @@ pub trait ReactiveValue: Send + Sync {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::{ReactiveValue, ReactiveList};
+    /// use egui_mobius_reactive::{ReactiveValue, ReactiveList};
     /// let list: ReactiveList<i32> = ReactiveList::new();
     /// list.subscribe(Box::new(|| println!("Value changed!")));
     /// ```
@@ -78,7 +78,7 @@ pub trait ReactiveValue: Send + Sync {
     /// # Example
     ///
     /// ```rust
-    /// use egui_mobius_reactive::reactive::{ReactiveValue, ReactiveList};
+    /// use egui_mobius_reactive::{ReactiveValue, ReactiveList};
     /// let list: ReactiveList<i32> = ReactiveList::new();
     /// let any_ref = list.as_any();
     ///
@@ -101,7 +101,7 @@ pub trait ReactiveValue: Send + Sync {
 ///
 /// # Example
 /// ```rust
-/// use egui_mobius_reactive::reactive::ReactiveList;
+/// use egui_mobius_reactive::ReactiveList;
 /// let list: ReactiveList<i32> = ReactiveList::new();
 /// list.push(42);
 /// list.on_change(|| println!("List changed!"));
@@ -116,7 +116,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::new();
     /// ```
     pub fn new() -> Self {
@@ -133,7 +133,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::new(); // Specify the type explicitly
     /// list.push(42);
     /// ```
@@ -149,7 +149,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::new(); // Specify the type explicitly
     /// list.push(42);
     /// list.remove(0);
@@ -163,7 +163,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::new(); // Specify the type explicitly
     /// list.push(42);
     /// list.clear();
@@ -177,7 +177,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list = ReactiveList::new();
     /// list.push(42);
     /// let items = list.get_all();
@@ -194,7 +194,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::new(); // Specify the type explicitly
     /// list.on_change(|| println!("List changed!"));
     /// list.push(42); // This will trigger the callback
@@ -218,7 +218,7 @@ impl<T> Clone for ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::new();
     /// let cloned_list = list.clone();
     /// ```
@@ -238,7 +238,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveValue for ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::{ReactiveList, ReactiveValue};
+    /// use egui_mobius_reactive::{ReactiveList, ReactiveValue};
     /// let list: ReactiveList<i32> = ReactiveList::new();
     /// list.subscribe(Box::new(|| println!("List changed!")));
     /// ```
@@ -251,7 +251,7 @@ impl<T: Clone + Send + Sync + 'static> ReactiveValue for ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::{ReactiveList, ReactiveValue};
+    /// use egui_mobius_reactive::{ReactiveList, ReactiveValue};
     /// let list = ReactiveList::<i32>::new();
     /// let any_ref = list.as_any();
     /// ```
@@ -267,7 +267,7 @@ impl<T: Clone + Send + Sync + 'static> Default for ReactiveList<T> {
     ///
     /// # Example
     /// ```rust
-    /// use egui_mobius_reactive::reactive::ReactiveList;
+    /// use egui_mobius_reactive::ReactiveList;
     /// let list: ReactiveList<i32> = ReactiveList::default();
     /// ```
     fn default() -> Self {

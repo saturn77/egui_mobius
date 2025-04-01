@@ -12,7 +12,7 @@
 use crate::types::{Config, LogColors, ButtonColors, LogEntry};
 use chrono::Local;
 use eframe::egui;
-use egui_mobius_reactive::{Dynamic, Derived, ReactiveValue};
+use egui_mobius_reactive::*; 
 use std::collections::VecDeque;
 use std::sync::Arc;
 

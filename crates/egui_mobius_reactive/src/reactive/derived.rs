@@ -1,14 +1,14 @@
 use std::sync::{Arc, Mutex};
-use crate::reactive::Dynamic;
-use crate::reactive::core::ReactiveValue;
-use crate::reactive::core::Subscribers;
+use crate::Dynamic;
+use crate::ReactiveValue;
+use crate::Subscribers;
 /// Type alias for a list of subscribers.
 ///
 /// This is used to store callbacks that should be executed when the derived value changes.
 /// 
 /// # Example
 /// ```rust
-/// use egui_mobius_reactive::reactive::Derived;
+/// use egui_mobius_reactive::Derived;
 /// use egui_mobius_reactive::ReactiveValue;
 /// use std::sync::Arc;
 ///

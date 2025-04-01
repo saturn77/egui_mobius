@@ -3,7 +3,7 @@ use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::fmt::{self, Debug};
 use parking_lot::Mutex as PLMutex;
-use crate::reactive::ReactiveValue;
+use crate::ReactiveValue;
 
 /// A thread-safe container for dynamic values that can be monitored for changes.
 ///
@@ -224,7 +224,7 @@ mod tests {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use std::time::Duration;
-    use crate::reactive::ValueExt; // Import the ValueExt trait
+    use crate::ValueExt; // Import the ValueExt trait
 
     /// Tests the `get` and `set` methods of the `Dynamic` struct.
     #[test]

@@ -1,55 +1,8 @@
 use std::sync::Arc;
 use eframe::NativeOptions;
-use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry, ReactiveList, ReactiveValue};
-use egui_mobius::factory;
-use egui_mobius::Signal;
-
-// Reactive Core Example
-// =====================
-// This example demonstrates the use of the reactive core in `egui_mobius`.
-// It shows how to create reactive signals and bind them to UI elements.
-macro_rules! register_derived {
-    ($registry:expr, $name:expr, $dep:expr, $power:expr) => {{
-        let derived = Derived::new(&[Arc::new($dep.clone()) as Arc<dyn ReactiveValue>], move || {
-            let val: i32 = $dep.get();
-            val.pow($power as u32)
-        });
-        $registry.register_named_signal($name, Arc::new(derived.clone()));
-        derived
-    }};
-}
-
-macro_rules! register_list {
-    ($registry:expr, $name:expr, $list:expr, $effect:block) => {{
-        let list_arc = Arc::new($list.clone());
-        $registry.effect(&[list_arc.clone()], {
-            let _list = list_arc.clone();
-            move || $effect
-        });
-        $registry.register_named_signal($name, list_arc.clone());
-        list_arc
-    }};
-}
-
-macro_rules! register_effect {
-    ($registry:expr, $name:expr, $signal:expr, $effect:block) => {{
-        let signal_arc = Arc::new($signal.clone());
-        $registry.effect(&[signal_arc.clone()], {
-            let _signal = signal_arc.clone();
-            move || $effect
-        });
-        $registry.register_named_signal($name, signal_arc.clone());
-        signal_arc
-    }};
-}
-
-fn register_signal<T: ReactiveValue + 'static>(
-    registry: &SignalRegistry,
-    name: &str,
-    signal: Arc<T>,
-) {
-    registry.register_named_signal(name, signal);
-}
+use egui_mobius_reactive::*;
+use egui_mobius::factory; 
+use egui_mobius::signals::Signal;
 
 #[derive(Clone, Debug)]
 pub enum Event {
@@ -59,61 +12,55 @@ pub enum Event {
 }
 
 pub struct AppState {
-    pub registry : SignalRegistry,
-    count        : Dynamic<i32>,
-    label        : Dynamic<String>,
-    doubled      : Derived<i32>,
-    quad         : Derived<i32>,
-    fifth        : Derived<i32>,
-    sum_derived  : Derived<i32>,
-    list_sum     : Derived<i32>,
-    list         : ReactiveList<i32>,
-    signal       : Signal<Event>,
+    pub registry: SignalRegistry,
+    count: Dynamic<i32>,
+    label: Dynamic<String>,
+    doubled: Derived<i32>,
+    quad: Derived<i32>,
+    fifth: Derived<i32>,
+    sum_derived: Derived<i32>,
+    list_sum: Derived<i32>,
+    list: ReactiveList<i32>,
+    signal: Signal<Event>,
 }
 
 impl AppState {
     pub fn new(registry: SignalRegistry, signal: Signal<Event>) -> Self {
         let count = Dynamic::new(0);
-        let count_clone = count.clone();
-        let count_clone2 = count.clone();
-        let count_clone3 = count.clone();
-        let count_clone4 = count.clone();
-        register_signal(&registry, "count", Arc::new(count.clone()));
+        let label = Dynamic::new("Click to increment".to_string());
+        registry.register_named_signal("count", Arc::new(count.clone()));
+        registry.register_named_signal("label", Arc::new(label.clone()));
 
-        let doubled = register_derived!(registry, "doubled", count_clone.clone(), 2);
-        let doubled_clone = doubled.clone();
-        let quad = register_derived!(registry, "quad", count_clone2.clone(), 4);
-        let fifth = register_derived!(registry, "fifth", count_clone3.clone(), 5);
+        // Use ReactiveMath
+        let doubled : Derived<i32> = count.powi(2);
+        let quad = count.powi(4);
+        let fifth = count.powi(5);
+        let sum_derived : Derived<i32> = count.clone() + doubled.clone();
 
-        let sum_derived = Derived::new(&[
-            Arc::new(count_clone4.clone()) as Arc<dyn ReactiveValue>,
-            Arc::new(doubled_clone.clone()) as Arc<dyn ReactiveValue>,
-        ], move || {
-            count_clone4.get() + doubled_clone.get()
-        });
+        registry.register_named_signal("doubled", Arc::new(doubled.clone()));
+        registry.register_named_signal("quad", Arc::new(quad.clone()));
+        registry.register_named_signal("fifth", Arc::new(fifth.clone()));
+        registry.register_named_signal("sum_derived", Arc::new(sum_derived.clone()));
 
-        let _sum_derived_arc = register_effect!(registry, "sum_derived", sum_derived, {
+        registry.effect(&[Arc::new(sum_derived.clone())], move || {
             println!("💥 sum_derived changed");
         });
 
         let list = ReactiveList::new();
-        let list_clone = list.clone();
-        let list_clone2 = list.clone();
         list.push(42);
         list.push(7);
         list.push(13);
 
-        let list_arc = register_list!(registry, "list", list_clone2, {
-            println!("📋 list changed: {:?}", list_clone2.get_all());
+        let list_arc = Arc::new(list.clone());
+        registry.register_named_signal("list", list_arc.clone());
+
+        let list_clone = list.clone();
+        registry.effect(&[list_arc.clone()], move || {
+            println!("📋 list changed: {:?}", list_clone.get_all());
         });
 
-        let list_sum = Derived::new(&[list_arc.clone() as Arc<dyn ReactiveValue>], move || {
-            list_clone.get_all().iter().sum()
-        });
-        register_signal(&registry, "list_sum", Arc::new(list_sum.clone()));
-
-        let label = Dynamic::new("Click to increment".to_string());
-        register_signal(&registry, "label", Arc::new(label.clone()));
+        let list_sum = list.clone().sum();
+        registry.register_named_signal("list_sum", Arc::new(list_sum.clone()));
 
         Self {
             registry,
@@ -138,7 +85,6 @@ impl eframe::App for AppState {
             });
             ui.add_space(20.0);
 
-            // Counter Section with collapsing header
             egui::CollapsingHeader::new("📊 Counter Values")
                 .default_open(true)
                 .show(ui, |ui| {
@@ -151,28 +97,27 @@ impl eframe::App for AppState {
                             }
                         }
                     });
-                    
+
                     egui::Grid::new("counter_grid")
                         .striped(true)
                         .spacing([40.0, 4.0])
                         .show(ui, |ui| {
-                            let count = *self.count.lock();
                             ui.label("Count:");
-                            ui.label(format!("{}", count));
+                            ui.label(format!("{}", self.count.get()));
                             ui.end_row();
-                            
+
                             ui.label("Doubled:");
                             ui.label(format!("{}", self.doubled.get()));
                             ui.end_row();
-                            
+
                             ui.label("Quad:");
                             ui.label(format!("{}", self.quad.get()));
                             ui.end_row();
-                            
+
                             ui.label("Fifth:");
                             ui.label(format!("{}", self.fifth.get()));
                             ui.end_row();
-                            
+
                             ui.label("Sum:");
                             ui.label(format!("{}", self.sum_derived.get()));
                             ui.end_row();
@@ -181,16 +126,13 @@ impl eframe::App for AppState {
 
             ui.add_space(10.0);
             ui.separator();
-            
-            // Reactive List Section with collapsing header
+
             egui::CollapsingHeader::new("📋 Reactive List")
                 .default_open(true)
                 .show(ui, |ui| {
-                    // List controls in a horizontal layout
                     ui.horizontal(|ui| {
                         if ui.button("➕ Add Item").clicked() {
-                            let new_item = *self.count.lock();
-                            self.list.push(new_item);
+                            self.list.push(*self.count.lock());
                         }
                         if ui.button("➖ Remove Last").clicked() {
                             let all = self.list.get_all();
@@ -202,10 +144,9 @@ impl eframe::App for AppState {
                             self.list.clear();
                         }
                     });
-                    
+
                     ui.add_space(8.0);
-                    
-                    // List items in a frame with custom styling
+
                     egui::Frame::new()
                         .fill(ui.visuals().extreme_bg_color)
                         .inner_margin(8.0)
@@ -219,7 +160,6 @@ impl eframe::App for AppState {
                 });
         });
 
-        // Debug Panel for Reactive Graph
         egui::Window::new("🔍 Reactive Graph Debug").show(ctx, |ui| {
             ui.label("⚙️ Registered Signals:");
             for (name, signal) in self.registry.list_signals() {

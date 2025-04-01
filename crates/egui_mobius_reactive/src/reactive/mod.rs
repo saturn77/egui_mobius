@@ -57,16 +57,16 @@
 //! - Change detection uses a polling approach with a 100ms interval
 //! - Consider using `parking_lot::Mutex` instead of `std::sync::Mutex` for better performance
 //! - Derived values are only recomputed when their dependencies actually change
+pub mod prelude;
+pub mod registry;
+pub mod dynamic;
+pub mod derived;
+pub mod core; 
+pub mod reactive_math;
 
-mod registry;
-mod dynamic;
-mod derived;
-mod core; 
 
-pub use registry::SignalRegistry;
-pub use dynamic::{Dynamic, ValueExt};
-pub use derived::Derived;
-pub use core::{ReactiveValue, ReactiveList};
 
-// Re-export types needed for the public API
-pub use std::sync::{Arc, Mutex};
+
+
+
+

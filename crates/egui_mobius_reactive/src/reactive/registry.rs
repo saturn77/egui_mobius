@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use crate::reactive::ReactiveValue;
+use crate::ReactiveValue;
 use std::any::Any;
 
 /// Alias for shared reactive signal type
@@ -72,7 +72,7 @@ impl SignalRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reactive::{Dynamic, Derived};
+    use crate::{Dynamic, Derived};
     use std::thread;
     use std::time::Duration;
 
