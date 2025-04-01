@@ -382,7 +382,7 @@ mod tests {
     #[test]
     fn test_mixed_type_f64_math() {
         let a = Dynamic::new(2.0);
-        let b = Dynamic::new(4.0);
+        let _b = Dynamic::new(4.0);
 
         let d = a.clone().powf(2.0); // 4.0
 
