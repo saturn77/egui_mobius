@@ -3,12 +3,15 @@
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
+// masonry imports
 use masonry::app::{AppDriver, DriverCtx};
 use masonry::core::{Action, StyleProperty, WidgetId};
 use masonry::dpi::LogicalSize;
 use masonry::parley::style::FontWeight;
 use masonry::widgets::{Button, Flex, Label, RootWidget};
 use winit::window::Window;
+
+// egui_mobius_reactive imports
 use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry, ReactiveMath};
 use std::sync::Arc;
 
