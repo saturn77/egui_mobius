@@ -67,7 +67,7 @@ Reactive state is handled using `Dynamic<i32>` and `Derived<i32>` values:
 
 Changes to these values automatically update the UI—no manual redrawing needed.
 
-### 2. \*\*Integration with \*\***`masonry`**
+### 2. **Integration with `masonry`**
 
 - Uses `masonry` widgets like `Button`, `Label`, `Flex`, and `RootWidget`.
 - Reactive values are displayed and updated via standard `masonry` layouts.
