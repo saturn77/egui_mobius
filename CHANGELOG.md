@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0-alpha.28] - 2025-04-05
+
+### Added
+-- Example `masonry-reactive` demonstrating egui_mobius_reactive integrating with `masonry` from `xilem`
+
+-- Added appropriate README.md in the example; highlighting the versatility of `egui_mobius_reactive`
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.27] - 2025-04-01
 
 ### Added

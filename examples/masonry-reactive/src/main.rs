@@ -11,8 +11,8 @@ use masonry::parley::style::FontWeight;
 use masonry::widgets::{Button, Flex, Label, RootWidget};
 use winit::window::Window;
 
-// egui_mobius_reactive imports
-use egui_mobius_reactive::{Dynamic, Derived, SignalRegistry, ReactiveMath};
+// egui_mobius_reactive imports using prelude import
+use egui_mobius_reactive::*;
 use std::sync::Arc;
 
 const VERTICAL_WIDGET_SPACING: f64 = 40.0;
