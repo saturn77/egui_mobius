@@ -1,8 +1,4 @@
-// Copyright 2019 the Xilem Authors and the Druid Authors
-// SPDX-License-Identifier: Apache-2.0
-
-//! This is a very small example of how to setup a masonry application.
-//! It does the almost bare minimum while still being useful.
+//! masonry with egui_mobius integration
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
@@ -44,6 +40,12 @@ impl AppState {
             sum, 
             message,
         }
+    }
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
