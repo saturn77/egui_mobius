@@ -1,5 +1,8 @@
 //! masonry with egui_mobius integration
-
+//!
+//! Demonstrates how to integrate egui_mobius_reactive with another
+//! GUI framework other than egui/eframe.
+//!
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
