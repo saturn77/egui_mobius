@@ -11,10 +11,10 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/masonry-reactive",
     "examples"
 ]
-exclude = [
+# exclude = [
     # this example has its own workspace
-    "examples/egui_crux_example"
-]
+#    "examples/egui_crux_example"
+#]
 
 resolver = "2"
 
