@@ -1,3 +1,10 @@
+//! Derived<T> is a struct that represents a derived value in a reactive programming model.
+//! 
+//! It is used to create a new reactive value that is computed from other reactive values.
+//!
+//! This allows for automatic updates when the source values change.
+//!
+
 use std::sync::{Arc, Mutex};
 use crate::Dynamic;
 use crate::ReactiveValue;
