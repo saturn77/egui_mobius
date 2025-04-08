@@ -1,3 +1,9 @@
+//! Dynamic<T> is a thread-safe container for dynamic values that can be monitored for changes.
+//! 
+//! The `Dynamic` struct allows you to store a value in a thread-safe manner and
+//! provides mechanisms to monitor changes to the value. It is often on the argument list to the 
+//! UiState or AppState function.  
+//! 
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
