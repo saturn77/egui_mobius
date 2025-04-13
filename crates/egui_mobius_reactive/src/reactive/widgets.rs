@@ -1,7 +1,7 @@
 // src/tree.rs
 
 use std::sync::Arc;
-
+use egui::Ui; 
 
 /// Base trait for rendering polymorphic reactive widgets.
 /// This version is dyn-compatible.
