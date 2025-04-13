@@ -9,6 +9,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/realtime_plot",
     "examples/ui_refresh_events",
     "examples/masonry-reactive",
+    "examples/mobius-widget", 
     "examples"
 ]
 # exclude = [

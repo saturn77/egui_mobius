@@ -13,15 +13,15 @@ pub enum Event {
 
 pub struct AppState {
     pub registry: SignalRegistry,
-    count: Dynamic<i32>,
-    label: Dynamic<String>,
-    doubled: Derived<i32>,
-    quad: Derived<i32>,
-    fifth: Derived<i32>,
-    sum_derived: Derived<i32>,
-    list_sum: Derived<i32>,
-    list: ReactiveList<i32>,
-    signal: Signal<Event>,
+    count       : Dynamic<i32>,
+    label       : Dynamic<String>,
+    doubled     : Derived<i32>,
+    quad        : Derived<i32>,
+    fifth       : Derived<i32>,
+    sum_derived : Derived<i32>,
+    list_sum    : Derived<i32>,
+    list        : ReactiveList<i32>,
+    signal      : Signal<Event>,
 }
 
 impl AppState {
