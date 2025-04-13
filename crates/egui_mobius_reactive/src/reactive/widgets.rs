@@ -1,13 +1,13 @@
 // src/tree.rs
 
 use std::sync::Arc;
-use egui::Ui; 
+
 
 /// Base trait for rendering polymorphic reactive widgets.
 /// This version is dyn-compatible.
 pub trait MobiusWidget: Send + Sync + 'static {    
     
-    fn render_widget(&self, ui: &mut egui::Ui)  {    
+    fn render_widget(&self, _ui: &mut egui::Ui)  {    
     }
 
     fn render_event(&self, triggered: bool, ui: &mut egui::Ui) {
