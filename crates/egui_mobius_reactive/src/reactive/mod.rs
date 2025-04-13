@@ -62,6 +62,7 @@ pub mod registry;
 pub mod dynamic;
 pub mod derived;
 pub mod core; 
+pub mod widgets;
 pub mod reactive_math;
 
 

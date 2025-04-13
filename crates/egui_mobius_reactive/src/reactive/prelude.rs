@@ -7,6 +7,8 @@
 
 
 pub use super::{
+    // Widgets
+    widgets::{MobiusWidget, MobiusWidgetReactive, MobiusWidgetSlot, MobiusWidgetSignal},
     derived::Derived,
     dynamic::{Dynamic, ValueExt},
     registry::SignalRegistry,

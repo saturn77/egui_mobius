@@ -16,7 +16,8 @@ include                = ["LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
 parking_lot = "0.12"
-
+egui = {workspace = true}
+egui_mobius = {workspace = true}
 [dev-dependencies]
 criterion = "0.5"
 tokio = { version = "1.35", features = ["full"] }
