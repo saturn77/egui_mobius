@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0-alpha.29] - 2025-04-13
+
+### Added
+-- New MobiusWidget trait, along with MobiusWidgetReactive, MobiusWidgetSlot, MobiusWidgetSignal 
+allowing for dynamic composition of widgets in an ecapsulated context providing greater flexibiity
+to egui_mobius overall. Each widget can have a Dynamic<T>, Signal<T>, or Slot<T> attached to it. 
+-- Added an example "mobius-widget" to the examples to illustrate the use of this new composition
+style 
+
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.28] - 2025-04-05
 
 ### Added
