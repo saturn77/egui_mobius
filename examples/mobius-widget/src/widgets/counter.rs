@@ -24,6 +24,9 @@ impl MobiusWidget for CounterWidget {
             ui.horizontal(|ui| {
                 if ui.button("-").clicked() {
                     self.count.set(self.count.get() - 1);
+                    if let Some(log) = &self.log {
+                        log.set(format!("Decremented to {}", self.count.get()));
+                    }
                 }
                 ui.label(egui::RichText::new(format!("Count: {}", self.count.get())).color(Color32::GREEN));
                 if ui.button("+").clicked() {
