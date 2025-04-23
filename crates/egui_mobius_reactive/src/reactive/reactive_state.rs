@@ -14,6 +14,16 @@ pub struct ReactiveWidgetRef<T> {
     pub modified: bool,
 }
 
+impl<T: Clone> Clone for ReactiveWidgetRef<T> {
+    fn clone(&self) -> Self {
+        Self {
+            weak_ref: self.weak_ref.clone(),
+            cached_value: self.cached_value.clone(),
+            modified: self.modified,
+        }
+    }
+}
+
 impl<T: Clone + 'static + Send + Sync> ReactiveWidgetRef<T> {
     pub fn from_dynamic(dynamic: &Dynamic<T>) -> Self {
         Self {
