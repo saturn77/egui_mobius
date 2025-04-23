@@ -252,8 +252,8 @@ where
 /// use egui_mobius_reactive::{Dynamic, ValueExt};
 ///
 /// let value = Dynamic::new(42);
-/// let float_value: Dynamic<f64> = value.into();
-/// assert_eq!(float_value.get(), 42.0);
+/// let float_value: f64 = (&value).into();
+/// assert_eq!(float_value, 42.0);
 /// ```
 impl<'a, T> From<&'a Dynamic<T>> for f64
 where
