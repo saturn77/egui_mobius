@@ -220,7 +220,50 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Dynamic<T> 
     }
 }
 
+/// Converts a `Dynamic<T>` to a `Dynamic<U>` where `T` can be converted to `U`.
+/// 
+/// This is useful for converting between different types of dynamic values.
+/// /// # Example
+/// /// ```rust
+/// use egui_mobius_reactive::{Dynamic, ValueExt};
+///
+/// let value = Dynamic::new(42);
+/// let float_value: Dynamic<f64> = value.into();
+/// assert_eq!(float_value.get(), 42.0);
+/// ```
+impl<T> From<T> for Dynamic<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn from(value: T) -> Self {
+        Dynamic::new(value)
+    }
+}
 
+/// Converts a `Dynamic<T>` to a `Dynamic<f64>` where `T` can be converted to `f64`.
+///
+/// This is useful for converting between different types of dynamic values.
+/// Note here the 'a lifetime is used to ensure that the conversion is valid for the lifetime of the `Dynamic<T>`.
+/// This is important for ensuring that the conversion does not outlive the original `Dynamic<T>`.
+/// This is particularly useful in a multi-threaded context where the `Dynamic<T>` may be shared across threads.
+/// 
+/// # Example
+/// ```rust
+/// use egui_mobius_reactive::{Dynamic, ValueExt};
+///
+/// let value = Dynamic::new(42);
+/// let float_value: Dynamic<f64> = value.into();
+/// assert_eq!(float_value.get(), 42.0);
+/// ```
+impl<'a, T> From<&'a Dynamic<T>> for f64
+where
+    T: Clone + Send + Sync + Into<f64> + 'static,
+{
+    fn from(dynamic: &'a Dynamic<T>) -> Self {
+        let value = dynamic.get();
+        value.into()
+    }
+}
 
 
 

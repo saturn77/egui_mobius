@@ -6,6 +6,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/dashboard",
     "examples/dashboard_async",
     "examples/reactive",
+    "examples/reactive_slider",
     "examples/realtime_plot",
     "examples/ui_refresh_events",
     "examples"

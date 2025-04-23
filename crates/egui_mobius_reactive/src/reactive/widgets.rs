@@ -1,78 +1,100 @@
-//! MobiusWidget traits for creating customizable, modular widgets
-//!
-//! This module defines the `MobiusWidget` trait and its extensions for creating
-//! customizable, modular widgets in a variety of styles : 
-//! // - `MobiusWidget`
-//! // - `MobiusWidgetReactive`
-//! // - `MobiusWidgetSlot`
-//! // - `MobiusWidgetSignal`
-//!
-//! The `MobiusWidget` trait is the base trait for all widgets, providing a
-//! default implementation for rendering the widget and handling events.
-//! 
-//! The `MobiusWidgetReactive` trait extends the base trait to allow for
-//! attaching optional reactive behavior.
-//! 
-//! The `MobiusWidgetSlot` and `MobiusWidgetSignal` traits extend the base trait
-//! to allow for attaching slots and signals, respectively.
-//!
-//! The `MobiusWidget` trait is designed to be used with the `egui` library,
-//! providing a simple and flexible way to create and manage widgets.
-
-use std::sync::Arc;
+//! ReactiveWidgets – retained-style reactive Widgets for immediate-mode UI
+use std::ops::RangeInclusive;
+use crate::reactive::reactive_state::ReactiveWidgetRef;
+use egui::Ui; 
+use crate::reactive::dynamic::Dynamic; 
 
 
-/// Base trait for rendering polymorphic reactive widgets.
-/// This version is dyn-compatible.
-pub trait MobiusWidget: Send + Sync + 'static {    
-    
-    fn render_widget(&self, _ui: &mut egui::Ui)  {    
-    }
+pub struct ReactiveSlider<'a, T> {
+    value: &'a Dynamic<T>,
+    range: RangeInclusive<f64>,
+    display_value: bool,
+    logarithmic: bool,
+    text: Option<String>,
+    // more configuration options...
+}
 
-    fn render_event(&self, triggered: bool, ui: &mut egui::Ui) {
-        let _ = (triggered, ui);
+impl<'a, T: Send + Sync + Clone + Into<f64> + From<f64> + std::fmt::Display + 'static> ReactiveSlider<'a, T> {
+    pub fn new(value: &'a Dynamic<T>) -> Self {
+        Self {
+            value,
+            range: 0.0..=1.0,
+            display_value: false,
+            logarithmic: false,
+            text: None,
+        }
     }
     
-    fn widget_name(&self) -> &str {
-        std::any::type_name::<Self>()
+    pub fn with_range(mut self, range: RangeInclusive<f64>) -> Self {
+        self.range = range;
+        self
+    }
+    
+    pub fn with_display_value(mut self, display: bool) -> Self {
+        self.display_value = display;
+        self
+    }
+    
+    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+        self.text = Some(text.into());
+        self
+    }
+    
+    pub fn with_logarithmic(mut self, logarithmic: bool) -> Self {
+        self.logarithmic = logarithmic;
+        self
+    }
+    
+    pub fn show(self, ui: &mut Ui) -> egui::Response {
+        // Create the widget reference (avoids double Arc)
+        let mut widget_ref = ReactiveWidgetRef::from_dynamic(self.value);
+        
+        // Refresh cached value if needed
+        if widget_ref.cached_value.is_none() {
+            if let Some(arc) = widget_ref.weak_ref.upgrade() {
+                let guard = arc.lock().unwrap();
+                widget_ref.cached_value = Some((*guard).clone());
+            }
+        }
+        
+        // If we don't have a cached value and couldn't get one, show a placeholder
+        if widget_ref.cached_value.is_none() {
+            // Return the Response directly, not a field from it
+            return ui.label("Value no longer available");
+        }
+        
+        // Build a slider with our configuration
+        let mut slider_value = widget_ref.cached_value.as_ref().unwrap().clone().into();
+        let mut slider = egui::Slider::new(&mut slider_value, self.range);
+        
+        if let Some(text) = &self.text {
+            slider = slider.text(text);
+        }
+        
+        slider = slider.show_value(self.display_value);
+        
+        if self.logarithmic {
+            slider = slider.logarithmic(true);
+        }
+        
+        // Add the slider and handle response
+        let response = ui.add(slider);
+        
+        if response.changed() {
+            // Update our cached value 
+            if let Some(value) = &mut widget_ref.cached_value {
+                *value = T::from(slider_value);
+                widget_ref.modified = true;
+                
+                // Update the source
+                if let Some(arc) = widget_ref.weak_ref.upgrade() {
+                    let mut guard = arc.lock().unwrap();
+                    *guard = value.clone();
+                }
+            }
+        }
+        
+        response
     }
 }
 
-/// **MobiusWidgetReactive** Extension trait for attaching Dynamic<T> to widgets
-/// 
-/// This trait is used to attach optional reactive behavior to widgets,
-/// allowing for this widget to receive data from other widgets or systems.
-/// This is useful for creating widgets that can be updated dynamically
-/// based on changes in the application state, facilitating modular and
-/// customizable designs.
-///
-/// The `with_dynamic` method allows for attaching a dynamic state to the widget,
-/// enabling it to react to changes in the state. The state is passed as an
-/// `Arc<dyn std::any::Any>`, allowing for dynamic typing and flexibility.
-/// The default implementation does nothing, allowing for widgets to be created
-/// without any reactive behavior if desired.
-///
-pub trait MobiusWidgetReactive: MobiusWidget + Default {
-    fn with_dynamic(&mut self, _state: Arc<dyn std::any::Any>) {}
-
-}
-
-/// **MobiusWidgetSlot** Extension trait for attaching slots to widgets
-///
-/// This trait is used to attach slots to widgets, allowing for
-/// this widget to receive data from other widgets or systems.
-pub trait MobiusWidgetSlot : MobiusWidget + Default {
-    fn with_slot<T: Send + Sync + 'static>(&mut self, _slot: egui_mobius::slot::Slot<T>) {}
-        // Default implementation does nothing
-}
-
-/// **MobiusWidgetSignal** Extension trait for attaching signals to widgets
-/// 
-/// This trait is used to attach signals to widgets, allowing for
-/// sending data from this widget to other widgets or systems.
-pub trait MobiusWidgetSignal : MobiusWidget + Default {
-
-    fn with_signal<T: Send + Sync + 'static>(&mut self, _signal: egui_mobius::signals::Signal<T>) {}
-        // Default implementation does nothing
-    
-}

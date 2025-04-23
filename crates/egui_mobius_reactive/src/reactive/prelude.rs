@@ -8,12 +8,13 @@
 
 pub use super::{
     // Widgets
-    widgets::{MobiusWidget, MobiusWidgetReactive, MobiusWidgetSlot, MobiusWidgetSignal},
+    widgets::ReactiveSlider,
     derived::Derived,
     dynamic::{Dynamic, ValueExt},
     registry::SignalRegistry,
     core::{ReactiveValue, ReactiveList, Subscribers},
     reactive_math::{ReactiveMath, ReactiveLogic, ReactiveString, ReactiveListSum},
+    reactive_state::ReactiveWidgetRef,
 };
 
 
