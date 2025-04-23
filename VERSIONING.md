@@ -5,7 +5,7 @@
 `egui_mobius` follows [Semantic Versioning](https://semver.org/) with the following structure:
 `MAJOR.MINOR.PATCH[-PRERELEASE]`
 
-### Current Phase: 0.3.0-alpha.29
+### Current Phase: 0.3.0-alpha.30
 
 We are currently in the **alpha phase** of our first public release. This version represents:
 - An evolving, yet relatively **mature architectural foundation** with the `MobiusWidget` trait and related traits (`MobiusWidgetReactive`, `MobiusWidgetSlot`, `MobiusWidgetSignal`).

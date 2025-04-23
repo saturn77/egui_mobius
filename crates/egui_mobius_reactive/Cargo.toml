@@ -1,6 +1,6 @@
 [package]
 name                   = "egui_mobius_reactive"
-version= "0.3.0-alpha.29"
+version= "0.3.0-alpha.30"
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "A thread-safe reactive state management system for egui_mobius"
 edition.workspace      = true

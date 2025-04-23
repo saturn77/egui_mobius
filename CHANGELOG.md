@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0-alpha.30] - 2025-04-23
+
+### Added
+-- Added new feature, ReactiveWidgetRef, with Weak<T> references that facilitates using
+components in a more retained-style manner or modular composition. This will cut down 
+on the use of Arc and clone inside of a reactive widget.
+-- Added example "reactive_slider" to demonstrate the use of ReactiveWidgetRef.
+### Changed
+
+### Fixed
+
 ## [0.3.0-alpha.29] - 2025-04-13
 
 ### Added
