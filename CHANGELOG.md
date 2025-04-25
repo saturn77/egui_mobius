@@ -1,5 +1,3 @@
-# Changelog
-
 ## [0.3.0-alpha.31] - 2025-04-25
 
 ### Added

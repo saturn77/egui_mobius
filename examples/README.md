@@ -1,77 +1,112 @@
 # Examples in `egui_mobius`
 
-The highlighted examples are the core projects that are actively maintained and intended to showcase the key features of `egui_mobius`.
+This directory contains examples demonstrating the capabilities and architectural patterns of the `egui_mobius` ecosystem. Each example is designed to showcase specific aspects of the framework.
 
-## 🚀 Getting Started
+## 🚀 Learning Path
 
-To get the most out of these examples, we recommend following this learning path:
+For the best learning experience, we recommend exploring these examples in the following order:
 
-1. **Basic Concepts** - Start with `ui_refresh_events`
-   - Learn basic event handling and UI updates
-   - Understand egui_mobius's widget system
-   - See how RequestRepaint works
+### 1. Core Paradigms
 
-2. **Core Architecture** - Move to `dashboard`
-   - Explore the Dispatcher pattern
-   - Learn about signal-slot connections
-   - See proper UI/backend separation
+Start with these to understand the three primary paradigms in egui_mobius:
 
-3. **Real-world Patterns** - Try `realtime_plot` and `dashboard_async`
-   - Handle streaming data updates
-   - Integrate async operations
-   - Work with background tasks
+- **Reactive Pattern**: `reactive` → `reactive_slider` → `dashboard_async` → `clock_reactive`
+- **Signal-Slot Pattern**: `ui_refresh_events` → `dashboard` → `clock_async` 
+- **Components**: `logger_component`
 
-4. **Advanced Features** - Finally, study `clock_async`
-   - See thread-safe state management with Value<T>
-   - Understand type-safe message passing
-   - Learn about AsyncDispatcher and Tokio integration
+### 2. Integration Patterns
 
-## 🔧 Setup Instructions
+After understanding the basics, explore how these paradigms work together:
 
-### Prerequisites
-- Rust 2024 edition (latest stable toolchain)
-- Cargo package manager
-- Git for cloning the repository
+- **Reactive + Async**: `clock_reactive` (shows MobiusRuntime integration)
+- **Signals + Async**: `clock_async` (shows AsyncDispatcher with Tokio)
+- **Real-time Data Visualization**: `realtime_plot` (shows data streaming patterns)
 
-### Version Compatibility
+## 🏗️ Example Architecture
 
-These examples are compatible with egui_mobius 0.3.0-alpha.1 and egui 0.31.0. They demonstrate the framework's core architectural features:
-- Thread-aware slot system
-- Type-safe message passing
-- Signal-slot architecture
-- Value<T> state management
-- Background operations
+### Signal-Slot Pattern Examples
 
-### Running Examples
+- **`ui_refresh_events`** - Introduction to signal-slot basics
+  - Custom timed and programmatic UI refresh events
+  - Simple RequestRepaint pattern
 
-1. **Clone Repository**
-   ```bash
-   # Clone the repository
-   git clone https://github.com/saturn77/egui_mobius.git
-   cd egui_mobius
-   ```
-   
-   Each example is a standalone crate demonstrating specific architectural features of egui_mobius, from basic event handling to complete thread-aware applications.
+- **`dashboard`** - Core Dispatcher pattern for event handling
+  - Demonstrates separation of UI and backend concerns
+  - Shows how to register slots and handle responses
 
-2. **Run Examples**
-   ```bash
-   # Run any example as its own crate
-   cargo run -p <example_name>
-   
-   # For instance:
-   cargo run -p ui_refresh_events
-   cargo run -p dashboard
-   cargo run -p clock_async
-   ```
+- **`clock_async`** - Comprehensive signal-slot architecture
+  - Thread-safe state management using Value<T>
+  - Shows signal-slot system with true concurrent processing
+  - Type-safe message passing between UI and background
+  - Uses AsyncDispatcher for Tokio integration
 
-3. **Available Examples**
-   - `ui_refresh_events` - Introduction to Qt-inspired signal-slot architecture
-   - `dashboard` - Type-safe message passing between UI and background threads
-   - `realtime_plot` - Thread-safe state management using Value<T>
-   - `dashboard_async` - Clean thread separation for background operations
-   - `clock_async` - Thread-aware slot system with hybrid sync/async operation
+### Reactive Pattern Examples
 
-### Configuration & Features
+- **`reactive`** - Basic reactive state management with Dynamic<T>
+  - Thread-safe state with automatic UI updates
+  - Basic dependency tracking
+  - Simple counter patterns
+
+- **`reactive_slider`** - Demonstrates ReactiveWidgetRef
+  - Retained-mode style component references
+  - Weak references for cleaner composition
+  - Reduced Arc<T> cloning pattern
+
+- **`dashboard_async`** - Reactive state with async integration
+  - Uses Dynamic<T> for reactive state management
+  - Integrates async tasks using MobiusRuntime
+  - Demonstrates reactive UI updates with background processing
+
+- **`clock_reactive`** - Complete reactive app with async integration
+  - MobiusRuntime for background processing
+  - Clean UI/logic separation with reactive state
+  - Comprehensive UI with multiple views
+
+### Component Examples
+
+- **`logger_component`** - Demonstrates EventLogger component
+  - Sophisticated event logging with customizable styles
+  - Thread-safe implementation with signal-slot architecture
+  - Multi-level message severity
+  - Timestamp filtering and rich text formatting
+
+## 🔧 Running Examples
+
+Each example is a standalone crate that can be run directly:
+
+```bash
+# Run any example by name
+cargo run -p <example_name>
+
+# For instance:
+cargo run -p reactive
+cargo run -p logger_component
+cargo run -p clock_reactive
+```
+
+## 📊 Feature Matrix
+
+| Example | Reactive State | Signal-Slot | Async | Components | Complexity |
+|---------|:-------------:|:-----------:|:-----:|:----------:|:----------:|
+| reactive | ✅ | - | - | - | 🟢 Basic |
+| reactive_slider | ✅ | - | - | - | 🟢 Basic |
+| ui_refresh_events | - | ✅ | - | - | 🟢 Basic |
+| logger_component | ✅ | ✅ | - | ✅ | 🟡 Moderate |
+| dashboard | - | ✅ | - | - | 🟡 Moderate |
+| realtime_plot | ✅ | ✅ | - | - | 🟡 Moderate |
+| dashboard_async | ✅ | - | ✅ | - | 🟡 Moderate |
+| clock_reactive | ✅ | - | ✅ | - | 🔴 Advanced |
+| clock_async | ✅ | ✅ | ✅ | - | 🔴 Advanced |
+
+## 🧩 Ecosystem Integration
+
+These examples demonstrate different aspects of the egui_mobius ecosystem:
+
+- `egui_mobius_reactive`: Used in all reactive examples
+- `egui_mobius_widgets`: Used in most UI-heavy examples
+- `egui_mobius_components`: Used in `logger_component`
+
+## 📝 Configuration & Debugging
 
 - **Logging**: Most examples support detailed logging
   ```bash
@@ -79,85 +114,19 @@ These examples are compatible with egui_mobius 0.3.0-alpha.1 and egui 0.31.0. Th
   RUST_LOG=debug cargo run -p <example_name>
   ```
 
-- **State Persistence**: Some examples (like `clock_async`) support:
+- **State Persistence**: Some examples support:
   - RON files for static configuration
   - JSON for runtime state persistence
 
-- **Documentation**: Each example has its own README with:
-  - Detailed feature explanations
-  - Architecture diagrams (where applicable)
-  - Example-specific configuration options
+## 📚 Documentation
+
+Each example has its own README with:
+- Detailed feature explanations
+- Architecture notes
+- Example-specific configuration options
+
+For a comprehensive introduction to egui_mobius patterns, also check out our [template repository](https://github.com/saturn77/egui_mobius_template).
 
 ---
 
-## ✅ Highlighted Examples
-
-### `ui_refresh_events`
-A beginner-friendly example demonstrating basic UI event handling.
-
-- Perfect starting point for understanding egui_mobius basics
-- Shows custom timed and programmatic UI refresh events
-- Demonstrates basic widget event handling
-- Uses simple RequestRepaint pattern without Dispatcher
-
----
-
-### `dashboard`
-Introduces the core Dispatcher pattern for event handling.
-
-- Demonstrates separation of UI and backend concerns
-- Shows how to register slots and handle responses
-- Features internal logging of UI events and backend processing
-- Good template for building modular applications
-
----
-
-### `realtime_plot`
-Focuses on real-time data visualization.
-
-- Shows how to stream data updates to the UI
-- Demonstrates dynamic chart updates
-- Useful for monitoring and telemetry applications
-
----
-
-### `dashboard_async`
-Builds on the dashboard example with async capabilities.
-
-- Integrates async tasks using tokio runtime
-- Handles long-running background processes
-- Perfect for applications with API interactions
-
----
-
-### `clock_async`
-A comprehensive example showcasing egui_mobius's complete architecture.
-
-- Demonstrates thread-safe state management using Value<T> for UI controls
-- Shows signal-slot system with true concurrent processing (UI vs clock thread)
-- Features type-safe message passing between UI and background operations
-- Includes detailed logging panel showing the complete event flow
-- Uses AsyncDispatcher for specialized async workloads via Tokio
-
----
-
-## 🏗️ Key Architectural Features
-
-Through these examples, you'll encounter egui_mobius's core architectural features:
-
-- **Thread-aware Slot System** - Each slot maintains its own thread for true hybrid sync/async operation
-- **Type-safe Message Passing** - Clean communication between UI and background threads
-- **Signal-Slot Architecture** - Qt-inspired design for event handling
-- **Value<T> State Management** - Thread-safe state handling with proper synchronization
-- **Background Operations** - Clean thread separation with proper message ordering
-
-## 📝 Notes
-
-- Other, more minimal or legacy examples have been moved to the `deprecated` branch
-- Dev/test utilities will be in `examples/dev/`
-- Each example progressively demonstrates more architectural features
-- All examples follow egui_mobius's best practices for production use
-
----
-
-Feel free to explore these examples when building your own app or library with `egui_mobius`. They cover a range of patterns and are kept up to date with the latest APIs.
+Feel free to explore these examples when building your own application with `egui_mobius`. They cover the full range of architectural patterns and showcase best practices for production use.
