@@ -1,6 +1,6 @@
 [workspace]
 members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
-    "crates/egui_mobius_reactive",
+    "crates/egui_mobius_reactive", "crates/egui_mobius_components",
     "examples/clock_async",
     "examples/clock_reactive",
     "examples/dashboard",
@@ -9,6 +9,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/reactive_slider",
     "examples/realtime_plot",
     "examples/ui_refresh_events",
+    "examples/logger_component",
     "examples"
 ]
 # exclude = [
@@ -26,9 +27,10 @@ version = "0.3.0-alpha.27"
 
 [workspace.dependencies]
 # egui mobius related crates
-egui_mobius   = { version = "0.3.0-alpha.27", path = "crates/egui_mobius" }
-egui_mobius_widgets = { version = "0.3.0-alpha.27", path = "crates/egui_mobius_widgets" }
-egui_mobius_reactive = { version = "0.3.0-alpha.27", path = "crates/egui_mobius_reactive" }
+egui_mobius   = { version = "0.3.0-alpha.30", path = "crates/egui_mobius" }
+egui_mobius_widgets = { version = "0.3.0-alpha.30", path = "crates/egui_mobius_widgets" }
+egui_mobius_reactive = { version = "0.3.0-alpha.30", path = "crates/egui_mobius_reactive" }
+egui_mobius_components = { version = "0.3.0-alpha.30", path = "crates/egui_mobius_components" }
 
 # egui and eframe
 egui_plot = "0.31.0"
