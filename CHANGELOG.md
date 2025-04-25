@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.0-alpha.31] - 2025-04-25
+
+### Added
+- Added new `egui_mobius_components` crate, a collection of reusable UI components for the egui_mobius framework
+- Added EventLogger component:
+  - Terminal-like widget for logging events with different severity levels
+  - Supports rich text formatting with customizable colors
+  - Thread-safe implementation compatible with the egui_mobius signal/slot architecture
+  - Support for categorizing logs by sender type and custom log styles
+  - Built-in timestamping and filtering capabilities
+  - Complete with examples that demonstrate usage in multi-threaded environments
+- Added `logger_component` example that demonstrates the use of the EventLogger component
+
+### Changed
+- Enhanced the workspace structure to include the new components crate
+- Updated the prelude pattern across all crates for more consistent imports
+
+### Fixed
+- Fixed release tools to correctly handle workspace inheritance in Cargo.toml files
+- Updated formatting in platform.banner module for clippy compliance
+
 ## [0.3.0-alpha.30] - 2025-04-23
 
 ### Added
