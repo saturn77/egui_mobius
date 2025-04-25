@@ -23,7 +23,7 @@ resolver = "2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
-version = "0.3.0-alpha.27"
+version = "0.3.0-alpha.30"
 
 [workspace.dependencies]
 # egui mobius related crates
