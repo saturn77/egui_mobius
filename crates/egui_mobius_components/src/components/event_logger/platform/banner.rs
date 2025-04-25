@@ -21,7 +21,7 @@ impl Banner {
         self.message = format!(
             "**** Welcome to Arrakis Serial Runtime, Version {}.{}.{}\n**** Today is {} {}:{}:{}", 
             0, 1, 0,
-            "04-25-2025", 16, 41, 03
+            "04-25-2025", 16, 41, 3
         );
     }
 }
