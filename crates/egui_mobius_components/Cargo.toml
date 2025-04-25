@@ -10,7 +10,7 @@ homepage = "https://github.com/saturn77/egui_mobius"
 documentation = "https://docs.rs/egui_mobius_components"
 readme = "README.md"
 keywords = ["gui", "egui", "components", "ui", "widgets"]
-categories = ["gui", "ui-framework"]
+categories = ["gui", "visualization"]
 
 
 [dependencies]
