@@ -4,6 +4,13 @@ version.workspace = true
 edition = "2024"
 description = "UI components for egui_mobius framework"
 authors = ["James <atlantix-eda@proton.me>"]
+license = "MIT"
+repository = "https://github.com/saturn77/egui_mobius"
+homepage = "https://github.com/saturn77/egui_mobius"
+documentation = "https://docs.rs/egui_mobius_components"
+readme = "README.md"
+keywords = ["gui", "egui", "components", "ui", "widgets"]
+categories = ["gui", "ui-framework"]
 
 
 [dependencies]
