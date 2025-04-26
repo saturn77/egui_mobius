@@ -16,35 +16,35 @@
 
 egui_mobius is a comprehensive application framework built on egui that transforms its immediate mode foundation into a complete development platform. It combines reactive state management, thread-safe async operations, and a powerful component system to create rich, responsive applications with clean architecture.
 
-# Core Features
+## Core Features
 
 The egui_mobius ecosystem provides multiple paradigms for building modern GUI applications, each serving different needs while maintaining compatibility with one another:
 
-## 📊 Reactive State Management
+### Reactive State Management
 - Thread-safe reactive primitives via `Dynamic<T>` and `Derived<T>` 
 - Automatic UI updates when state changes
 - Efficient dependency tracking with minimal boilerplate
 - Composition-friendly design patterns with `ReactiveWidgetRef`
 
-## 🧩 Component Library
-- Reusable, composable UI components in `egui_mobius_components`
-- Advanced event logging with our EventLogger component
-- Customizable widgets with integrated reactive state
-- Consistent design patterns across your application
-
-## ⚡ Async Runtime
+### Async Runtime
 - Background processing that keeps your UI responsive
 - Type-safe message passing between threads
 - Built on Tokio for reliable async operations
 - Seamless integration with the reactive system
 
-## 🏗️ Modular Architecture
+### Modular Architecture
 - Signal-slot system for clean separation of UI and business logic
 - `MobiusWidget` traits for encapsulated, reusable UI elements
 - Scalable patterns for complex applications
 - Stateful components that maintain their own lifecycle
 
-# Ecosystem
+### Component Library
+- Reusable, composable UI components in `egui_mobius_components`
+- Advanced event logging with our EventLogger component
+- Customizable widgets with integrated reactive state
+- Consistent design patterns across your application
+  
+### Ecosystem
 
 The egui_mobius framework consists of multiple coordinated crates:
 
@@ -53,7 +53,7 @@ The egui_mobius framework consists of multiple coordinated crates:
 - `egui_mobius_widgets`: Custom, stateful widget implementations
 - `egui_mobius_components`: Higher-level UI components
 
-# Getting Started
+### Getting Started
 
 Explore our comprehensive examples to understand different architectural approaches:
 
@@ -75,7 +75,7 @@ The template provides three comprehensive examples:
 * **Reactive-Async** - Sophisticated async task handling with background operations
 * **Signals-Slots** - Full-featured RLC Circuit Simulator demonstrating signal-slot architecture
 
-## Contributing  
+### Contributing  
 * Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request.  
 * This project is licensed under the MIT License.  
 * For support or questions, open an issue or reach out on [GitHub Discussions](https://github.com/saturn77/egui_mobius/discussions).
