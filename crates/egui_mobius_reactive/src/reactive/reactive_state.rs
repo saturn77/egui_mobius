@@ -1,16 +1,13 @@
-//! ReactiveWidgetState – retained-style local state for immediate-mode UI
-
 use std::sync::{Arc, Mutex, Weak};
-use std::ops::RangeInclusive;
-use crate::reactive::dynamic::Dynamic; 
 
-/// A lightweight reference to a reactive value optimized for use in widgets
+/// A reactive reference used by widgets.
+/// Wraps a `Weak<Mutex<T>>` to avoid `Arc` duplication.
+///
+/// Use `get_live()` to safely clone the current state.
+/// Use `get_cached()` only when widget performance matters.
 pub struct ReactiveWidgetRef<T> {
-    // Weak reference to avoid double Arc wrapping
     pub weak_ref: Weak<Mutex<T>>,
-    // Option to cache the last known value to reduce mutex locks
     pub cached_value: Option<T>,
-    // Track if this widget has modified the value
     pub modified: bool,
 }
 
@@ -24,51 +21,64 @@ impl<T: Clone> Clone for ReactiveWidgetRef<T> {
     }
 }
 
-impl<T: Clone + 'static + Send + Sync> ReactiveWidgetRef<T> {
-    pub fn from_dynamic(dynamic: &Dynamic<T>) -> Self {
+impl<T: Clone + Send + Sync + 'static> ReactiveWidgetRef<T> {
+    /// Create a widget ref from a `Dynamic<T>`
+    pub fn from_dynamic(dynamic: &crate::reactive::dynamic::Dynamic<T>) -> Self {
         Self {
             weak_ref: Arc::downgrade(&dynamic.inner),
             cached_value: None,
             modified: false,
         }
     }
-    
-    // pub fn from_derived(derived: &Derived<T>) -> Self {
-    //     Self {
-    //         weak_ref: Arc::downgrade(&derived.get()), // Assuming `get_inner` is the correct method to access the inner Arc<Mutex<T>>
-    //         cached_value: None,
-    //         modified: false,
-    //     }
-    // }
-    
-    // Helper to use in widgets, returns true if value was changed
-    pub fn ui_slider(&mut self, ui: &mut egui::Ui, range: RangeInclusive<f64>) -> bool 
-    where T: Into<f64> + From<f64> + std::fmt::Display
-    {
-        // Refresh cached value if needed
-        if self.cached_value.is_none() {
-            if let Some(arc) = self.weak_ref.upgrade() {
-                let guard = arc.lock().unwrap();
-                self.cached_value = Some((*guard).clone());
-            }
-        }
-        
-        if let Some(ref mut value) = self.cached_value {
-            let mut float_val: f64 = (*value).clone().into();
-            if ui.add(egui::Slider::new(&mut float_val, range)).changed() {
-                *value = T::from(float_val);
-                self.modified = true;
-                
-                // Also update the source if possible
-                if let Some(arc) = self.weak_ref.upgrade() {
-                    let mut guard = arc.lock().unwrap();
-                    *guard = value.clone();
-                }
-                return true;
+
+    /// Return a fresh cloned value by locking the underlying data
+    pub fn get_live(&self) -> Option<T> {
+        if let Some(arc) = self.weak_ref.upgrade() {
+            match arc.lock() {
+                Ok(guard) => Some(guard.clone()),
+                Err(poisoned) => Some(poisoned.into_inner().clone()),
             }
         } else {
-            ui.label("Value no longer available");
+            None
+        }
+    }
+
+    /// Mutate the underlying state directly via closure (safe, avoids stale cache)
+    pub fn with_live_mut<F: FnOnce(&mut T)>(&self, f: F) -> bool {
+        if let Some(arc) = self.weak_ref.upgrade() {
+            if let Ok(mut guard) = arc.lock() {
+                f(&mut guard);
+                return true;
+            }
         }
         false
+    }
+
+    /// Cached value accessor (for performance-sensitive use like sliders)
+    pub fn get_cached(&mut self) -> Option<T> {
+        if self.cached_value.is_none() {
+            if let Some(arc) = self.weak_ref.upgrade() {
+                if let Ok(guard) = arc.lock() {
+                    self.cached_value = Some(guard.clone());
+                }
+            }
+        }
+        self.cached_value.clone()
+    }
+
+    /// Refresh the cached value manually
+    pub fn refresh_cache(&mut self) {
+        self.cached_value = self.get_live();
+    }
+
+    /// Set value and update cache
+    pub fn set(&mut self, new_value: T) {
+        if let Some(arc) = self.weak_ref.upgrade() {
+            if let Ok(mut guard) = arc.lock() {
+                *guard = new_value.clone();
+                self.cached_value = Some(new_value);
+                self.modified = true;
+            }
+        }
     }
 }
