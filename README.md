@@ -14,11 +14,19 @@
 
 </div>
 
-egui_mobius is a comprehensive application framework built on egui that transforms its immediate mode foundation into a complete development platform. It combines reactive state management, thread-safe async operations, and a powerful component system to create rich, responsive applications with clean architecture.
+egui_mobius is a comprehensive software stack for building sophisticated egui applications. It provides essential layers needed for production-ready GUI applications that include reactive state management, async operations and dedicated threading mechanisms, and an evolving component system. The component system is the primary
+focus to develop modular and maintainble applications with a clean architecture.
 
 ## Core Features
 
 The egui_mobius ecosystem provides multiple paradigms for building modern GUI applications, each serving different needs while maintaining compatibility with one another:
+
+  ### Architecture Overview
+  The diagram below is a general representation of how egui_mobius is organized. 
+
+<div align="center">
+<img width=360 height=330 src="./assets/mobius_stack.png"></img>
+</div>
 
 ### Reactive State Management
 - Thread-safe reactive primitives via `Dynamic<T>` and `Derived<T>` 
@@ -38,12 +46,6 @@ The egui_mobius ecosystem provides multiple paradigms for building modern GUI ap
 - Scalable patterns for complex applications
 - Stateful components that maintain their own lifecycle
 
-### Component Library
-- Reusable, composable UI components in `egui_mobius_components`
-- Advanced event logging with our EventLogger component
-- Customizable widgets with integrated reactive state
-- Consistent design patterns across your application
-  
 ### Ecosystem
 
 The egui_mobius framework consists of multiple coordinated crates:
@@ -52,6 +54,12 @@ The egui_mobius framework consists of multiple coordinated crates:
 - `egui_mobius_reactive`: Thread-safe reactive state management
 - `egui_mobius_widgets`: Custom, stateful widget implementations
 - `egui_mobius_components`: Higher-level UI components
+
+## Built with egui_mobius
+
+- `egui_lens` A reactive event logger [component](https://github.com/saturn77/egui_lens) built upon `egui_mobius_reactive`
+- `diskforge` An SD card formatting [application](https://github.com/saturn77/egui_lens/tree/master/examples/diskforge) that is an example within `egui_lens`
+- `KiForge` A computer aided manufacturing [CAM](https://github.com/saturn77/KiForge) platform for KiCad incorporating `egui_lens`
 
 ### Getting Started
 
