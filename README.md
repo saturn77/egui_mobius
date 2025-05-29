@@ -19,7 +19,7 @@ focus to develop modular and maintainble applications with a clean architecture.
 
 ## Core Features
 
-The egui_mobius ecosystem provides multiple paradigms for building modern GUI applications, each serving different needs while maintaining compatibility with one another:
+The egui_mobius ecosystem provides multiple paradigms for building modern GUI applications, each serving different needs while maintaining compatibility with one another. 
 
   ### Architecture Overview
   The diagram below is a general representation of how egui_mobius is organized. 
