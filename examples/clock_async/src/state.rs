@@ -66,7 +66,7 @@ impl AppState {
             logs.push_back(LogEntry {
                 timestamp: now,
                 source: "clock".to_string(),
-                message: format!("Time updated: {}", time_str),
+                message: format!("Time updated: {time_str}"),
                 color: Some(egui::Color32::from_rgb(100, 200, 255)), // Light Blue
             });
             ctx.request_repaint();
@@ -91,7 +91,7 @@ impl AppState {
                 }
                 let config_path = local_dir.join("config.json");
                 if let Err(e) = std::fs::write(&config_path, json_data) {
-                    eprintln!("Failed to save config: {}", e);
+                    eprintln!("Failed to save config: {e}");
                 }
             }
         });

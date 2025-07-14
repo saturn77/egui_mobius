@@ -18,7 +18,7 @@ impl<'a> LoggerPanel<'a> {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         // Get current state
         let total_events = self.state.log_count.get();
-        ui.heading(format!("Event Log ({} events)", total_events));
+        ui.heading(format!("Event Log ({total_events} events)"));
 
         let log_filters = self.state.log_filters.get();
         ui.horizontal(|ui| {

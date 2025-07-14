@@ -107,11 +107,11 @@ impl eframe::App for UiApp {
             move |event: ProcessedType| {
                 let mut logger: egui_mobius::types::ValueGuard<'_, String> = logger_text_clone.lock().unwrap();
                 let log_msg: String = match event {
-                    ProcessedType::Foo    { _id: _, message  } => format!("Ui Received:  {}", message),
-                    ProcessedType::Bar    { _id: _, message  } => format!("Ui Received:  {}", message),
-                    ProcessedType::Slider { message: value      } => format!("Ui Received:  {}", value),
+                    ProcessedType::Foo    { _id: _, message  } => format!("Ui Received:  {message}"),
+                    ProcessedType::Bar    { _id: _, message  } => format!("Ui Received:  {message}"),
+                    ProcessedType::Slider { message: value      } => format!("Ui Received:  {value}"),
                     ProcessedType::_Combo  { _id, message } => {
-                        format!("Ui Received: [{}]: {}", _id, message)
+                        format!("Ui Received: [{_id}]: {message}")
                     },
                     ProcessedType::_ApplicationCommand { message } => {
                         match message.as_str() {
@@ -122,17 +122,17 @@ impl eframe::App for UiApp {
                             // can we use regex or starts_with to match the command? Yes ! 
                             
                             msg if msg.starts_with("Backend found the os") => {
-                                format!("Ui Received:  {}", message)
+                                format!("Ui Received:  {message}")
                             },
                             msg if msg.starts_with("Backend found version info") => {
-                                format!("Ui Received:  {}", message)
+                                format!("Ui Received:  {message}")
                             },
                             _ => "Unknown command".to_string(),
                         }
                     }
                     
                 };
-                logger.push_str(&format!("{}\n", log_msg));
+                logger.push_str(&format!("{log_msg}\n"));
                 *update_needed_clone.lock().unwrap() = true;
             }
         });
@@ -291,25 +291,25 @@ fn backend_consumer_thread(
             
             match &event {
                 EventType::Foo { id, message } => {
-                    let log_msg = format!("Backend processed Foo event [{}]: {}", id, message);
+                    let log_msg = format!("Backend processed Foo event [{id}]: {message}");
                     let processed_msg = ProcessedType::Foo { _id: *id, message: log_msg.clone() };
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
                 },
                 EventType::Bar { id, message } => {
-                    let log_msg = format!("Backend processed Bar event [{}]: {}", id, message);
+                    let log_msg = format!("Backend processed Bar event [{id}]: {message}");
                     let processed_msg = ProcessedType::Bar { _id: *id, message: log_msg.clone() };
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
                 },
                 EventType::Slider(value) => {
-                    let log_msg = format!("Backend processed Slider value: {}", value);
+                    let log_msg = format!("Backend processed Slider value: {value}");
                     let processed_msg = ProcessedType::Slider{ message: log_msg.clone() };
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
                 },
                 EventType::Combo { message: msg, _id } => {
-                    let log_msg = format!("Backend processed Combo selection: {}", msg);
+                    let log_msg = format!("Backend processed Combo selection: {msg}");
                     let processed_msg = ProcessedType::_Combo { _id: *_id, message: log_msg.clone() };
                     process_event!(queue, logger, slot_on_uiapp, event, log_msg, processed_msg);
                     return
@@ -413,6 +413,6 @@ fn main() {
             update_needed,
         )))),
     ) {
-        eprintln!("Failed to run eframe: {:?}", e);
+        eprintln!("Failed to run eframe: {e:?}");
     }
 }

@@ -78,7 +78,7 @@ impl<'a> ControlPanel<'a> {
                     if let Some(signal) = &*self.state.event_signal.lock().unwrap() {
                         let _ = signal.send(Event::SliderChanged(slider_value));
                     }
-                    self.state.log("ui", format!("Slider value changed to {}", slider_value));
+                    self.state.log("ui", format!("Slider value changed to {slider_value}"));
                     self.state.save_config();
                 }
 
@@ -95,7 +95,7 @@ impl<'a> ControlPanel<'a> {
                                 if let Some(signal) = &*self.state.event_signal.lock().unwrap() {
                                     let _ = signal.send(Event::ComboSelected(option.to_string()));
                                 }
-                                self.state.log("ui", format!("Selected option: {}", option));
+                                self.state.log("ui", format!("Selected option: {option}"));
                             }
                         }
                     });
@@ -247,7 +247,7 @@ impl<'a> ControlPanel<'a> {
                         let custom_event = crate::logger::LogEntry {
                             timestamp: chrono::Local::now(),
                             source: "ui".to_string(),
-                            message: format!("Log buffer size changed to {}", buffer_size),
+                            message: format!("Log buffer size changed to {buffer_size}"),
                             color: Some(colors.custom_event),
                         };
                         self.state.logs.lock().unwrap().push_back(custom_event);

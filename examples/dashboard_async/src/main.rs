@@ -163,7 +163,7 @@ impl AppState {
     fn record_price_entry(&mut self, symbol: &str, price: f64)
     {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-        self.price_log.push(format!("[{}] {}: ${:.6}", timestamp, symbol, price));
+        self.price_log.push(format!("[{timestamp}] {symbol}: ${price:.6}"));
         if self.price_log.len() > 1000 {
             self.price_log.drain(0..self.price_log.len() - 1000);
         }
@@ -281,7 +281,7 @@ impl eframe::App for UiMainWindow {
 
             if let Some(ref loading) = state.loading_coin {
                 ui.horizontal(|ui| {
-                    ui.label(format!("Loading {} price...", loading));
+                    ui.label(format!("Loading {loading} price..."));
                 });
                 ui.horizontal(|ui| {
                     ui.label("Loading price...");
@@ -289,15 +289,15 @@ impl eframe::App for UiMainWindow {
             }
             // must match all the way to the end of the match statement
             else if let Some(price) = state.sui_price {
-                ui.label(format!("SUI Price: ${:.2}", price));
+                ui.label(format!("SUI Price: ${price:.2}"));
             } else if let Some(price) = state.stellar_price {
-                ui.label(format!("Stellar Price: ${:.2}", price));
+                ui.label(format!("Stellar Price: ${price:.2}"));
             } else if let Some(price) = state.solana_price {
-                ui.label(format!("Solana Price: ${:.2}", price));
+                ui.label(format!("Solana Price: ${price:.2}"));
             } else if let Some(price) = state.kaspa_price {
-                ui.label(format!("Kaspa Price: ${:.2}", price));
+                ui.label(format!("Kaspa Price: ${price:.2}"));
             } else if let Some(price) = state.bitcoin_price {
-                ui.label(format!("Bitcoin Price: ${:.2}", price));
+                ui.label(format!("Bitcoin Price: ${price:.2}"));
             } else if let Some(ref err) = state.error_message {
                 ui.colored_label(egui::Color32::RED, err);
             }
@@ -361,7 +361,7 @@ fn main() {
         options,
         Box::new(|_cc| Ok(Box::new(app))),
     ) {
-        eprintln!("Failed to run eframe UiMainWindowlication: {:?}", e);
+        eprintln!("Failed to run eframe UiMainWindowlication: {e:?}");
     }
 }
 
@@ -376,14 +376,14 @@ struct KrakenTicker {
 }
 
 async fn fetch_price(pair: &str) -> f64 {
-    let url = format!("https://api.kraken.com/0/public/Ticker?pair={}", pair);
+    let url = format!("https://api.kraken.com/0/public/Ticker?pair={pair}");
 
     match reqwest::get(&url).await {
         Ok(resp) => match resp.json::<BitcoinPrice>().await {
             Ok(json) => {
                 if let Some(ticker) = json.result.values().next() {
                     if let Ok(price) = ticker.c[0].parse::<f64>() {
-                        println!("{} price: ${:.6}", pair, price);
+                        println!("{pair} price: ${price:.6}");
                         return price;
                     } else {
                         eprintln!("Failed to parse price string: {:?}", ticker.c[0]);
@@ -393,11 +393,11 @@ async fn fetch_price(pair: &str) -> f64 {
                 }
             }
             Err(e) => {
-                eprintln!("Failed to parse Kraken JSON: {:?}", e);
+                eprintln!("Failed to parse Kraken JSON: {e:?}");
             }
         },
         Err(e) => {
-            eprintln!("HTTP request error: {:?}", e);
+            eprintln!("HTTP request error: {e:?}");
         }
     }
 

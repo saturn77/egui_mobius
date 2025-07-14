@@ -100,13 +100,13 @@ impl LogColors {
                         colors
                     }
                     Err(e) => {
-                        eprintln!("Failed to parse colors JSON: {}", e);
+                        eprintln!("Failed to parse colors JSON: {e}");
                         Self::default()
                     }
                 }
             }
             Err(e) => {
-                eprintln!("Failed to read colors file: {}", e);
+                eprintln!("Failed to read colors file: {e}");
                 Self::default()
             }
         }
@@ -123,7 +123,7 @@ impl LogColors {
             
             // Create config directory if it doesn't exist
             if let Err(e) = fs::create_dir_all(&config_dir) {
-                eprintln!("Failed to create config directory: {}", e);
+                eprintln!("Failed to create config directory: {e}");
                 return;
             }
             
@@ -135,12 +135,12 @@ impl LogColors {
                 Ok(json) => {
                     // Write JSON to file
                     if let Err(e) = fs::write(&config_path, json) {
-                        eprintln!("Failed to write colors to {}: {}", config_path.display(), e);
+                        eprintln!("Failed to write colors to {}: {e}", config_path.display());
                     } else {
                         println!("Successfully saved colors to {}", config_path.display());
                     }
                 },
-                Err(e) => eprintln!("Failed to serialize colors: {}", e),
+                Err(e) => eprintln!("Failed to serialize colors: {e}"),
             }
         });
     }

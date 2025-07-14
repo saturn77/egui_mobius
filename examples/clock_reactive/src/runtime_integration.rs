@@ -78,7 +78,7 @@ impl RuntimeManager {
                 current_logs.push_back(LogEntry {
                     timestamp: Local::now(),
                     source: "clock".to_string(),
-                    message: format!("Time updated: {}", time_str),
+                    message: format!("Time updated: {time_str}"),
                     color: Some(egui::Color32::from_rgb(100, 200, 255)), // Light Blue
                 });
                 logs.set(current_logs);

@@ -246,7 +246,7 @@ pub fn create_event_logger(ctx: egui::Context, colors: LogColors) -> (EguiMobius
     dispatcher.register_slot("logger_events", move |event| {
         let response = crate::components::event_logger::processor::process_event(event);
         if let Err(e) = response_signal_clone.send(response) {
-            eprintln!("Failed to send logger response: {:?}", e);
+            eprintln!("Failed to send logger response: {e:?}");
         }
     });
     

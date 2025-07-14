@@ -113,7 +113,7 @@ fn background_generator_thread(clock_signal: Signal<ClockMessage>, _ctx: egui::C
         loop {
             let now = chrono::Local::now();
             if let Err(e) = clock_signal.send(ClockMessage::TimeUpdated(now.format("%H:%M:%S").to_string())) {
-                eprintln!("Failed to send TimeUpdated message: {:?}", e);
+                eprintln!("Failed to send TimeUpdated message: {e:?}");
             }
             std::thread::sleep(Duration::from_secs(1));
         }
@@ -133,7 +133,7 @@ fn main() {
                 match serde_json::from_str(&config_str) {
                     Ok(config) => config,
                     Err(e) => {
-                        eprintln!("Failed to parse config: {}", e);
+                        eprintln!("Failed to parse config: {e}");
                         Config::default()
                     }
                 }
@@ -146,7 +146,7 @@ fn main() {
             let default_config = Config::default();
             if let Ok(json_data) = serde_json::to_string_pretty(&default_config) {
                 if let Err(e) = std::fs::write(&config_path, json_data) {
-                    eprintln!("Failed to write default config: {}", e);
+                    eprintln!("Failed to write default config: {e}");
                 }
             }
             default_config

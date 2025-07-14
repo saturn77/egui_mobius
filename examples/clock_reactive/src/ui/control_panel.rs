@@ -76,7 +76,7 @@ impl<'a> ControlPanel<'a> {
                 let mut slider_value = self.state.slider_value.get();
                 if ui.add(egui::Slider::new(&mut slider_value, 0.0..=100.0).text("Value")).changed() {
                     self.state.slider_value.set(slider_value);
-                    self.state.log("ui", format!("Slider value changed to {}", slider_value));
+                    self.state.log("ui", format!("Slider value changed to {slider_value}"));
                     self.state.save_config();
                 }
 
@@ -90,7 +90,7 @@ impl<'a> ControlPanel<'a> {
                         for option in ["Option A", "Option B", "Option C"].iter() {
                             if ui.selectable_label(combo_value == *option, *option).clicked() {
                                 self.state.combo_value.set(option.to_string());
-                                self.state.log("ui", format!("Selected option: {}", option));
+                                self.state.log("ui", format!("Selected option: {option}"));
                                 self.state.save_config();
                             }
                         }
@@ -227,7 +227,7 @@ impl<'a> ControlPanel<'a> {
                         let custom_event = LogEntry {
                             timestamp: chrono::Local::now(),
                             source: "ui".to_string(),
-                            message: format!("Buffer size changed to {}", buffer_size),
+                            message: format!("Buffer size changed to {buffer_size}"),
                             color: Some(colors.custom_event),
                         };
                         let mut logs = self.state.logs.get();

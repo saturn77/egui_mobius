@@ -55,7 +55,7 @@ impl AppState {
         registry.register_named_signal("list", list_arc.clone());
 
         let list_clone = list.clone();
-        registry.effect(&[list_arc.clone()], move || {
+        registry.effect(std::slice::from_ref(&list_arc), move || {
             println!("📋 list changed: {:?}", list_clone.get_all());
         });
 
@@ -93,7 +93,7 @@ impl eframe::App for AppState {
                             let new_count = *self.count.lock() + 1;
                             self.count.set(new_count);
                             if let Err(e) = self.signal.send(Event::IncrementClicked) {
-                                eprintln!("Failed to send increment event: {}", e);
+                                eprintln!("Failed to send increment event: {e}");
                             }
                         }
                     });
@@ -152,7 +152,7 @@ impl eframe::App for AppState {
                         .inner_margin(8.0)
                         .show(ui, |ui| {
                             for item in self.list.get_all() {
-                                ui.label(format!("• {}", item));
+                                ui.label(format!("• {item}"));
                             }
                             ui.separator();
                             ui.strong(format!("Sum: {}", self.list_sum.get()));
@@ -173,7 +173,7 @@ impl eframe::App for AppState {
                 } else if let Some(val) = any.downcast_ref::<Dynamic<String>>() {
                     ui.label(format!("- {}: \"{}\"", name, val.get()));
                 } else {
-                    ui.label(format!("- {} (?)", name));
+                    ui.label(format!("- {name} (?)"));
                 }
             }
         });

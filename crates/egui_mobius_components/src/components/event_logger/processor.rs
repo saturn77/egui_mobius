@@ -77,7 +77,7 @@ pub fn run_logger_backend(mut event_slot: Slot<LoggerEvent>, response_signal: Si
     event_slot.start(move |event| {
         let response = process_event(event);
         if let Err(e) = response_signal.send(response) {
-            eprintln!("Failed to send logger response: {:?}", e);
+            eprintln!("Failed to send logger response: {e:?}");
         }
     });
 }

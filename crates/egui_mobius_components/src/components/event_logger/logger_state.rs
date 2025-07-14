@@ -120,14 +120,13 @@ impl LoggerState {
         };
         
         // Format with prefix showing both the message type and sender
-        let prefix = format!("[{}] [{}] ", 
-            entry.message.type_name(),
-            entry.sender.display_name()
-        );
+        let msg_type = entry.message.type_name();
+        let sender_name = entry.sender.display_name();
+        let prefix = format!("[{msg_type}] [{sender_name}] ");
         let content = entry.message.content();
         
         // Create formatted message with type prefix and content
-        let formatted_msg = format!("{}{}", prefix, content);
+        let formatted_msg = format!("{prefix}{content}");
         
         // Use configured color priority
         let final_color = if self.colors.prioritize_style_colors {

@@ -132,7 +132,7 @@ impl LogSender {
             UiWidgetType::Tab => "Tab".to_string(),
             UiWidgetType::Canvas => "Canvas".to_string(),
             UiWidgetType::System => "System".to_string(),
-            UiWidgetType::Custom(name) => format!("Custom({})", name),
+            UiWidgetType::Custom(name) => format!("Custom({name})"),
         }
     }
     
@@ -140,8 +140,10 @@ impl LogSender {
     pub fn display_name(&self) -> String {
         match (&self.widget_type, &self.id) {
             (UiWidgetType::System, _) => "System".to_string(),
-            (_, Some(id)) if !id.is_empty() => 
-                format!("{}({})", self.type_name(), id),
+            (_, Some(id)) if !id.is_empty() => {
+                let type_name = self.type_name();
+                format!("{type_name}({id})")
+            },
             _ => self.type_name(),
         }
     }

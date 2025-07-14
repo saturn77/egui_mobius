@@ -337,6 +337,6 @@ fn main() {
         options,
         Box::new(|_cc| Ok(Box::new(app))),
     ) {
-        eprintln!("Failed to run eframe UiApplication: {:?}", e);
+        eprintln!("Failed to run eframe UiApplication: {e:?}");
     }
 }

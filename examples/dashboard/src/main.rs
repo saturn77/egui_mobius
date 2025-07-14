@@ -43,7 +43,7 @@ pub fn run_backend(mut event_slot: Slot<Event>, response_signal: Signal<Response
     event_slot.start(move |event| {
         let response = process(event);
         if let Err(e) = response_signal.send(response) {
-            eprintln!("Failed to send response: {:?}", e);
+            eprintln!("Failed to send response: {e:?}");
         }
     });
 }
@@ -57,7 +57,7 @@ fn main() {
     dispatcher.register_slot("external_log", move |event| {
         let response = process(event);
         if let Err(e) = response_signal.send(response) {
-            eprintln!("Failed to send response: {:?}", e);
+            eprintln!("Failed to send response: {e:?}");
         }
     });
 
@@ -76,7 +76,7 @@ fn main() {
         options,
         Box::new(|_cc| Ok(Box::new(app))),
     ) {
-        eprintln!("Failed to run eframe UiApplication: {:?}", e);
+        eprintln!("Failed to run eframe UiApplication: {e:?}");
     }
 }
 // src/app.rs
@@ -96,7 +96,7 @@ impl UiApp {
             state_clone
                 .lock()
                 .unwrap()
-                .log("external", format!("Dispatched: {:?}", event));
+                .log("external", format!("Dispatched: {event:?}"));
         });
 
         // Test message
@@ -138,7 +138,7 @@ impl eframe::App for UiApp {
                             let source = source.to_string();
                             let selected = app_state.log_filters.contains(&source);
                             if ui.selectable_label(selected, &source).clicked() {
-                                println!("selected: {}", selected);
+                                println!("selected: {selected}");
                                 match !selected {
                                     true => app_state.log_filters.push(source),
                                     false => app_state.log_filters.retain(|it| !it.eq(&source)),
@@ -165,21 +165,18 @@ impl eframe::App for UiApp {
                         {
                             if entry.source == "backend"
                                 && entry.message.starts_with("Counter updated to")
-                            {
-                                if let Some(new_counter) = entry
+                                && let Some(new_counter) = entry
                                     .message
                                     .strip_prefix("Counter updated to ")
                                     .and_then(|v| v.parse::<usize>().ok())
-                                {
-                                    _current_cluster_counter = Some(new_counter);
-                                    ui.label(
-                                        egui::RichText::new(format!(
-                                            "\n**** Counter Event Cluster @ Counter == {}",
-                                            new_counter
-                                        ))
-                                        .strong(),
-                                    );
-                                }
+                            {
+                                _current_cluster_counter = Some(new_counter);
+                                ui.label(
+                                    egui::RichText::new(format!(
+                                        "\n**** Counter Event Cluster @ Counter == {new_counter}"
+                                    ))
+                                    .strong(),
+                                );
                             }
 
                             let colored = match entry.source.as_str() {
@@ -202,7 +199,7 @@ impl eframe::App for UiApp {
             // Your UI code here
 
             let counter = self.state.lock().unwrap().dashboard.counter;
-            ui.label(format!("Counter: {}", counter));
+            ui.label(format!("Counter: {counter}"));
 
             if ui.button("Increment").clicked() {
                 self.log("clicked increment button".to_string());
@@ -287,7 +284,7 @@ impl AppState {
         match response {
             Response::CounterUpdated(value) => {
                 self.dashboard.counter = value;
-                self.log("backend", format!("Counter updated to {}", value));
+                self.log("backend", format!("Counter updated to {value}"));
             }
             Response::Message(msg) => {
                 self.log("backend", msg);
@@ -313,7 +310,7 @@ pub fn process(event: Event) -> Response {
             *count = 0;
             Response::CounterUpdated(*count)
         }
-        Event::Custom(message) => Response::Message(format!("processed message: {}", message)),
+        Event::Custom(message) => Response::Message(format!("processed message: {message}")),
     }
 }
 
