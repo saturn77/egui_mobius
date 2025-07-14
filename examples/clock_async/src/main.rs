@@ -144,10 +144,12 @@ fn main() {
         } else {
             // Copy default config
             let default_config = Config::default();
-            if let Ok(json_data) = serde_json::to_string_pretty(&default_config)
-                && let Err(e) = std::fs::write(&config_path, json_data) {
+            #[allow(clippy::collapsible_if)]
+            if let Ok(json_data) = serde_json::to_string_pretty(&default_config) {
+                if let Err(e) = std::fs::write(&config_path, json_data) {
                     eprintln!("Failed to write default config: {e}");
                 }
+            }
             default_config
         }
     };

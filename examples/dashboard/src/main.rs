@@ -163,20 +163,23 @@ impl eframe::App for UiApp {
                             .rev()
                             .filter(|entry| app_state.log_filters.contains(&entry.source))
                         {
+                            #[allow(clippy::collapsible_if)]
                             if entry.source == "backend"
                                 && entry.message.starts_with("Counter updated to")
-                                && let Some(new_counter) = entry
+                            {
+                                if let Some(new_counter) = entry
                                     .message
                                     .strip_prefix("Counter updated to ")
                                     .and_then(|v| v.parse::<usize>().ok())
-                            {
-                                _current_cluster_counter = Some(new_counter);
-                                ui.label(
-                                    egui::RichText::new(format!(
-                                        "\n**** Counter Event Cluster @ Counter == {new_counter}"
-                                    ))
-                                    .strong(),
-                                );
+                                {
+                                    _current_cluster_counter = Some(new_counter);
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "\n**** Counter Event Cluster @ Counter == {new_counter}"
+                                        ))
+                                        .strong(),
+                                    );
+                                }
                             }
 
                             let colored = match entry.source.as_str() {
