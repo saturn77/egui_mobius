@@ -59,7 +59,7 @@
 use std::sync::Arc;
 use std::ops::{Add, Sub, Mul, Div, Not};
 
-use crate::{Derived, Dynamic};
+use crate::{Derived, Dynamic, ReactiveValue};
 
 // Math ops for i32 and f64, including mixed-type reactive arithmetic
 macro_rules! impl_math_ops {
@@ -224,7 +224,7 @@ impl Not for Dynamic<bool> {
     type Output = Derived<bool>;
     fn not(self) -> Self::Output {
         let a = Arc::new(self);
-        Derived::new(&[a.clone()], move || !*a.lock())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || !*a.lock())
     }
 }
 
@@ -266,22 +266,22 @@ pub trait ReactiveMath {
 impl ReactiveMath for Dynamic<i32> {
     fn doubled(&self) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || *a.lock() * 2)
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || *a.lock() * 2)
     }
 
     fn negated(&self) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || -*a.lock())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || -*a.lock())
     }
 
     fn powi(&self, exp: u32) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || a.lock().pow(exp))
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().pow(exp))
     }
 
     fn abs(&self) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || a.lock().abs())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().abs())
     }
 
     fn min(&self, other: &Dynamic<i32>) -> Derived<i32> {
@@ -315,12 +315,12 @@ pub trait ReactiveMathF64 {
 impl ReactiveMathF64 for Dynamic<f64> {
     fn powf(&self, exp: f64) -> Derived<f64> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || a.lock().powf(exp))
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().powf(exp))
     }
 
     fn abs(&self) -> Derived<f64> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || a.lock().abs())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().abs())
     }
 
     fn min(&self, other: &Dynamic<f64>) -> Derived<f64> {
@@ -351,14 +351,14 @@ pub trait ReactiveListSum<T: Clone + Send + Sync + 'static> {
 impl ReactiveListSum<i32> for crate::ReactiveList<i32> {
     fn sum(&self) -> Derived<i32> {
         let list = Arc::new(self.clone());
-        Derived::new(&[list.clone()], move || list.get_all().iter().copied().sum())
+        Derived::new(&[list.clone() as Arc<dyn ReactiveValue>], move || list.get_all().iter().copied().sum())
     }
 }
 
 impl ReactiveListSum<f64> for crate::ReactiveList<f64> {
     fn sum(&self) -> Derived<f64> {
         let list = Arc::new(self.clone());
-        Derived::new(&[list.clone()], move || list.get_all().iter().copied().sum())
+        Derived::new(&[list.clone() as Arc<dyn ReactiveValue>], move || list.get_all().iter().copied().sum())
     }
 }
 
@@ -370,7 +370,7 @@ pub trait ReactiveLogic {
 impl ReactiveLogic for Dynamic<bool> {
     fn not(&self) -> Derived<bool> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone()], move || !*a.lock())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || !*a.lock())
     }
 }
 

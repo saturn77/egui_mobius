@@ -23,14 +23,14 @@ resolver = "2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
-version = "0.3.0-alpha.31"
+version = "0.3.0-alpha.32"
 
 [workspace.dependencies]
 # egui mobius related crates
-egui_mobius   = { version = "0.3.0-alpha.31", path = "crates/egui_mobius" }
-egui_mobius_widgets = { version = "0.3.0-alpha.31", path = "crates/egui_mobius_widgets" }
-egui_mobius_reactive = { version = "0.3.0-alpha.31", path = "crates/egui_mobius_reactive" }
-egui_mobius_components = { version = "0.3.0-alpha.31", path = "crates/egui_mobius_components" }
+egui_mobius   = { version = "0.3.0-alpha.32", path = "crates/egui_mobius" }
+egui_mobius_widgets = { version = "0.3.0-alpha.32", path = "crates/egui_mobius_widgets" }
+egui_mobius_reactive = { version = "0.3.0-alpha.32", path = "crates/egui_mobius_reactive" }
+egui_mobius_components = { version = "0.3.0-alpha.32", path = "crates/egui_mobius_components" }
 
 # egui and eframe
 egui_plot = "0.33.0"

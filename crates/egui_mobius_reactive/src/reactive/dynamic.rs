@@ -51,7 +51,7 @@ impl<T> Dynamic<T> {
     /// *guard = 84;
     /// assert_eq!(*guard, 84);
     /// ```
-    pub fn lock(&self) -> std::sync::MutexGuard<T> {
+    pub fn lock(&self) -> std::sync::MutexGuard<'_, T> {
         self.inner.lock().unwrap()
     }
 }
