@@ -7,8 +7,6 @@
 
 
 pub use super::{
-    // Widgets
-    widgets::ReactiveSlider,
     derived::Derived,
     dynamic::{Dynamic, ValueExt},
     registry::SignalRegistry,
@@ -17,6 +15,11 @@ pub use super::{
     reactive_state::ReactiveWidgetRef,
 };
 
+#[cfg(feature = "widgets")]
+pub use super::{
+    // Widgets
+    widgets::ReactiveSlider,
+};
 
 // Useful shared types
 pub use std::sync::{Arc, Mutex};

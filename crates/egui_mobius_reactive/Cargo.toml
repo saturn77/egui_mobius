@@ -13,11 +13,15 @@ categories             = ["gui", "development-tools"]
 keywords               = ["egui-framework", "eframe", "egui-example", "desktop", "reactive"]
 include                = ["LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
+[features]
+widgets = [
+    "dep:egui"
+]
 
 [dependencies]
 parking_lot = "0.12"
-egui = {workspace = true}
-egui_mobius = {workspace = true}
+egui = {workspace = true, optional = true}
+
 [dev-dependencies]
 criterion = "0.5"
 tokio = { version = "1.35", features = ["full"] }

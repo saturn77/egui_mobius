@@ -22,21 +22,9 @@ all-features = true
 rustdoc-args = ["--generate-link-to-definition"]
 
 [dependencies]
-egui = "0.31.1"
-eframe = { version = "0.31.1", default-features = false, features = [
-    "default_fonts", 
-    "glow",          
-    "wayland",
-    "accesskit"
-] }
-priority-queue = "2.1.2"
-rand = "0.9.0"
 tokio = {version = "1.43.0", features = ["full"]}
 futures = "0.3"
-winit = "0.30.9"
-crossbeam-channel = "0.5.14"
 serde = { version = "1.0.218", optional = true }
-log = "0.4.26"
 
 [features]
 serde = ["serde/derive"]

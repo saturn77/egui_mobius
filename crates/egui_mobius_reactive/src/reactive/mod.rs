@@ -62,6 +62,7 @@ pub mod registry;
 pub mod dynamic;
 pub mod derived;
 pub mod core; 
+#[cfg(feature = "widgets")]
 pub mod widgets;
 pub mod reactive_math;
 pub mod reactive_state;
