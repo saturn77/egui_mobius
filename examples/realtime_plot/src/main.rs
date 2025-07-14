@@ -206,9 +206,9 @@ impl eframe::App for UiApp {
                     let exhaust_points: PlotPoints = exhaust_history.iter().enumerate().map(|(i, &y)| [i as f64, y]).collect();
                     let ambient_points: PlotPoints = ambient_history.iter().enumerate().map(|(i, &y)| [i as f64, y]).collect();
 
-                    plot_ui.line(Line::new(inlet_points).name("Inlet Temp (°C)").color(egui::Color32::RED));
-                    plot_ui.line(Line::new(exhaust_points).name("Exhaust Temp (°C)").color(egui::Color32::BLUE));
-                    plot_ui.line(Line::new(ambient_points).name("Ambient Temp (°C)").color(egui::Color32::GREEN));
+                    plot_ui.line(Line::new("Inlet Temp (°C)", inlet_points).color(egui::Color32::RED));
+                    plot_ui.line(Line::new("Exhaust Temp (°C)", exhaust_points).color(egui::Color32::BLUE));
+                    plot_ui.line(Line::new("Ambient Temp (°C)", ambient_points).color(egui::Color32::GREEN));
                 });
         });
         ctx.request_repaint_after(Duration::from_secs(1));
