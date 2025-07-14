@@ -6,12 +6,7 @@ publish = false
 
 [dependencies]
 egui_mobius = { path = "../../crates/egui_mobius" }
-egui_mobius_widgets = { path = "../../crates/egui_mobius_widgets" }
-egui = "0.31.1"
-eframe = "0.31.1"
-tokio = { version = "1", features = ["full"] }
-serde = "1.0"
-serde_json = "1.0"
+egui = { workspace = true }
+eframe = { workspace = true, features = ["glow"] }
 chrono = "0.4"
-rand = "0.8"
 lazy_static = "1.4.0"

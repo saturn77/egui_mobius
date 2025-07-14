@@ -5,14 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-egui_plot = { version = "0.31.0" }
+egui_plot = { version = "0.33.0" }
 egui_mobius = { path = "../../crates/egui_mobius" }
-egui_mobius_widgets = { path = "../../crates/egui_mobius_widgets" }
-egui = { workspace = true }
-eframe = { workspace = true }
-tokio = { version = "1", features = ["full"] }
-serde = "1.0"
-serde_json = "1.0"
-chrono = "0.4"
-rand = "0.8"
+eframe = { workspace = true, features = ["glow", "default_fonts"] }
 image = { version = "0.24.7", features = ["png"] }

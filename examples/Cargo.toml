@@ -12,11 +12,12 @@ path = "lib.rs"
 egui_mobius = { path = "../crates/egui_mobius" }
 egui_mobius_widgets = { path = "../crates/egui_mobius_widgets" }
 egui_mobius_reactive = { path = "../crates/egui_mobius_reactive" }
-egui = "0.31.1"
-eframe = { version = "0.31.1", default-features = false }
+egui = { version = "0.32.0" }
+eframe = { version = "0.32.0", default-features = false }
 tokio = { version = "1.43.0", features = ["full"] }
-egui_plot = { version = "0.31.0" }
-egui_taffy = "0.7.0"
+egui_plot = { version = "0.33.0" }
+#egui_taffy = "0.7.0"
+egui_taffy = { git = "https://github.com/makerpnp/egui_taffy", rev = "c14e390c1f3cd6487968c5845ea205a38c6afbe2" }
 rand = "0.9.0"
 chrono = "0.4.40"
 tracing = "0.1"

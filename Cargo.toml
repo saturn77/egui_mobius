@@ -33,12 +33,14 @@ egui_mobius_reactive = { version = "0.3.0-alpha.31", path = "crates/egui_mobius_
 egui_mobius_components = { version = "0.3.0-alpha.31", path = "crates/egui_mobius_components" }
 
 # egui and eframe
-egui_plot = "0.31.0"
-egui = "0.31.1"
-eframe = { version = "0.31.1", default-features = false }
-egui-winit = { version = "0.31.1", features = ["accesskit"] }
-egui_extras = "0.31.1"
-egui_taffy = "0.7.0"
+egui_plot = "0.33.0"
+egui = "0.32.0"
+eframe = { version = "0.32.0", default-features = false }
+egui-winit = { version = "0.32.0", features = ["accesskit"] }
+egui_extras = "0.32.0"
+#egui_taffy = "0.7.0"
+egui_taffy = { git = "https://github.com/makerpnp/egui_taffy", rev = "c14e390c1f3cd6487968c5845ea205a38c6afbe2" }
+
 # random number generation, useful for testing and examples
 rand = "0.9.0"
 
@@ -60,7 +62,7 @@ ron = "0.8"
 dirs = "5.0"
 
 # windowing
-winit = "0.30.9"
+winit = "0.30.11"
 
 # alternative to std::sync::mpsc
 crossbeam-channel = "0.5.14"
