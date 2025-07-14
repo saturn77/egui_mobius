@@ -137,7 +137,7 @@ impl eframe::App for MyApp {
                         thread::spawn(move || {
                             for i in 0..5 {
                                 logger.info(
-                                    format!("Background thread log #{}", i),
+                                    format!("Background thread log #{i}"),
                                     LogSender::button("Background Thread"),
                                     LogType::Primary
                                 );

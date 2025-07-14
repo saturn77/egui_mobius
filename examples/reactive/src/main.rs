@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use eframe::NativeOptions;
 use egui_mobius_reactive::*;
+use egui_mobius_reactive::reactive::registry::ErasedReactiveValue;
 use egui_mobius::factory; 
 use egui_mobius::signals::Signal;
 
@@ -55,7 +56,7 @@ impl AppState {
         registry.register_named_signal("list", list_arc.clone());
 
         let list_clone = list.clone();
-        registry.effect(std::slice::from_ref(&list_arc), move || {
+        registry.effect(&[list_arc.clone() as Arc<dyn ErasedReactiveValue>], move || {
             println!("📋 list changed: {:?}", list_clone.get_all());
         });
 
