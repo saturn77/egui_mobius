@@ -83,7 +83,7 @@ where
                     let fut = handler(msg);
                     tokio::spawn(async move {
                         if let Err(err) = AssertUnwindSafe(fut).catch_unwind().await {
-                            eprintln!("⚠️  async handler panicked: {:?}", err);
+                            eprintln!("⚠️  async handler panicked: {err:?}");
                         }
                     });
                 }
