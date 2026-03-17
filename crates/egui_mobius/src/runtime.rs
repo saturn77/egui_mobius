@@ -1,10 +1,10 @@
+use futures::FutureExt;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::mpsc;
 use tokio::sync::Notify;
-use futures::FutureExt;
 
 use crate::slot::Slot;
 
@@ -14,7 +14,8 @@ pub enum Processed {
     Success(()),
 }
 
-pub type DynEventHandler<E> = Arc<dyn Fn(E) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
+pub type DynEventHandler<E> =
+    Arc<dyn Fn(E) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
 
 /// Trait for routing events to the appropriate handler by string key
 pub trait EventRoute {
@@ -82,8 +83,11 @@ impl<E: EventRoute + Send + Clone + 'static> MobiusRuntime<E> {
         (runtime, handle, processed_rx)
     }
 
-    pub fn register_handler<Fut>(&mut self, route: &str, handler: impl Fn(E) -> Fut + Send + Sync + 'static)
-    where
+    pub fn register_handler<Fut>(
+        &mut self,
+        route: &str,
+        handler: impl Fn(E) -> Fut + Send + Sync + 'static,
+    ) where
         Fut: Future<Output = ()> + Send + 'static,
     {
         self.handlers
@@ -120,7 +124,7 @@ impl<E: EventRoute + Send + Clone + 'static> MobiusRuntime<E> {
 
         self.shutdown_notify.notified().await;
         self.state = RuntimeState::Done;
-        
+
         // Drop the slot to close the channel
         drop(slot);
     }
@@ -133,7 +137,6 @@ mod tests {
 
     const TEST_TIMEOUT: Duration = Duration::from_secs(1);
     const PING_ROUTE: &str = "ping";
-
 
     #[derive(Clone)]
     enum TestEvent {
@@ -177,7 +180,7 @@ mod tests {
         // Ensure clean shutdown
         handle.shutdown();
         tokio::time::sleep(Duration::from_millis(100)).await; // Give time for cleanup
-        let _ = rt.abort(); // Force abort the runtime task
+        rt.abort(); // Force abort the runtime task
     }
 
     #[tokio::test]
@@ -187,6 +190,6 @@ mod tests {
         handle.send(TestEvent::Message(())).await;
         handle.shutdown();
         tokio::time::sleep(Duration::from_millis(100)).await;
-        let _ = rt.abort();
+        rt.abort();
     }
 }

@@ -2,7 +2,7 @@
 //!
 //! This module provides a reactive system that enables automatic UI updates when state changes,
 //! with built-in thread safety and change detection. It's particularly useful for:
-//! 
+//!
 //! - Managing state that needs to be shared between UI and background threads
 //! - Creating computed values that automatically update when their dependencies change
 //! - Ensuring thread-safe access to shared state
@@ -30,7 +30,7 @@
 //!
 //! // Create a derived value that depends on count
 //! let count_for_compute = count.clone();
-//! 
+//!
 //! let doubled = Derived::new(&[Arc::new(count.clone())], move || {
 //!     let val = *count_for_compute.lock();
 //!     val * 2
@@ -57,18 +57,12 @@
 //! - Change detection uses a polling approach with a 100ms interval
 //! - Consider using `parking_lot::Mutex` instead of `std::sync::Mutex` for better performance
 //! - Derived values are only recomputed when their dependencies actually change
-pub mod prelude;
-pub mod registry;
-pub mod dynamic;
+pub mod core;
 pub mod derived;
-pub mod core; 
-#[cfg(feature = "widgets")]
-pub mod widgets;
+pub mod dynamic;
+pub mod prelude;
 pub mod reactive_math;
 pub mod reactive_state;
-
-
-
-
-
-
+pub mod registry;
+#[cfg(feature = "widgets")]
+pub mod widgets;

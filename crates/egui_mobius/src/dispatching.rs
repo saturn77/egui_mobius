@@ -27,10 +27,10 @@
 //! dispatcher.send("greet", Event::Text("hi from egui_mobius".into()));
 //! ```
 
-use std::collections::HashMap;
-use crate::types::Value;
-use crate::slot::Slot;
 use crate::signals::Signal;
+use crate::slot::Slot;
+use crate::types::Value;
+use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -40,7 +40,6 @@ type HandlerFn<E> = dyn Fn(E) + Send + Sync;
 
 /// Type alias for a collection of event handlers.
 type HandlerMap<E> = HashMap<String, Vec<Arc<HandlerFn<E>>>>;
-
 
 /// The `SignalDispatcher` trait provides a generic interface
 /// for sending and receiving typed events across named channels.
@@ -138,9 +137,6 @@ impl<E: Clone + Send + 'static> SignalDispatcher<E> for Dispatcher<E> {
             .push(std::sync::Arc::new(f));
     }
 }
-
-
-
 
 /// An asynchronous dispatcher that processes events in a dedicated thread pool and
 /// supports non-blocking operations with proper error handling and timeouts.
@@ -282,12 +278,8 @@ impl<E: Send + 'static, R: Send + 'static> AsyncDispatcher<E, R> {
     ///     process_data(input).await
     /// });
     /// ```
-    pub fn attach_async<F, Fut>(
-        &self,
-        mut slot: Slot<E>,
-        signal: Signal<R>,
-        handler: F,
-    ) where
+    pub fn attach_async<F, Fut>(&self, mut slot: Slot<E>, signal: Signal<R>, handler: F)
+    where
         E: Clone + Send + 'static,
         R: Send + 'static,
         F: Fn(E) -> Fut + Send + Sync + 'static,
@@ -295,7 +287,7 @@ impl<E: Send + 'static, R: Send + 'static> AsyncDispatcher<E, R> {
     {
         let runtime = self.runtime.clone();
         let handler = Arc::new(handler); // satisfy Fn(E) + Send + Sync
-    
+
         slot.start({
             let handler = handler.clone();
             move |event| {
@@ -308,11 +300,7 @@ impl<E: Send + 'static, R: Send + 'static> AsyncDispatcher<E, R> {
             }
         });
     }
-    
-    
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -338,7 +326,7 @@ mod tests {
         });
 
         dispatcher.send("test", TestEvent::Ping);
-        assert_eq!(*called.lock().unwrap(), true);
+        assert!(*called.lock().unwrap());
     }
 
     #[test]
@@ -398,8 +386,8 @@ mod tests {
         dispatcher.send("alpha", TestEvent::Message("alpha".into()));
         dispatcher.send("beta", TestEvent::Message("beta".into()));
 
-        assert_eq!(*alpha_flag.lock().unwrap(), true);
-        assert_eq!(*beta_flag.lock().unwrap(), true);
+        assert!(*alpha_flag.lock().unwrap());
+        assert!(*beta_flag.lock().unwrap());
     }
 
     #[test]
@@ -409,4 +397,3 @@ mod tests {
         // No panic or error expected
     }
 }
-

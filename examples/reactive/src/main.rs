@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use eframe::NativeOptions;
-use egui_mobius_reactive::*;
-use egui_mobius_reactive::reactive::registry::ErasedReactiveValue;
-use egui_mobius::factory; 
+use egui_mobius::factory;
 use egui_mobius::signals::Signal;
+use egui_mobius_reactive::reactive::registry::ErasedReactiveValue;
+use egui_mobius_reactive::*;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub enum Event {
@@ -14,15 +14,15 @@ pub enum Event {
 
 pub struct AppState {
     pub registry: SignalRegistry,
-    count       : Dynamic<i32>,
-    label       : Dynamic<String>,
-    doubled     : Derived<i32>,
-    quad        : Derived<i32>,
-    fifth       : Derived<i32>,
-    sum_derived : Derived<i32>,
-    list_sum    : Derived<i32>,
-    list        : ReactiveList<i32>,
-    signal      : Signal<Event>,
+    count: Dynamic<i32>,
+    label: Dynamic<String>,
+    doubled: Derived<i32>,
+    quad: Derived<i32>,
+    fifth: Derived<i32>,
+    sum_derived: Derived<i32>,
+    list_sum: Derived<i32>,
+    list: ReactiveList<i32>,
+    signal: Signal<Event>,
 }
 
 impl AppState {
@@ -33,10 +33,10 @@ impl AppState {
         registry.register_named_signal("label", Arc::new(label.clone()));
 
         // Use ReactiveMath
-        let doubled : Derived<i32> = count.powi(2);
+        let doubled: Derived<i32> = count.powi(2);
         let quad = count.powi(4);
         let fifth = count.powi(5);
-        let sum_derived : Derived<i32> = count.clone() + doubled.clone();
+        let sum_derived: Derived<i32> = count.clone() + doubled.clone();
 
         registry.register_named_signal("doubled", Arc::new(doubled.clone()));
         registry.register_named_signal("quad", Arc::new(quad.clone()));
@@ -56,9 +56,12 @@ impl AppState {
         registry.register_named_signal("list", list_arc.clone());
 
         let list_clone = list.clone();
-        registry.effect(&[list_arc.clone() as Arc<dyn ErasedReactiveValue>], move || {
-            println!("📋 list changed: {:?}", list_clone.get_all());
-        });
+        registry.effect(
+            &[list_arc.clone() as Arc<dyn ErasedReactiveValue>],
+            move || {
+                println!("📋 list changed: {:?}", list_clone.get_all());
+            },
+        );
 
         let list_sum = list.clone().sum();
         registry.register_named_signal("list_sum", Arc::new(list_sum.clone()));

@@ -1,12 +1,11 @@
 #![allow(dead_code)]
 //! The Signal module provides a non-threaded mpsc (multi-producer, single-consumer) channel sender.
-//! 
+//!
 //! `Signal<T>` is used to send messages (either commands or responses) to a corresponding
 //! `Slot<T>` receiver. Messages can be sent directly through the Signal, or alternatively,
 //! through a `Dispatcher` or `AsyncDispatcher`. The dispatchers provide additional functionality
 //! by managing signal-slot registration and message routing.
-//! 
-
+//!
 
 use std::sync::mpsc::Sender;
 
@@ -20,12 +19,12 @@ where
     T: Send + 'static,
 {
     /// Create a new Signal instance with a ```Sender<T>``` instance.
-    /// 
+    ///
     /// Example Usage:
     /// ```rust
-    /// use egui_mobius::factory::create_signal_slot; 
+    /// use egui_mobius::factory::create_signal_slot;
     /// use egui_mobius::signals::Signal;
-    /// 
+    ///
     /// let (signal, _slot) = create_signal_slot::<String>();
     /// signal.send("Hello".to_string());
     /// ```
@@ -33,7 +32,7 @@ where
         Signal { sender }
     }
 
-    /// Send a ```message<T>``` to the ```Signal<T>``` instance. Typically, 
+    /// Send a ```message<T>``` to the ```Signal<T>``` instance. Typically,
     /// the ```message<T>```  is an Event, Command, or Response type
     /// but can be any type that implements the Send trait.
     pub fn send(&self, cmd_or_msg: T) -> Result<(), String> {
@@ -57,17 +56,16 @@ where
     }
 }
 
-
 /// ```Clone``` trait implementation for ```Signal<T>```
-/// 
+///
 /// This is important not to use #[derive(Clone)] because the ```Sender<T>``` is not
 /// ```Clone``` and the ```Sender<T>``` is the only field in the ```Signal<T>``` struct.
-/// 
+///
 /// Example Usage:
 /// ```rust
 /// use egui_mobius::signals::Signal;
 /// use egui_mobius::factory::create_signal_slot;
-/// 
+///
 /// let (signal, _) = create_signal_slot::<String>();
 /// let cloned_signal = signal.clone();
 /// ```

@@ -1,5 +1,5 @@
 use eframe::egui;
-use egui_mobius_widgets::{StyledButton, StatefulButton};
+use egui_mobius_widgets::{StatefulButton, StyledButton};
 
 use crate::state::AppState;
 use crate::types::Event;
@@ -47,7 +47,7 @@ impl<'a> ControlPanel<'a> {
             ui.add_space(10.0);
             let time_str = self.state.current_time.lock().unwrap().clone();
             ui.heading(time_str);
-            
+
             ui.add_space(20.0);
             ui.heading("Clock Settings");
             ui.add_space(10.0);
@@ -58,12 +58,14 @@ impl<'a> ControlPanel<'a> {
                     let mut use_24h = *self.state.use_24h.lock().unwrap();
                     if ui.radio_value(&mut use_24h, false, "12-hour").clicked() {
                         *self.state.use_24h.lock().unwrap() = use_24h;
-                        self.state.log("ui", "Changed time format to 12-hour".to_string());
+                        self.state
+                            .log("ui", "Changed time format to 12-hour".to_string());
                         self.state.save_config();
                     }
                     if ui.radio_value(&mut use_24h, true, "24-hour").clicked() {
                         *self.state.use_24h.lock().unwrap() = use_24h;
-                        self.state.log("ui", "Changed time format to 24-hour".to_string());
+                        self.state
+                            .log("ui", "Changed time format to 24-hour".to_string());
                         self.state.save_config();
                     }
                 });
@@ -73,12 +75,16 @@ impl<'a> ControlPanel<'a> {
             ui.add_space(20.0);
             ui.collapsing("🎛️ Controls", |ui| {
                 let mut slider_value = *self.state.slider_value.lock().unwrap();
-                if ui.add(egui::Slider::new(&mut slider_value, 0.0..=100.0).text("Value")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut slider_value, 0.0..=100.0).text("Value"))
+                    .changed()
+                {
                     *self.state.slider_value.lock().unwrap() = slider_value;
                     if let Some(signal) = &*self.state.event_signal.lock().unwrap() {
                         let _ = signal.send(Event::SliderChanged(slider_value));
                     }
-                    self.state.log("ui", format!("Slider value changed to {slider_value}"));
+                    self.state
+                        .log("ui", format!("Slider value changed to {slider_value}"));
                     self.state.save_config();
                 }
 
@@ -90,7 +96,10 @@ impl<'a> ControlPanel<'a> {
                     .selected_text(combo_value.clone())
                     .show_ui(ui, |ui| {
                         for option in ["Option A", "Option B", "Option C"].iter() {
-                            if ui.selectable_label(combo_value == *option, *option).clicked() {
+                            if ui
+                                .selectable_label(combo_value == *option, *option)
+                                .clicked()
+                            {
                                 *self.state.combo_value.lock().unwrap() = option.to_string();
                                 if let Some(signal) = &*self.state.event_signal.lock().unwrap() {
                                     let _ = signal.send(Event::ComboSelected(option.to_string()));
@@ -101,7 +110,6 @@ impl<'a> ControlPanel<'a> {
                     });
             });
 
-
             // Button Colors Section
             ui.add_space(20.0);
             ui.collapsing("🎨 Button Colors", |ui| {
@@ -110,12 +118,16 @@ impl<'a> ControlPanel<'a> {
 
                 ui.horizontal(|ui| {
                     ui.label("RUN State:");
-                    changed |= ui.color_edit_button_srgba(&mut button_colors.run_state).changed();
+                    changed |= ui
+                        .color_edit_button_srgba(&mut button_colors.run_state)
+                        .changed();
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("STOP State:");
-                    changed |= ui.color_edit_button_srgba(&mut button_colors.stop_state).changed();
+                    changed |= ui
+                        .color_edit_button_srgba(&mut button_colors.stop_state)
+                        .changed();
                 });
 
                 if changed {
@@ -163,19 +175,25 @@ impl<'a> ControlPanel<'a> {
 
                 ui.horizontal(|ui| {
                     ui.label("Time Format:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.time_format).changed();
+                    changed |= ui
+                        .color_edit_button_srgba(&mut colors.time_format)
+                        .changed();
                     colors_clone.time_format = colors.time_format;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Custom Events:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.custom_event).changed();
+                    changed |= ui
+                        .color_edit_button_srgba(&mut colors.custom_event)
+                        .changed();
                     colors_clone.custom_event = colors.custom_event;
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("RUN/STOP Events:");
-                    changed |= ui.color_edit_button_srgba(&mut colors.run_stop_log).changed();
+                    changed |= ui
+                        .color_edit_button_srgba(&mut colors.run_stop_log)
+                        .changed();
                     colors_clone.run_stop_log = colors.run_stop_log;
                 });
 
@@ -196,7 +214,7 @@ impl<'a> ControlPanel<'a> {
                     .rounding(4.0)
                     .margin(egui::Vec2::new(4.0, 2.0))
                     .min_size(egui::vec2(120.0, 24.0));
-                
+
                 if custom_button.show(ui).clicked() {
                     let colors = self.state.colors.lock().unwrap();
                     let custom_event = crate::logger::LogEntry {
@@ -217,7 +235,7 @@ impl<'a> ControlPanel<'a> {
                     .rounding(4.0)
                     .margin(egui::Vec2::new(4.0, 2.0))
                     .min_size(egui::vec2(120.0, 24.0));
-                
+
                 if styled_button.show(ui).clicked() {
                     let colors = self.state.colors.lock().unwrap();
                     let custom_event = crate::logger::LogEntry {
@@ -235,13 +253,17 @@ impl<'a> ControlPanel<'a> {
                 ui.group(|ui| {
                     ui.label("Log Buffer Size:");
                     let mut buffer_size = *self.state.buffer_size.lock().unwrap();
-                    if ui.add(egui::DragValue::new(&mut buffer_size)
-                        .range(100..=10000)
-                        .speed(100)
-                        .prefix("Max entries: ")
-                    ).changed() {
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut buffer_size)
+                                .range(100..=10000)
+                                .speed(100)
+                                .prefix("Max entries: "),
+                        )
+                        .changed()
+                    {
                         *self.state.buffer_size.lock().unwrap() = buffer_size;
-                        
+
                         // Log the buffer size change
                         let colors = self.state.colors.lock().unwrap();
                         let custom_event = crate::logger::LogEntry {
@@ -259,16 +281,16 @@ impl<'a> ControlPanel<'a> {
                 // RUN/STOP Button
                 let mut button_started = self.state.button_started.lock().unwrap();
                 let button_colors = self.state.button_colors.lock().unwrap();
-                
+
                 let mut stateful_button = StatefulButton::new()
                     .margin(egui::Vec2::new(4.0, 2.0))
                     .rounding(4.0)
                     .min_size(egui::vec2(120.0, 24.0))
                     .run_color(button_colors.run_state)
                     .stop_color(button_colors.stop_state);
-                
+
                 stateful_button.set_started(*button_started);
-                
+
                 if stateful_button.show(ui).clicked() {
                     *button_started = !*button_started;
                     let message = if *button_started {

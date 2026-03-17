@@ -1,21 +1,21 @@
-//! Core types and traits for building **egui_mobius_reactive** applications. 
+//! Core types and traits for building **egui_mobius_reactive** applications.
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
 /// Subscribers
-/// 
+///
 /// A vector of boxed Fn() function trait objects wrapped in an Arc<Mutex>.
-/// This becomes this vector of **callbacks** that are 
+/// This becomes this vector of **callbacks** that are
 /// triggered when a `Dynamic<T>` or `Derived<T>` changes, or any other
 /// reactive type that implements the `ReactiveValue` trait.
-/// 
+///
 /// Subscribers are very similar to Slots in the Signal-Slot pattern, in that
 /// both are used to invoke a callback when a value is change (in the case of Subscribers)
 /// or when a signal has been received (in the case of Slots).
 ///
 pub type Subscribers = Arc<Mutex<Vec<Box<dyn Fn() + Send + Sync>>>>;
 
-/// Trait implemented by all reactive types (`Dynamic`, `Derived`, `ReactiveList`) 
+/// Trait implemented by all reactive types (`Dynamic`, `Derived`, `ReactiveList`)
 /// that can be observed for changes.
 ///
 /// This trait provides a common interface for subscribing to changes in reactive types
@@ -92,8 +92,6 @@ pub trait ReactiveValue: Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }
 
-
-
 /// A reactive list that notifies subscribers when items are added, removed, or cleared.
 ///
 /// Each modification to the internal `Vec<T>` triggers all registered callbacks.
@@ -107,8 +105,8 @@ pub trait ReactiveValue: Send + Sync {
 /// list.on_change(|| println!("List changed!"));
 /// ```
 pub struct ReactiveList<T> {
-    items       : Arc<Mutex<Vec<T>>>,
-    subscribers : Subscribers,
+    items: Arc<Mutex<Vec<T>>>,
+    subscribers: Subscribers,
 }
 
 impl<T: Clone + Send + Sync + 'static> ReactiveList<T> {

@@ -1,6 +1,6 @@
-use eframe::egui;
-use crate::state::AppState;
 use crate::logger::LogEntry;
+use crate::state::AppState;
+use eframe::egui;
 
 pub struct LoggerPanel<'a> {
     state: &'a AppState,
@@ -61,62 +61,62 @@ impl<'a> LoggerPanel<'a> {
                 });
                 ui.add_space(8.0);
 
-            // Split entries into two columns
-            let mut time_updates: Vec<&LogEntry> = Vec::new();
-            let mut ui_events: Vec<&LogEntry> = Vec::new();
+                // Split entries into two columns
+                let mut time_updates: Vec<&LogEntry> = Vec::new();
+                let mut ui_events: Vec<&LogEntry> = Vec::new();
 
-            for entry in logs.iter().rev() {
-                if !filters.contains(&entry.source) {
-                    continue;
-                }
-                if entry.source == "clock" {
-                    time_updates.push(entry);
-                } else if entry.source == "ui" {
-                    ui_events.push(entry);
-                }
-            }
-
-            // Display entries side by side
-            ui.horizontal(|ui| {
-                // Time Updates column
-                ui.vertical(|ui| {
-                    ui.set_min_width(280.0);
-                    for entry in time_updates.iter() {
-                        let text = egui::RichText::new(entry.formatted()).monospace();
-                        ui.label(text.color(colors.clock));
+                for entry in logs.iter().rev() {
+                    if !filters.contains(&entry.source) {
+                        continue;
                     }
-                });
-
-                // Spacer
-                ui.add_space(20.0);
-
-                // UI Events column
-                ui.vertical(|ui| {
-                    ui.set_min_width(400.0);
-                    for entry in ui_events.iter() {
-                        // Use the entry's custom color if available, otherwise determine from message
-                        let color = entry.color.unwrap_or_else(|| {
-                            if entry.message.contains("Slider value") {
-                                colors.slider
-                            } else if entry.message.contains("Selected option: Option A") {
-                                colors.option_a
-                            } else if entry.message.contains("Selected option: Option B") {
-                                colors.option_b
-                            } else if entry.message.contains("Selected option: Option C") {
-                                colors.option_c
-                            } else if entry.message.contains("Time format changed") {
-                                colors.time_format
-                            } else if entry.message.contains("Custom Event") {
-                                colors.custom_event
-                            } else {
-                                colors.time_format // Default color
-                            }
-                        });
-                        let text = egui::RichText::new(entry.formatted()).monospace();
-                        ui.label(text.color(color));
+                    if entry.source == "clock" {
+                        time_updates.push(entry);
+                    } else if entry.source == "ui" {
+                        ui_events.push(entry);
                     }
+                }
+
+                // Display entries side by side
+                ui.horizontal(|ui| {
+                    // Time Updates column
+                    ui.vertical(|ui| {
+                        ui.set_min_width(280.0);
+                        for entry in time_updates.iter() {
+                            let text = egui::RichText::new(entry.formatted()).monospace();
+                            ui.label(text.color(colors.clock));
+                        }
+                    });
+
+                    // Spacer
+                    ui.add_space(20.0);
+
+                    // UI Events column
+                    ui.vertical(|ui| {
+                        ui.set_min_width(400.0);
+                        for entry in ui_events.iter() {
+                            // Use the entry's custom color if available, otherwise determine from message
+                            let color = entry.color.unwrap_or_else(|| {
+                                if entry.message.contains("Slider value") {
+                                    colors.slider
+                                } else if entry.message.contains("Selected option: Option A") {
+                                    colors.option_a
+                                } else if entry.message.contains("Selected option: Option B") {
+                                    colors.option_b
+                                } else if entry.message.contains("Selected option: Option C") {
+                                    colors.option_c
+                                } else if entry.message.contains("Time format changed") {
+                                    colors.time_format
+                                } else if entry.message.contains("Custom Event") {
+                                    colors.custom_event
+                                } else {
+                                    colors.time_format // Default color
+                                }
+                            });
+                            let text = egui::RichText::new(entry.formatted()).monospace();
+                            ui.label(text.color(color));
+                        }
+                    });
                 });
             });
-        });
     }
 }

@@ -1,21 +1,21 @@
 // examples/dashboard_async/main.rs
 ///
-/// *** Notes for this example *** 
-/// 
+/// *** Notes for this example ***
+///
 /// This is a "monolithic" example that demonstrates how to use the egui_mobius library to create
 /// an async based application that fetches cryptocurrency prices from the Kraken API. The example
 /// uses the egui library for the UI, and the reqwest library for the HTTP requests. The example
 /// uses the egui_mobius library for the signal-slot architecture, and the async dispatcher for
 /// handling the async requests. The example fetches the prices of Bitcoin, Kaspa, Solana, Stellar,
 /// and SUI, and displays them in the UI. The example also logs the prices in a price log.
-/// 
+///
 /// The various parts of the code could be refactored into separate modules, but for the sake of
 /// simplicity, everything is in one file. The main function is the entry point of the application.
 /// The main purpose of the example is to illustrate how all the different aspects of the egui_mobius
 /// library can be used together to create an async based application.
-/// 
+///
 /// James Bonanno, <atlantix-eda@proton.me>, 15 March 2025
-/// 
+///
 use egui::Context;
 use egui_mobius::dispatching::AsyncDispatcher;
 use egui_mobius::factory;
@@ -42,7 +42,7 @@ pub enum Processed {
 }
 
 /// Updatable Trait
-/// 
+///
 /// The Updatable trait is a generic trait that is used to update the state of the application
 /// with a message of type T. The Updatable trait is implemented for the AppState struct
 /// to allow the AppState to be updated with a Processed message, that is coming from the background
@@ -53,11 +53,11 @@ pub trait Updatable<T> {
 }
 
 /// Implement the Updatable trait for the AppState struct
-/// 
+///
 /// The Updatable trait is implemented for the AppState struct to allow the AppState to be updated
 /// with a Processed message, that is coming from the background dispatcher. Note that the AppState
 /// struct is updated with a Processed message, not an Event message! Also note the private function
-/// record_price_entry is called from the update method. This is possible due the factor that the 
+/// record_price_entry is called from the update method. This is possible due the factor that the
 /// Updatable trait is implemented for the AppState struct.
 ///
 impl Updatable<Processed> for AppState {
@@ -71,7 +71,8 @@ impl Updatable<Processed> for AppState {
                     self.record_price_entry("BTC", p);
                 } else {
                     self.bitcoin_price = None;
-                    self.error_message = Some("Failed to retrieve a valid Bitcoin price.".to_string());
+                    self.error_message =
+                        Some("Failed to retrieve a valid Bitcoin price.".to_string());
                 }
             }
             Processed::KaspaPrice(p) => {
@@ -82,7 +83,8 @@ impl Updatable<Processed> for AppState {
                     self.record_price_entry("KAS", p);
                 } else {
                     self.kaspa_price = None;
-                    self.error_message = Some("Failed to retrieve a valid Kaspa price.".to_string());
+                    self.error_message =
+                        Some("Failed to retrieve a valid Kaspa price.".to_string());
                 }
             }
             Processed::SolanaPrice(p) => {
@@ -93,7 +95,8 @@ impl Updatable<Processed> for AppState {
                     self.record_price_entry("SOL", p);
                 } else {
                     self.solana_price = None;
-                    self.error_message = Some("Failed to retrieve a valid Solana price.".to_string());
+                    self.error_message =
+                        Some("Failed to retrieve a valid Solana price.".to_string());
                 }
             }
             Processed::StellarPrice(p) => {
@@ -104,7 +107,8 @@ impl Updatable<Processed> for AppState {
                     self.record_price_entry("XLM", p);
                 } else {
                     self.stellar_price = None;
-                    self.error_message = Some("Failed to retrieve a valid Stellar price.".to_string());
+                    self.error_message =
+                        Some("Failed to retrieve a valid Stellar price.".to_string());
                 }
             }
             Processed::SuiPrice(p) => {
@@ -122,13 +126,12 @@ impl Updatable<Processed> for AppState {
     }
 }
 
-
 /// AppState
 ///
 /// AppState is the main state struct for the application. It holds the state of the application,
 /// such as the prices of the cryptocurrencies, the loading coin, etc. The AppState struct is
 /// updated with a Processed message, that is coming from the background dispatcher. The AppState
-/// struct is updated with a Processed message from the AsyncDispatcher, via the Updatable trait! 
+/// struct is updated with a Processed message from the AsyncDispatcher, via the Updatable trait!
 ///
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -160,19 +163,18 @@ impl AppState {
 
     /// Making this a private function, as it is "owned" by the AppState
     /// and should not be called from outside the AppState.
-    fn record_price_entry(&mut self, symbol: &str, price: f64)
-    {
+    fn record_price_entry(&mut self, symbol: &str, price: f64) {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-        self.price_log.push(format!("[{timestamp}] {symbol}: ${price:.6}"));
+        self.price_log
+            .push(format!("[{timestamp}] {symbol}: ${price:.6}"));
         if self.price_log.len() > 1000 {
             self.price_log.drain(0..self.price_log.len() - 1000);
         }
     }
-
 }
 
 /// UiMainWindow
-/// 
+///
 /// The UiMainWindow struct is the main UI window for the application.
 /// It is responsible for rendering the UI and handling user input.
 /// The UiMainWindow struct holds a `Value<AppState>` that is shared with the
@@ -309,8 +311,8 @@ impl eframe::App for UiMainWindow {
 }
 
 /// Main function
-/// 
-/// The main function is the entry point of the application. It creates the Signal and Slot instances, 
+///
+/// The main function is the entry point of the application. It creates the Signal and Slot instances,
 /// UiMainWindow instance, and the AsyncDispatcher instance. The main function also creates the
 /// eframe::NativeOptions instance, and runs the eframe::run_native function to run the application.
 ///
@@ -322,7 +324,7 @@ fn main() {
 
     let dispatcher = AsyncDispatcher::<Event, Processed>::new();
     let signal_to_ui = signal_to_ui.clone();
-    
+
     dispatcher.attach_async(slot_from_ui, signal_to_ui.clone(), |event| async move {
         match event {
             Event::FetchBitcoin => {
@@ -347,7 +349,7 @@ fn main() {
             }
         }
     });
-    
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_titlebar_buttons_shown(true)

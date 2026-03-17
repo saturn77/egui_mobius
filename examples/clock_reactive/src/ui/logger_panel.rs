@@ -1,4 +1,3 @@
-
 use crate::state::AppState;
 use eframe::egui;
 pub struct LoggerPanel<'a> {
@@ -65,10 +64,12 @@ impl<'a> LoggerPanel<'a> {
                 ui.add_space(8.0);
 
                 // Sort logs by source
-                let time_updates: Vec<_> = filtered_logs.iter()
+                let time_updates: Vec<_> = filtered_logs
+                    .iter()
                     .filter(|entry| entry.source == "clock")
                     .collect();
-                let ui_events: Vec<_> = filtered_logs.iter()
+                let ui_events: Vec<_> = filtered_logs
+                    .iter()
                     .filter(|entry| entry.source == "ui")
                     .collect();
 
@@ -78,9 +79,12 @@ impl<'a> LoggerPanel<'a> {
                     ui.vertical(|ui| {
                         ui.set_min_width(280.0);
                         for entry in time_updates.iter().rev() {
-                            let text = egui::RichText::new(
-                                format!("[{}] {}", entry.timestamp.format("%H:%M:%S"), entry.message)
-                            ).monospace();
+                            let text = egui::RichText::new(format!(
+                                "[{}] {}",
+                                entry.timestamp.format("%H:%M:%S"),
+                                entry.message
+                            ))
+                            .monospace();
                             ui.label(text.color(colors.clock));
                         }
                     });
@@ -92,9 +96,12 @@ impl<'a> LoggerPanel<'a> {
                     ui.vertical(|ui| {
                         ui.set_min_width(400.0);
                         for entry in ui_events.iter().rev() {
-                            let text = egui::RichText::new(
-                                format!("[{}] {}", entry.timestamp.format("%H:%M:%S"), entry.message)
-                            ).monospace();
+                            let text = egui::RichText::new(format!(
+                                "[{}] {}",
+                                entry.timestamp.format("%H:%M:%S"),
+                                entry.message
+                            ))
+                            .monospace();
                             ui.label(text.color(entry.color.unwrap_or(colors.custom_event)));
                         }
                     });

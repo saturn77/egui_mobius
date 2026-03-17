@@ -8,12 +8,12 @@
 //! Each Slot can run on its own thread or within the tokio runtime, allowing flexible
 //! concurrent execution independent of the main application thread.
 
-use std::sync::{Arc, Mutex};
-use std::fmt::{Debug, Display};
-use std::sync::mpsc::Receiver;
-use std::thread;
-use std::panic::AssertUnwindSafe;
 use futures::FutureExt;
+use std::fmt::{Debug, Display};
+use std::panic::AssertUnwindSafe;
+use std::sync::mpsc::Receiver;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 /// Slot struct with receiver
 pub struct Slot<T> {
@@ -95,13 +95,12 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{mpsc, Arc, Mutex};
-    use std::time::Duration;
+    use std::sync::{Arc, Mutex, mpsc};
     use std::thread;
+    use std::time::Duration;
     use tokio::sync::Notify;
 
     #[derive(PartialEq, Clone, Debug)]

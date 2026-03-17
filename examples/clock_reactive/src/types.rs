@@ -1,11 +1,11 @@
-use serde::{Deserialize, Serialize};
-use egui::Color32;
 use chrono::{DateTime, Local};
+use egui::Color32;
+use serde::{Deserialize, Serialize};
 use std::{fs::OpenOptions, io::Write};
 
 mod color32_serde {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use eframe::egui::Color32;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     pub fn serialize<S>(color: &Color32, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -20,7 +20,9 @@ mod color32_serde {
         D: Deserializer<'de>,
     {
         let rgba = <[u8; 4]>::deserialize(deserializer)?;
-        Ok(Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]))
+        Ok(Color32::from_rgba_unmultiplied(
+            rgba[0], rgba[1], rgba[2], rgba[3],
+        ))
     }
 }
 
@@ -34,10 +36,10 @@ pub struct LogEntry {
 
 impl PartialEq for LogEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.timestamp.timestamp() == other.timestamp.timestamp() &&
-        self.source == other.source &&
-        self.message == other.message &&
-        self.color == other.color
+        self.timestamp.timestamp() == other.timestamp.timestamp()
+            && self.source == other.source
+            && self.message == other.message
+            && self.color == other.color
     }
 }
 
@@ -127,11 +129,11 @@ impl Default for ButtonColors {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub slider_value  : f32,
-    pub combo_value   : String,
-    pub time_format   : String,
-    pub colors        : LogColors,
-    pub button_colors : ButtonColors,
+    pub slider_value: f32,
+    pub combo_value: String,
+    pub time_format: String,
+    pub colors: LogColors,
+    pub button_colors: ButtonColors,
 }
 
 impl Default for Config {

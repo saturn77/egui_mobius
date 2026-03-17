@@ -1,3 +1,19 @@
+## [0.3.0-alpha.33] - 2026-03-17
+
+### Changed
+- Updated to egui 0.33 and eframe 0.33
+- Updated egui_plot from 0.33 to 0.34 (aligned with egui 0.33)
+- Switched egui_taffy to v0.10.0 from PPakalns/egui_taffy (crates.io)
+- Updated egui-winit and egui_extras to 0.33
+
+### Fixed
+- Fixed clippy warnings: replaced `assert_eq!` with literal bools with `assert!`/`assert!(!...)`
+- Fixed clippy warnings: removed unit-value let bindings in runtime tests
+- Applied `cargo fmt` across the workspace
+
+### Removed
+- Removed unused `egui_mobius_harness` crate from workspace
+
 ## [0.3.0-alpha.31] - 2025-04-25
 
 ### Added

@@ -1,20 +1,20 @@
+mod runtime_integration;
 mod state;
 mod types;
 mod ui;
-mod runtime_integration;
-use std::sync::Arc;
 use eframe::egui;
+use std::sync::Arc;
 
-use egui_taffy::{taffy, tui};
-use taffy::prelude::{length, percent, Style};
-use egui_taffy::TuiBuilderLogic;
+use crate::runtime_integration::RuntimeManager;
 use crate::state::AppState;
 use crate::ui::{ControlPanel, LoggerPanel};
-use crate::runtime_integration::RuntimeManager;
+use egui_taffy::TuiBuilderLogic;
+use egui_taffy::{taffy, tui};
+use taffy::prelude::{length, percent, Style};
 
 struct ClockApp {
-    state    : Arc<AppState>,
-    _runtime : RuntimeManager,
+    state: Arc<AppState>,
+    _runtime: RuntimeManager,
 }
 
 impl eframe::App for ClockApp {
@@ -114,6 +114,6 @@ fn main() -> eframe::Result<()> {
                 state,
                 _runtime: runtime,
             }))
-        })
+        }),
     )
 }

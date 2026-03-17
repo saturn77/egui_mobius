@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::{fs::OpenOptions, io::Write};
 
 mod color32_serde {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use eframe::egui::Color32;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     pub fn serialize<S>(color: &Color32, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -20,7 +20,9 @@ mod color32_serde {
         D: Deserializer<'de>,
     {
         let rgba = <[u8; 4]>::deserialize(deserializer)?;
-        Ok(Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]))
+        Ok(Color32::from_rgba_unmultiplied(
+            rgba[0], rgba[1], rgba[2], rgba[3],
+        ))
     }
 }
 
@@ -35,8 +37,8 @@ pub struct ButtonColors {
 impl Default for ButtonColors {
     fn default() -> Self {
         Self {
-            run_state: egui::Color32::GREEN,    // Green for RUN state
-            stop_state: egui::Color32::RED,     // Red for STOP state
+            run_state: egui::Color32::GREEN, // Green for RUN state
+            stop_state: egui::Color32::RED,  // Red for STOP state
         }
     }
 }
@@ -64,11 +66,11 @@ pub struct LogColors {
 impl Default for LogColors {
     fn default() -> Self {
         Self {
-            clock: egui::Color32::from_rgb(100, 200, 255),     // Light Blue
-            slider: egui::Color32::from_rgb(255, 180, 100),    // Orange
-            option_a: egui::Color32::from_rgb(255, 150, 150),  // Soft Red
-            option_b: egui::Color32::from_rgb(150, 255, 150),  // Soft Green
-            option_c: egui::Color32::from_rgb(150, 150, 255),  // Soft Blue
+            clock: egui::Color32::from_rgb(100, 200, 255), // Light Blue
+            slider: egui::Color32::from_rgb(255, 180, 100), // Orange
+            option_a: egui::Color32::from_rgb(255, 150, 150), // Soft Red
+            option_b: egui::Color32::from_rgb(150, 255, 150), // Soft Green
+            option_c: egui::Color32::from_rgb(150, 150, 255), // Soft Blue
             time_format: egui::Color32::from_rgb(190, 140, 255), // Purple
             custom_event: egui::Color32::from_rgb(255, 215, 0), // Gold
             run_stop_log: egui::Color32::from_rgb(255, 215, 0), // Gold

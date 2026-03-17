@@ -1,8 +1,8 @@
 use eframe::egui;
-use egui_mobius_components::*;
 use egui_mobius_components::components::event_logger::processor::run_logger_backend;
-use std::time::Duration;
+use egui_mobius_components::*;
 use std::thread;
+use std::time::Duration;
 
 fn main() -> Result<(), eframe::Error> {
     let native_options = eframe::NativeOptions {
@@ -19,14 +19,12 @@ fn main() -> Result<(), eframe::Error> {
         native_options,
         Box::new(|cc| {
             // Initialize logger with signal/slot
-            let (logger, event_slot, response_signal) = create_event_logger(
-                cc.egui_ctx.clone(), 
-                LogColors::default()
-            );
-            
+            let (logger, event_slot, response_signal) =
+                create_event_logger(cc.egui_ctx.clone(), LogColors::default());
+
             // Run the logger backend
             run_logger_backend(event_slot, response_signal);
-            
+
             // Create the app with the logger
             Ok(Box::new(MyApp::new(logger)))
         }),
@@ -44,18 +42,15 @@ impl MyApp {
         logger.info(
             "Application started".to_string(),
             LogSender::system(),
-            LogType::Default
+            LogType::Default,
         );
 
-        Self {
-            logger,
-            counter: 0,
-        }
+        Self { logger, counter: 0 }
     }
-    
+
     fn add_random_log(&mut self) {
         self.counter += 1;
-        
+
         // Create different message types based on counter
         let message = match self.counter % 4 {
             0 => Message::Info(format!("Info message #{}", self.counter)),
@@ -93,44 +88,44 @@ impl eframe::App for MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
                 ui.heading("Event Logger Example");
-                
+
                 // Button row
                 ui.horizontal(|ui| {
                     if ui.button("Add Random Log").clicked() {
                         self.add_random_log();
                     }
-                    
+
                     if ui.button("Add Info Log").clicked() {
                         self.counter += 1;
                         self.logger.info(
                             format!("Information log at time {}", self.counter),
                             LogSender::button("Info Button"),
-                            LogType::Default
+                            LogType::Default,
                         );
                     }
-                    
+
                     if ui.button("Add Warning Log").clicked() {
                         self.counter += 1;
                         self.logger.warn(
                             format!("Warning log at time {}", self.counter),
                             LogSender::slider("Warning Slider"),
-                            LogType::Slider
+                            LogType::Slider,
                         );
                     }
-                    
+
                     if ui.button("Add Error Log").clicked() {
                         self.counter += 1;
                         self.logger.error(
                             format!("Error log at time {}", self.counter),
                             LogSender::text_field("Error Text Field"),
-                            LogType::RunStop
+                            LogType::RunStop,
                         );
                     }
-                    
+
                     if ui.button("Clear Log").clicked() {
                         self.logger.clear();
                     }
-                    
+
                     // Background thread button
                     if ui.button("Add Logs From Thread").clicked() {
                         let logger = self.logger.clone();
@@ -139,20 +134,20 @@ impl eframe::App for MyApp {
                                 logger.info(
                                     format!("Background thread log #{i}"),
                                     LogSender::button("Background Thread"),
-                                    LogType::Primary
+                                    LogType::Primary,
                                 );
                                 thread::sleep(Duration::from_millis(500));
                             }
                         });
                     }
                 });
-                
+
                 ui.separator();
-                
+
                 // Display the logger
                 ui.heading("Event Log");
                 ui.separator();
-                
+
                 // Create a scrollable area for the logger
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     self.logger.show(ui);

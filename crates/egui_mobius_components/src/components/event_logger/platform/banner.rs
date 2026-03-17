@@ -15,13 +15,12 @@ impl Banner {
             message: String::new(),
         }
     }
-    
+
     /// Formats the banner with version and build information
     pub fn format(&mut self) {
         self.message = format!(
-            "**** Welcome to Arrakis Serial Runtime, Version {}.{}.{}\n**** Today is {} {}:{}:{}", 
-            0, 1, 0,
-            "04-25-2025", 16, 41, 3
+            "**** Welcome to Arrakis Serial Runtime, Version {}.{}.{}\n**** Today is {} {}:{}:{}",
+            0, 1, 0, "04-25-2025", 16, 41, 3
         );
     }
 }

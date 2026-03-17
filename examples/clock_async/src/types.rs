@@ -1,5 +1,5 @@
+use crate::logger::{ButtonColors, LogColors};
 use serde::{Deserialize, Serialize};
-use crate::logger::{LogColors, ButtonColors};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {

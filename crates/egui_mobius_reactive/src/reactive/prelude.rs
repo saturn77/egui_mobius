@@ -5,14 +5,13 @@
 //! use egui_mobius_reactive::*;
 //! ```
 
-
 pub use super::{
+    core::{ReactiveList, ReactiveValue, Subscribers},
     derived::Derived,
     dynamic::{Dynamic, ValueExt},
-    registry::SignalRegistry,
-    core::{ReactiveValue, ReactiveList, Subscribers},
-    reactive_math::{ReactiveMath, ReactiveLogic, ReactiveString, ReactiveListSum},
+    reactive_math::{ReactiveListSum, ReactiveLogic, ReactiveMath, ReactiveString},
     reactive_state::ReactiveWidgetRef,
+    registry::SignalRegistry,
 };
 
 #[cfg(feature = "widgets")]

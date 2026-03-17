@@ -1,18 +1,18 @@
 /// State management for the Clock example
-/// 
+///
 /// This module contains the AppState struct which holds all the reactive state for the Clock example.
-/// The AppState struct contains all the reactive values and derived values that are used to manage 
+/// The AppState struct contains all the reactive values and derived values that are used to manage
 /// the state of the application.
-/// 
+///
 /// Dynamic<T> is a reactive value that can be updated and read from any part of the application.
 /// Derived<T> is a reactive value that is derived from other reactive values. It is recomputed
 /// whenever any of the dependent reactive values change.
 ///
 ///
-use crate::types::{Config, LogColors, ButtonColors, LogEntry};
+use crate::types::{ButtonColors, Config, LogColors, LogEntry};
 use chrono::Local;
 use eframe::egui;
-use egui_mobius_reactive::*; 
+use egui_mobius_reactive::*;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -30,7 +30,7 @@ use std::sync::Arc;
 ///  - button_colors: Dynamic<ButtonColors>
 ///  - button_started: Dynamic<bool>
 ///  - use_24h: Dynamic<bool>
-/// 
+///
 /// The logs are what is displayed in the log window. The log_filters are used to filter the logs
 /// based on the source of the log. The buffer_size is the maximum number of logs to keep in the
 /// logs buffer. The slider_value and combo_value are used to display the current values of the
@@ -44,31 +44,30 @@ use std::sync::Arc;
 ///  - filtered_logs: Derived<VecDeque<LogEntry>>
 ///  - log_count: Derived<usize>
 ///  - formatted_time: Derived<String>
-/// 
+///
 /// The filtered_logs is a derived value that filters the logs based on the log_filters. The log_count
 /// is a derived value that keeps track of the number of logs in the logs buffer. The formatted_time
 /// is a derived value that formats the current time based on the use_24h value.
 ///
 #[derive(Clone)]
 pub struct AppState {
-    pub slider_value   : Dynamic<f32>,
-    pub combo_value    : Dynamic<String>,
-    pub current_time   : Dynamic<String>,
-    pub logs           : Dynamic<VecDeque<LogEntry>>,
-    pub log_filters    : Dynamic<Vec<String>>,
-    pub buffer_size    : Dynamic<usize>,
+    pub slider_value: Dynamic<f32>,
+    pub combo_value: Dynamic<String>,
+    pub current_time: Dynamic<String>,
+    pub logs: Dynamic<VecDeque<LogEntry>>,
+    pub log_filters: Dynamic<Vec<String>>,
+    pub buffer_size: Dynamic<usize>,
     //pub repaint        : egui::Context,
-    pub colors         : Dynamic<LogColors>,
-    pub button_colors  : Dynamic<ButtonColors>,
-    pub button_started : Dynamic<bool>,
-    pub use_24h        : Dynamic<bool>,
-    
-    // Derived values
-    pub filtered_logs  : Derived<VecDeque<LogEntry>>,
-    pub log_count      : Derived<usize>,
-    pub formatted_time : Derived<String>,
-}
+    pub colors: Dynamic<LogColors>,
+    pub button_colors: Dynamic<ButtonColors>,
+    pub button_started: Dynamic<bool>,
+    pub use_24h: Dynamic<bool>,
 
+    // Derived values
+    pub filtered_logs: Derived<VecDeque<LogEntry>>,
+    pub log_count: Derived<usize>,
+    pub formatted_time: Derived<String>,
+}
 
 impl AppState {
     pub fn new(_repaint: egui::Context, config: Config) -> Self {
@@ -77,8 +76,9 @@ impl AppState {
         let logs_clone = logs.clone();
         let logs_clone_2 = logs.clone();
         let logs_clone_3 = logs.clone();
-        
-        let log_filters: Dynamic<Vec<String>> = Dynamic::new(vec!["ui".to_string(), "clock".to_string()]);
+
+        let log_filters: Dynamic<Vec<String>> =
+            Dynamic::new(vec!["ui".to_string(), "clock".to_string()]);
         let log_filters_clone = log_filters.clone();
         let current_time: Dynamic<String> = Dynamic::new(String::new());
         let current_time_clone = current_time.clone();
@@ -86,72 +86,63 @@ impl AppState {
         let use_24h: Dynamic<bool> = Dynamic::new(config.time_format == "24h");
         let use_24h_clone = use_24h.clone();
         let use_24h_clone_2 = use_24h.clone();
-        
+
         // Create derived values
         let deps = [
             Arc::new(logs_clone.clone()) as Arc<dyn ReactiveValue>,
-            Arc::new(log_filters_clone.clone()) as Arc<dyn ReactiveValue>
+            Arc::new(log_filters_clone.clone()) as Arc<dyn ReactiveValue>,
         ];
-        let filtered_logs = Derived::new(
-            &deps,
-            move || {
-                let logs = logs_clone_2.get();
-                let filters = log_filters_clone.get();
-                let mut filtered = VecDeque::new();
-                for log in logs.iter() {
-                    if filters.contains(&log.source) {
-                        filtered.push_back(log.clone());
-                    }
+        let filtered_logs = Derived::new(&deps, move || {
+            let logs = logs_clone_2.get();
+            let filters = log_filters_clone.get();
+            let mut filtered = VecDeque::new();
+            for log in logs.iter() {
+                if filters.contains(&log.source) {
+                    filtered.push_back(log.clone());
                 }
-                filtered
             }
-        );
-        
+            filtered
+        });
+
         let deps = [Arc::new(logs_clone_3.clone()) as Arc<dyn ReactiveValue>];
-        let log_count = Derived::new(
-            &deps,
-            move || logs_clone_3.clone().get().len()
-        );
-        
+        let log_count = Derived::new(&deps, move || logs_clone_3.clone().get().len());
+
         let deps = [
             Arc::new(current_time_clone) as Arc<dyn ReactiveValue>,
-            Arc::new(use_24h_clone) as Arc<dyn ReactiveValue>
+            Arc::new(use_24h_clone) as Arc<dyn ReactiveValue>,
         ];
-        let formatted_time = Derived::new(
-            &deps,
-            move || {
-                let time = current_time_clone_2.get();
-                let use_24h = use_24h_clone_2.get();
-                if use_24h {
-                    time.clone()
-                } else {
-                    time.trim_start_matches('0').to_string()
-                }
+        let formatted_time = Derived::new(&deps, move || {
+            let time = current_time_clone_2.get();
+            let use_24h = use_24h_clone_2.get();
+            if use_24h {
+                time.clone()
+            } else {
+                time.trim_start_matches('0').to_string()
             }
-        );
+        });
 
         Self {
             current_time,
             logs,
             log_filters,
-            buffer_size    : Dynamic::new(1000),
-            slider_value   : Dynamic::new(config.slider_value),
-            combo_value    : Dynamic::new(config.combo_value),
+            buffer_size: Dynamic::new(1000),
+            slider_value: Dynamic::new(config.slider_value),
+            combo_value: Dynamic::new(config.combo_value),
             //repaint,
-            colors         : Dynamic::new(config.colors),
-            button_colors  : Dynamic::new(config.button_colors),
-            button_started : Dynamic::new(false),
-            use_24h        : Dynamic::new(config.time_format == "24h"),
+            colors: Dynamic::new(config.colors),
+            button_colors: Dynamic::new(config.button_colors),
+            button_started: Dynamic::new(false),
+            use_24h: Dynamic::new(config.time_format == "24h"),
             filtered_logs,
             log_count,
             formatted_time,
         }
     }
 
-    // handle_message is not really used but is kept here to show 
-    // how to handle messages in the AppState struct, particularly if 
+    // handle_message is not really used but is kept here to show
+    // how to handle messages in the AppState struct, particularly if
     // using the EventTrait from the MobiusReactive crate.
-    
+
     // pub fn handle_message(&self, msg: ClockMessage) {
     //     let now = Local::now();
     //     let use_24h = self.use_24h.get();
@@ -200,14 +191,13 @@ impl AppState {
     //     self.repaint.request_repaint();
     // }
 
-
     pub fn save_config(&self) {
         let config = Config {
-            slider_value  : self.slider_value.get(),
-            combo_value   : self.combo_value.get(),
-            time_format   : if self.use_24h.get() { "24h" } else { "12h" }.to_string(),
-            colors        : self.colors.get(),
-            button_colors : self.button_colors.get(),
+            slider_value: self.slider_value.get(),
+            combo_value: self.combo_value.get(),
+            time_format: if self.use_24h.get() { "24h" } else { "12h" }.to_string(),
+            colors: self.colors.get(),
+            button_colors: self.button_colors.get(),
         };
 
         // Move config saving to background thread to avoid blocking UI
@@ -231,7 +221,7 @@ impl AppState {
             } else if message.contains("Process") {
                 Some(colors.run_stop_log)
             } else {
-                Some(colors.custom_event)  // Default for UI events and Custom Events
+                Some(colors.custom_event) // Default for UI events and Custom Events
             }
         } else {
             None

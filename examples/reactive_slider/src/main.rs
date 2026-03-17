@@ -28,7 +28,7 @@ impl App for ReactiveSliderDemo {
         CentralPanel::default().show(ctx, |ui| {
             ui.heading("Reactive Slider Demo");
             ui.spacing();
-            
+
             // Simple slider with default configuration
             ui.label("Basic slider:");
             ReactiveSlider::new(&self.value1)
@@ -36,7 +36,7 @@ impl App for ReactiveSliderDemo {
                 .show(ui);
             ui.label(format!("Value: {:.1}", self.value1.get()));
             ui.spacing();
-            
+
             // Slider with display value and text
             ui.label("Slider with display value and label:");
             ReactiveSlider::new(&self.value2)
@@ -45,7 +45,7 @@ impl App for ReactiveSliderDemo {
                 .with_text("Volume")
                 .show(ui);
             ui.spacing();
-            
+
             // Logarithmic slider
             ui.label("Logarithmic slider:");
             ReactiveSlider::new(&self.value3)
@@ -55,7 +55,7 @@ impl App for ReactiveSliderDemo {
                 .with_text("Sensitivity")
                 .show(ui);
             ui.spacing();
-            
+
             // Show values from all sliders
             ui.separator();
             ui.heading("Current Values");
@@ -71,6 +71,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Reactive Slider Demo",
         native_options,
-        Box::new(|cc| Ok(Box::new(ReactiveSliderDemo::new(cc))))
+        Box::new(|cc| Ok(Box::new(ReactiveSliderDemo::new(cc)))),
     )
 }

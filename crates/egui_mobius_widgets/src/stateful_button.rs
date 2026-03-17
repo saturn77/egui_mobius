@@ -25,8 +25,8 @@
 //! }
 //! ```
 
-use egui::{Response, Ui, Color32, CornerRadius, Stroke, Vec2};
 use egui::epaint::StrokeKind;
+use egui::{Color32, CornerRadius, Response, Stroke, Ui, Vec2};
 
 /// A button that maintains its state (started/stopped) and changes appearance accordingly.
 ///
@@ -36,15 +36,15 @@ use egui::epaint::StrokeKind;
 /// - Corner rounding
 /// - Margin and minimum size settings
 /// - Automatic state persistence between frames
-/// 
-/// Useful for buttons that need to toggle between two states, such as start/stop or on/off. 
-/// 
+///
+/// Useful for buttons that need to toggle between two states, such as start/stop or on/off.
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use egui_mobius_widgets::StatefulButton;
 /// use eframe::egui;
-/// 
+///
 #[derive(Debug)]
 pub struct StatefulButton {
     started: bool,
@@ -167,36 +167,42 @@ impl StatefulButton {
     /// Returns an egui::Response that can be used to check for clicks and hover state
     pub fn show(&mut self, ui: &mut Ui) -> Response {
         ui.add_space(self.margin.y);
-        let response = ui.horizontal(|ui| {
-            ui.add_space(self.margin.x);
-            let text = if self.started { "RUN" } else { "STOP" };
-            let color = if self.started { self.run_color } else { self.stop_color };
-            let button = egui::Button::new(text)
-                .fill(egui::Color32::TRANSPARENT)
-                .corner_radius(CornerRadius::from(self.rounding))
-                .min_size(self.min_size);
+        let response = ui
+            .horizontal(|ui| {
+                ui.add_space(self.margin.x);
+                let text = if self.started { "RUN" } else { "STOP" };
+                let color = if self.started {
+                    self.run_color
+                } else {
+                    self.stop_color
+                };
+                let button = egui::Button::new(text)
+                    .fill(egui::Color32::TRANSPARENT)
+                    .corner_radius(CornerRadius::from(self.rounding))
+                    .min_size(self.min_size);
 
-            let response = ui.add(button);
+                let response = ui.add(button);
 
-            if response.hovered() {
-                ui.painter().rect_stroke(
-                    response.rect,
-                    CornerRadius::from(self.rounding),
-                    Stroke::new(1.0, color.gamma_multiply(1.2)),
-                    StrokeKind::Outside,
-                );
-            } else {
-                ui.painter().rect_stroke(
-                    response.rect,
-                    CornerRadius::from(self.rounding),
-                    Stroke::new(1.0, color),
-                    StrokeKind::Outside,
-                );
-            }
+                if response.hovered() {
+                    ui.painter().rect_stroke(
+                        response.rect,
+                        CornerRadius::from(self.rounding),
+                        Stroke::new(1.0, color.gamma_multiply(1.2)),
+                        StrokeKind::Outside,
+                    );
+                } else {
+                    ui.painter().rect_stroke(
+                        response.rect,
+                        CornerRadius::from(self.rounding),
+                        Stroke::new(1.0, color),
+                        StrokeKind::Outside,
+                    );
+                }
 
-            ui.add_space(self.margin.x);
-            response
-        }).inner;
+                ui.add_space(self.margin.x);
+                response
+            })
+            .inner;
 
         if response.clicked() {
             self.started = !self.started;
@@ -271,8 +277,7 @@ mod tests {
 
     #[test]
     fn test_stateful_button_min_size() {
-        let button = StatefulButton::new()
-            .min_size(Vec2::new(100.0, 50.0));
+        let button = StatefulButton::new().min_size(Vec2::new(100.0, 50.0));
         assert_eq!(button.min_size, Vec2::new(100.0, 50.0));
     }
 }

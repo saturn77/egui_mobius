@@ -21,9 +21,9 @@
 //! signal.send(42).unwrap();
 //! ```
 
-use std::sync::mpsc::{self, Sender, Receiver};
 use crate::signals::Signal;
 use crate::slot::Slot;
+use std::sync::mpsc::{self, Receiver, Sender};
 
 /// Creates a new signal-slot pair.
 ///

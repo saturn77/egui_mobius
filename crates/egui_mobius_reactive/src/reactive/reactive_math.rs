@@ -56,8 +56,8 @@
 //! assert_eq!(result.get(), "Hello, world!");
 //! ```
 
+use std::ops::{Add, Div, Mul, Not, Sub};
 use std::sync::Arc;
-use std::ops::{Add, Sub, Mul, Div, Not};
 
 use crate::{Derived, Dynamic, ReactiveValue};
 
@@ -101,7 +101,6 @@ macro_rules! impl_math_ops {
         }
     };
 }
-
 
 impl_math_ops!(i32);
 
@@ -218,7 +217,6 @@ impl Div<Dynamic<f64>> for Derived<f64> {
     }
 }
 
-
 // Boolean negation
 impl Not for Dynamic<bool> {
     type Output = Derived<bool>;
@@ -234,7 +232,9 @@ impl Add for Dynamic<String> {
     fn add(self, rhs: Self) -> Self::Output {
         let a = Arc::new(self);
         let b = Arc::new(rhs);
-        Derived::new(&[a.clone(), b.clone()], move || format!("{}{}", *a.lock(), *b.lock()))
+        Derived::new(&[a.clone(), b.clone()], move || {
+            format!("{}{}", *a.lock(), *b.lock())
+        })
     }
 }
 
@@ -266,7 +266,9 @@ pub trait ReactiveMath {
 impl ReactiveMath for Dynamic<i32> {
     fn doubled(&self) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || *a.lock() * 2)
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || {
+            *a.lock() * 2
+        })
     }
 
     fn negated(&self) -> Derived<i32> {
@@ -276,12 +278,16 @@ impl ReactiveMath for Dynamic<i32> {
 
     fn powi(&self, exp: u32) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().pow(exp))
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || {
+            a.lock().pow(exp)
+        })
     }
 
     fn abs(&self) -> Derived<i32> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().abs())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || {
+            a.lock().abs()
+        })
     }
 
     fn min(&self, other: &Dynamic<i32>) -> Derived<i32> {
@@ -315,12 +321,16 @@ pub trait ReactiveMathF64 {
 impl ReactiveMathF64 for Dynamic<f64> {
     fn powf(&self, exp: f64) -> Derived<f64> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().powf(exp))
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || {
+            a.lock().powf(exp)
+        })
     }
 
     fn abs(&self) -> Derived<f64> {
         let a = Arc::new(self.clone());
-        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || a.lock().abs())
+        Derived::new(&[a.clone() as Arc<dyn ReactiveValue>], move || {
+            a.lock().abs()
+        })
     }
 
     fn min(&self, other: &Dynamic<f64>) -> Derived<f64> {
@@ -351,14 +361,18 @@ pub trait ReactiveListSum<T: Clone + Send + Sync + 'static> {
 impl ReactiveListSum<i32> for crate::ReactiveList<i32> {
     fn sum(&self) -> Derived<i32> {
         let list = Arc::new(self.clone());
-        Derived::new(&[list.clone() as Arc<dyn ReactiveValue>], move || list.get_all().iter().copied().sum())
+        Derived::new(&[list.clone() as Arc<dyn ReactiveValue>], move || {
+            list.get_all().iter().copied().sum()
+        })
     }
 }
 
 impl ReactiveListSum<f64> for crate::ReactiveList<f64> {
     fn sum(&self) -> Derived<f64> {
         let list = Arc::new(self.clone());
-        Derived::new(&[list.clone() as Arc<dyn ReactiveValue>], move || list.get_all().iter().copied().sum())
+        Derived::new(&[list.clone() as Arc<dyn ReactiveValue>], move || {
+            list.get_all().iter().copied().sum()
+        })
     }
 }
 
@@ -382,7 +396,9 @@ impl ReactiveString for Dynamic<String> {
     fn append(&self, other: &Dynamic<String>) -> Derived<String> {
         let a = Arc::new(self.clone());
         let b = Arc::new(other.clone());
-        Derived::new(&[a.clone(), b.clone()], move || format!("{}{}", *a.lock(), *b.lock()))
+        Derived::new(&[a.clone(), b.clone()], move || {
+            format!("{}{}", *a.lock(), *b.lock())
+        })
     }
 }
 
@@ -419,7 +435,7 @@ mod tests {
     #[test]
     fn test_boolean_not() {
         let flag = Dynamic::new(true);
-        assert_eq!((!flag).get(), false);
+        assert!(!(!flag).get());
     }
 
     #[test]
@@ -456,10 +472,10 @@ mod tests {
 
         let d = a.clone().powf(2.0); // 4.0
 
-        let sum = a.clone() + d.clone();     // 2.0 + 4.0 = 6.0
-        let diff = d.clone() - a.clone();    // 4.0 - 2.0 = 2.0
-        let prod = a.clone() * d.clone();    // 2.0 * 4.0 = 8.0
-        let quot = d.clone() / a.clone();    // 4.0 / 2.0 = 2.0
+        let sum = a.clone() + d.clone(); // 2.0 + 4.0 = 6.0
+        let diff = d.clone() - a.clone(); // 4.0 - 2.0 = 2.0
+        let prod = a.clone() * d.clone(); // 2.0 * 4.0 = 8.0
+        let quot = d.clone() / a.clone(); // 4.0 / 2.0 = 2.0
 
         assert_eq!(sum.get(), 6.0);
         assert_eq!(diff.get(), 2.0);
@@ -494,12 +510,10 @@ mod tests {
         assert_eq!(rem.get(), 0.0);
     }
 
-
-
     #[test]
     fn test_reactive_logic_trait() {
         let val = Dynamic::new(false);
         let toggled = val.not();
-        assert_eq!(toggled.get(), true);
+        assert!(toggled.get());
     }
 }

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use egui::Color32;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub fn serialize<S>(color: &Color32, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -14,5 +14,7 @@ where
     D: Deserializer<'de>,
 {
     let rgba = <[u8; 4]>::deserialize(deserializer)?;
-    Ok(Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]))
+    Ok(Color32::from_rgba_unmultiplied(
+        rgba[0], rgba[1], rgba[2], rgba[3],
+    ))
 }

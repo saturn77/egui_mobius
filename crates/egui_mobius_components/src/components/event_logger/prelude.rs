@@ -13,17 +13,10 @@ pub use super::logger::{EguiMobiusEventLogger, create_event_logger};
 pub use super::logger_state::LoggerState;
 
 // Import and re-export from messages
-pub use super::messages::{
-    Message, 
-    LogEntry,
-    LogSender,
-};
+pub use super::messages::{LogEntry, LogSender, Message};
 
 // Import and re-export from serialization
-pub use super::serialization::color32_serde::{serialize, deserialize};
+pub use super::serialization::color32_serde::{deserialize, serialize};
 
 // Import and re-export from platform
-pub use super::platform::{
-    banner::Banner, 
-    details::Details,
-};
+pub use super::platform::{banner::Banner, details::Details};

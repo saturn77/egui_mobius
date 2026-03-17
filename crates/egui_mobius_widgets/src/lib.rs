@@ -36,7 +36,7 @@
 //!
 //!     if stateful_btn.show(ui).clicked() {
 //!         stateful_btn.set_started(!stateful_btn.is_started());
-//!         println!("Process is now {}", 
+//!         println!("Process is now {}",
 //!             if stateful_btn.is_started() { "running" } else { "stopped" });
 //!     }
 //! }

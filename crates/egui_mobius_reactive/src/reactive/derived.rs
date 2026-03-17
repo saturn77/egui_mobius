@@ -1,18 +1,18 @@
 //! Derived<T> is a struct that represents a derived value in a reactive programming model.
-//! 
+//!
 //! It is used to create a new reactive value that is computed from other reactive values.
 //!
 //! This allows for automatic updates when the source values change.
 //!
 
-use std::sync::{Arc, Mutex};
 use crate::Dynamic;
 use crate::ReactiveValue;
 use crate::Subscribers;
+use std::sync::{Arc, Mutex};
 /// Type alias for a list of subscribers.
 ///
 /// This is used to store callbacks that should be executed when the derived value changes.
-/// 
+///
 /// # Example
 /// ```rust
 /// use egui_mobius_reactive::Derived;
@@ -50,7 +50,7 @@ pub struct Derived<T: Clone + Send + Sync + 'static> {
 }
 
 /// Implementation of the `Derived` struct.
-/// 
+///
 /// # Example
 /// ```rust
 /// use egui_mobius_reactive::{Dynamic, Derived};
@@ -132,12 +132,12 @@ impl<T: Clone + Send + Sync + 'static> ReactiveValue for Derived<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::thread;
     use std::time::Duration;
-    use std::sync::atomic::{AtomicBool, Ordering};
 
     /// Test the ReactiveValue implementation for the Derived struct.
-    /// 
+    ///
     #[test]
     fn test_derived_reactive_value() {
         let count = Dynamic::new(0);

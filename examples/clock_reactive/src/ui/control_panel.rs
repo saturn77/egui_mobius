@@ -1,7 +1,7 @@
 use crate::state::AppState;
 use crate::types::{LogColors, LogEntry};
 use eframe::egui;
-use egui_mobius_widgets::{StyledButton, StatefulButton};
+use egui_mobius_widgets::{StatefulButton, StyledButton};
 
 pub struct ControlPanel<'a> {
     state: &'a AppState,
@@ -48,7 +48,7 @@ impl<'a> ControlPanel<'a> {
             ui.add_space(10.0);
             let time_str = self.state.formatted_time.get();
             ui.heading(time_str);
-            
+
             ui.add_space(20.0);
             ui.heading("Clock Settings");
             ui.add_space(10.0);
@@ -59,12 +59,14 @@ impl<'a> ControlPanel<'a> {
                     let mut use_24h = self.state.use_24h.get();
                     if ui.radio_value(&mut use_24h, false, "12-hour").clicked() {
                         self.state.use_24h.set(use_24h);
-                        self.state.log("ui", "Changed time format to 12-hour".to_string());
+                        self.state
+                            .log("ui", "Changed time format to 12-hour".to_string());
                         self.state.save_config();
                     }
                     if ui.radio_value(&mut use_24h, true, "24-hour").clicked() {
                         self.state.use_24h.set(use_24h);
-                        self.state.log("ui", "Changed time format to 24-hour".to_string());
+                        self.state
+                            .log("ui", "Changed time format to 24-hour".to_string());
                         self.state.save_config();
                     }
                 });
@@ -74,9 +76,13 @@ impl<'a> ControlPanel<'a> {
             ui.add_space(20.0);
             ui.collapsing("🎛️ Controls", |ui| {
                 let mut slider_value = self.state.slider_value.get();
-                if ui.add(egui::Slider::new(&mut slider_value, 0.0..=100.0).text("Value")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut slider_value, 0.0..=100.0).text("Value"))
+                    .changed()
+                {
                     self.state.slider_value.set(slider_value);
-                    self.state.log("ui", format!("Slider value changed to {slider_value}"));
+                    self.state
+                        .log("ui", format!("Slider value changed to {slider_value}"));
                     self.state.save_config();
                 }
 
@@ -88,7 +94,10 @@ impl<'a> ControlPanel<'a> {
                     .selected_text(combo_value.clone())
                     .show_ui(ui, |ui| {
                         for option in ["Option A", "Option B", "Option C"].iter() {
-                            if ui.selectable_label(combo_value == *option, *option).clicked() {
+                            if ui
+                                .selectable_label(combo_value == *option, *option)
+                                .clicked()
+                            {
                                 self.state.combo_value.set(option.to_string());
                                 self.state.log("ui", format!("Selected option: {option}"));
                                 self.state.save_config();
@@ -104,12 +113,16 @@ impl<'a> ControlPanel<'a> {
 
                     ui.horizontal(|ui| {
                         ui.label("Run State:");
-                        changed |= ui.color_edit_button_srgba(&mut button_colors.run_state).changed();
+                        changed |= ui
+                            .color_edit_button_srgba(&mut button_colors.run_state)
+                            .changed();
                     });
 
                     ui.horizontal(|ui| {
                         ui.label("Stop State:");
-                        changed |= ui.color_edit_button_srgba(&mut button_colors.stop_state).changed();
+                        changed |= ui
+                            .color_edit_button_srgba(&mut button_colors.stop_state)
+                            .changed();
                     });
 
                     if changed {
@@ -151,17 +164,23 @@ impl<'a> ControlPanel<'a> {
 
                     ui.horizontal(|ui| {
                         ui.label("Time Format:");
-                        changed |= ui.color_edit_button_srgba(&mut colors.time_format).changed();
+                        changed |= ui
+                            .color_edit_button_srgba(&mut colors.time_format)
+                            .changed();
                     });
 
                     ui.horizontal(|ui| {
                         ui.label("Custom Event:");
-                        changed |= ui.color_edit_button_srgba(&mut colors.custom_event).changed();
+                        changed |= ui
+                            .color_edit_button_srgba(&mut colors.custom_event)
+                            .changed();
                     });
 
                     ui.horizontal(|ui| {
                         ui.label("Run/Stop:");
-                        changed |= ui.color_edit_button_srgba(&mut colors.run_stop_log).changed();
+                        changed |= ui
+                            .color_edit_button_srgba(&mut colors.run_stop_log)
+                            .changed();
                     });
 
                     if changed {
@@ -176,7 +195,7 @@ impl<'a> ControlPanel<'a> {
                 let custom_button = StyledButton::new("Custom Event")
                     .margin(egui::Vec2::new(4.0, 2.0))
                     .min_size(egui::vec2(120.0, 24.0));
-                
+
                 if custom_button.show(ui).clicked() {
                     let colors = self.state.colors.get();
                     let custom_event = LogEntry {
@@ -196,7 +215,7 @@ impl<'a> ControlPanel<'a> {
                 let styled_button = StyledButton::new("Styled Button")
                     .margin(egui::Vec2::new(4.0, 2.0))
                     .min_size(egui::vec2(120.0, 24.0));
-                
+
                 if styled_button.show(ui).clicked() {
                     let colors = self.state.colors.get();
                     let custom_event = LogEntry {
@@ -216,12 +235,16 @@ impl<'a> ControlPanel<'a> {
                 ui.group(|ui| {
                     ui.label("Log Buffer Size:");
                     let mut buffer_size = self.state.buffer_size.get();
-                    if ui.add(egui::DragValue::new(&mut buffer_size)
-                        .range(100..=10000)
-                        .speed(100)
-                    ).changed() {
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut buffer_size)
+                                .range(100..=10000)
+                                .speed(100),
+                        )
+                        .changed()
+                    {
                         self.state.buffer_size.set(buffer_size);
-                        
+
                         // Log the buffer size change
                         let colors = self.state.colors.get();
                         let custom_event = LogEntry {
@@ -241,15 +264,15 @@ impl<'a> ControlPanel<'a> {
                 // RUN/STOP Button
                 let mut button_started = self.state.button_started.get();
                 let button_colors = self.state.button_colors.get();
-                
+
                 let mut stateful_button = StatefulButton::new()
                     .margin(egui::Vec2::new(4.0, 2.0))
                     .min_size(egui::vec2(120.0, 24.0))
                     .run_color(button_colors.run_state)
                     .stop_color(button_colors.stop_state);
-                
+
                 stateful_button.set_started(button_started);
-                
+
                 if stateful_button.show(ui).clicked() {
                     button_started = !button_started;
                     self.state.button_started.set(button_started);

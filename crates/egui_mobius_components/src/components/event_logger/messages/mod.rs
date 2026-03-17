@@ -27,7 +27,7 @@ impl Message {
             Message::Error(s) => s,
         }
     }
-    
+
     /// Get the message type as a string
     pub fn type_name(&self) -> &str {
         match self {
@@ -60,7 +60,7 @@ pub enum UiWidgetType {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LogSender {
     widget_type: UiWidgetType,
-    id: Option<String>,    // Optional widget ID/name
+    id: Option<String>, // Optional widget ID/name
 }
 
 impl LogSender {
@@ -68,56 +68,56 @@ impl LogSender {
     pub fn new(widget_type: UiWidgetType, id: Option<String>) -> Self {
         Self { widget_type, id }
     }
-    
+
     /// Create common sender types with convenience methods
     pub fn slider(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Slider, Some(id.into()))
     }
-    
+
     pub fn checkbox(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Checkbox, Some(id.into()))
     }
-    
+
     pub fn combo_box(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::ComboBox, Some(id.into()))
     }
-    
+
     pub fn radio_button(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::RadioButton, Some(id.into()))
     }
-    
+
     pub fn button(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Button, Some(id.into()))
     }
-    
+
     pub fn text_field(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::TextField, Some(id.into()))
     }
-    
+
     pub fn rich_text(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::RichText, Some(id.into()))
     }
-    
+
     pub fn panel(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Panel, Some(id.into()))
     }
-    
+
     pub fn tab(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Tab, Some(id.into()))
     }
-    
+
     pub fn canvas(id: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Canvas, Some(id.into()))
     }
-    
+
     pub fn system() -> Self {
         Self::new(UiWidgetType::System, None)
     }
-    
+
     pub fn custom(name: impl Into<String>) -> Self {
         Self::new(UiWidgetType::Custom(name.into()), None)
     }
-    
+
     /// Get the widget type name as a string
     pub fn type_name(&self) -> String {
         match &self.widget_type {
@@ -135,7 +135,7 @@ impl LogSender {
             UiWidgetType::Custom(name) => format!("Custom({name})"),
         }
     }
-    
+
     /// Get a display name for the sender
     pub fn display_name(&self) -> String {
         match (&self.widget_type, &self.id) {
@@ -143,7 +143,7 @@ impl LogSender {
             (_, Some(id)) if !id.is_empty() => {
                 let type_name = self.type_name();
                 format!("{type_name}({id})")
-            },
+            }
             _ => self.type_name(),
         }
     }

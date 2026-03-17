@@ -1,5 +1,5 @@
-use crate::logger::{LogColors, LogEntry, ButtonColors};
-use crate::types::{ClockMessage, Event, Config};
+use crate::logger::{ButtonColors, LogColors, LogEntry};
+use crate::types::{ClockMessage, Config, Event};
 use chrono::Local;
 use eframe::egui;
 use egui_mobius::signals::Signal;
@@ -56,7 +56,10 @@ impl AppState {
             let time_str = if *use_24h.lock().unwrap() {
                 now.format("%H:%M:%S").to_string()
             } else {
-                now.format("%I:%M:%S %p").to_string().trim_start_matches('0').to_string()
+                now.format("%I:%M:%S %p")
+                    .to_string()
+                    .trim_start_matches('0')
+                    .to_string()
             };
             *current_time.lock().unwrap() = time_str.clone();
             let mut logs = logs.lock().unwrap();
@@ -77,7 +80,12 @@ impl AppState {
         let config = Config {
             slider_value: *self.slider_value.lock().unwrap(),
             combo_value: self.combo_value.lock().unwrap().clone(),
-            time_format: if *self.use_24h.lock().unwrap() { "24h" } else { "12h" }.to_string(),
+            time_format: if *self.use_24h.lock().unwrap() {
+                "24h"
+            } else {
+                "12h"
+            }
+            .to_string(),
             colors: self.colors.lock().unwrap().clone(),
             button_colors: self.button_colors.lock().unwrap().clone(),
         };

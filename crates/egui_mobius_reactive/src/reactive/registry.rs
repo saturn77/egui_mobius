@@ -1,6 +1,6 @@
-use std::sync::{Arc, Mutex};
 use crate::ReactiveValue;
 use std::any::Any;
+use std::sync::{Arc, Mutex};
 
 /// Alias for shared reactive signal type
 pub type SharedReactive = Arc<dyn ErasedReactiveValue>;
@@ -31,7 +31,10 @@ impl SignalRegistry {
 
     /// Register a named signal.
     pub fn register_named_signal(&self, name: &str, signal: SharedReactive) {
-        self.signals.lock().unwrap().push((name.to_string(), signal));
+        self.signals
+            .lock()
+            .unwrap()
+            .push((name.to_string(), signal));
     }
 
     /// List all registered signals and their names.
@@ -72,11 +75,11 @@ impl SignalRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Dynamic, Derived};
+    use crate::{Derived, Dynamic};
     use std::thread;
     use std::time::Duration;
 
-    #[test] 
+    #[test]
     fn test_registry_keeps_signals_alive() {
         let registry = SignalRegistry::new();
 

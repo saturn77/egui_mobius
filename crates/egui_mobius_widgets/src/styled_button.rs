@@ -25,8 +25,8 @@
 //! }
 //! ```
 
-use egui::{Response, Ui, Color32, CornerRadius, Stroke, Vec2};
 use egui::epaint::StrokeKind;
+use egui::{Color32, CornerRadius, Response, Stroke, Ui, Vec2};
 
 /// A styled button with customizable appearance and hover effects.
 ///
@@ -69,8 +69,8 @@ impl StyledButton {
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
-            hover_color: Color32::from_rgb(100, 200, 255),  // Default to light blue
-            normal_color: Color32::from_gray(128),          // Default to gray
+            hover_color: Color32::from_rgb(100, 200, 255), // Default to light blue
+            normal_color: Color32::from_gray(128),         // Default to gray
             text_color: Color32::WHITE,                    // Default to white text
             rounding: 5.0,
             margin: Vec2::new(10.0, 5.0),
@@ -172,7 +172,15 @@ impl StyledButton {
     ///
     /// Returns an egui::Response that can be used to check for clicks and hover state
     pub fn show(self, ui: &mut Ui) -> Response {
-        let Self { text, hover_color, normal_color, text_color, rounding, margin, min_size } = self;
+        let Self {
+            text,
+            hover_color,
+            normal_color,
+            text_color,
+            rounding,
+            margin,
+            min_size,
+        } = self;
 
         ui.add_space(margin.y);
         ui.horizontal(|ui| {
@@ -202,8 +210,8 @@ impl StyledButton {
 
             ui.add_space(margin.x);
             response
-        }).inner
-
+        })
+        .inner
     }
 }
 

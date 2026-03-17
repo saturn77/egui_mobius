@@ -1,15 +1,15 @@
 //! Dynamic<T> is a thread-safe container for dynamic values that can be monitored for changes.
-//! 
+//!
 //! The `Dynamic` struct allows you to store a value in a thread-safe manner and
-//! provides mechanisms to monitor changes to the value. It is often on the argument list to the 
+//! provides mechanisms to monitor changes to the value. It is often on the argument list to the
 //! UiState or AppState function.  
-//! 
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{channel, Sender};
-use std::thread;
-use std::fmt::{self, Debug};
-use parking_lot::Mutex as PLMutex;
+//!
 use crate::ReactiveValue;
+use parking_lot::Mutex as PLMutex;
+use std::fmt::{self, Debug};
+use std::sync::mpsc::{Sender, channel};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 /// A thread-safe container for dynamic values that can be monitored for changes.
 ///
@@ -189,13 +189,13 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Dynamic<T> {
     {
         let cb = Arc::new(callback);
         let cb_clone = cb.clone();
-        
+
         // Create a channel for change notifications
         let (tx, rx) = channel();
-        
+
         // Add the sender to our notifiers
         self.notifiers.lock().push(tx);
-        
+
         // Spawn a background thread to wait for notifications
         thread::spawn(move || {
             while rx.recv().is_ok() {
@@ -206,8 +206,6 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ValueExt<T> for Dynamic<T> {
         cb
     }
 }
-
-
 
 impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Dynamic<T> {
     fn subscribe(&self, f: Box<dyn Fn() + Send + Sync>) {
@@ -221,7 +219,7 @@ impl<T: Clone + Send + Sync + PartialEq + 'static> ReactiveValue for Dynamic<T> 
 }
 
 /// Converts a `Dynamic<T>` to a `Dynamic<U>` where `T` can be converted to `U`.
-/// 
+///
 /// This is useful for converting between different types of dynamic values.
 /// /// # Example
 /// /// ```rust
@@ -246,7 +244,7 @@ where
 /// Note here the 'a lifetime is used to ensure that the conversion is valid for the lifetime of the `Dynamic<T>`.
 /// This is important for ensuring that the conversion does not outlive the original `Dynamic<T>`.
 /// This is particularly useful in a multi-threaded context where the `Dynamic<T>` may be shared across threads.
-/// 
+///
 /// # Example
 /// ```rust
 /// use egui_mobius_reactive::{Dynamic, ValueExt};
@@ -265,15 +263,13 @@ where
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use crate::ValueExt;
     use std::sync::Arc;
-    use std::time::Duration;
-    use crate::ValueExt; // Import the ValueExt trait
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Duration; // Import the ValueExt trait
 
     /// Tests the `get` and `set` methods of the `Dynamic` struct.
     #[test]
@@ -329,5 +325,4 @@ mod tests {
         thread::sleep(Duration::from_millis(50));
         assert!(changed.load(Ordering::SeqCst));
     }
-
 }

@@ -1,42 +1,42 @@
 //! Runtime integration module
 //!
-//! This module contains the `RuntimeManager` struct which is responsible 
+//! This module contains the `RuntimeManager` struct which is responsible
 //! for managing the Mobius runtime and the background clock task. Basically
 //! the runtime is started and a background task is started to update the
 //! clock time every second. The runtime is used to handle messages from the
 //! background task and update the UI accordingly.
-use crate::{types::ClockMessage, state::AppState};
-use egui_mobius::{EventRoute, MobiusRuntime, MobiusHandle};
-use eframe::egui;
-use std::sync::{Arc, mpsc};
-use chrono::Local;
-use tokio::sync::Notify;
 use crate::types::LogEntry;
+use crate::{state::AppState, types::ClockMessage};
+use chrono::Local;
+use eframe::egui;
+use egui_mobius::{EventRoute, MobiusHandle, MobiusRuntime};
+use std::sync::{mpsc, Arc};
+use tokio::sync::Notify;
 
 impl EventRoute for ClockMessage {
     fn route(&self) -> &str {
         match self {
             ClockMessage::TimeUpdated(_) => "time_updated",
             ClockMessage::Start => "start",
-            ClockMessage::Stop  => "stop",
+            ClockMessage::Stop => "stop",
             ClockMessage::Clear => "clear",
         }
     }
 }
 
 pub struct RuntimeManager {
-    runtime   : Option<tokio::task::JoinHandle<()>>,
-    handle    : Option<Arc<MobiusHandle<ClockMessage>>>,
-    shutdown  : Arc<Notify>,
-    state     : Arc<AppState>,
+    runtime: Option<tokio::task::JoinHandle<()>>,
+    handle: Option<Arc<MobiusHandle<ClockMessage>>>,
+    shutdown: Arc<Notify>,
+    state: Arc<AppState>,
 }
 
 impl RuntimeManager {
     pub fn new(state: Arc<AppState>) -> Self {
         Self {
-            runtime  : None,
-            handle   : None,
-            shutdown : Arc::new(Notify::new()),
+            runtime: None,
+            handle: None,
+            shutdown: Arc::new(Notify::new()),
             state,
         }
     }
@@ -51,14 +51,12 @@ impl RuntimeManager {
         let _handle_clone = handle.clone();
         let shutdown = self.shutdown.clone();
 
-
-
         // Start clock updates in a separate tokio task
         // Since the clock is updated here, format the time for the UI
         // and then the reactive state management will take care of the
         // rest.
-        let current_time = self.state.current_time.clone().to_owned();  // Create owned Dynamic
-        let use_24h = self.state.use_24h.clone().to_owned();  // Create owned Dynamic
+        let current_time = self.state.current_time.clone().to_owned(); // Create owned Dynamic
+        let use_24h = self.state.use_24h.clone().to_owned(); // Create owned Dynamic
         let logs = self.state.logs.clone().to_owned(); // Create owned Dynamic
         tokio::spawn(async move {
             loop {
@@ -67,7 +65,10 @@ impl RuntimeManager {
                 let time_str = if use_24h.get() {
                     now.format("%H:%M:%S").to_string()
                 } else {
-                    now.format("%I:%M:%S %p").to_string().trim_start_matches('0').to_string()
+                    now.format("%I:%M:%S %p")
+                        .to_string()
+                        .trim_start_matches('0')
+                        .to_string()
                 };
                 current_time.set(time_str.clone());
                 log::debug!("Time updated: {}", time_str);
@@ -85,11 +86,10 @@ impl RuntimeManager {
             }
         });
 
-
-        // The code below registers the message handlers for the runtime, 
+        // The code below registers the message handlers for the runtime,
         // and there is a placeholder for this messages in state.rs
         // Since the design is reactive, the state will be updated based on
-        // the messages are not utilized at this moment, but are shown here 
+        // the messages are not utilized at this moment, but are shown here
         // for reference as aslo as a template for future use.
 
         // let state1 = self.state.clone();
@@ -138,10 +138,9 @@ impl RuntimeManager {
             let _ = tx.send(());
         });
 
-
         self.runtime = Some(rt);
         self.handle = Some(handle);
-        
+
         // Optional Control - Start the clock in running state (presently not used)
         // if let Some(handle) = &self.handle {
         //     let _ = handle.send(ClockMessage::Start);
