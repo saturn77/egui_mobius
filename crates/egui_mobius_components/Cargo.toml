@@ -16,7 +16,6 @@ categories = ["gui", "visualization"]
 [dependencies]
 # From workspace
 egui = {workspace = true}
-eframe = {workspace = true}
 egui_mobius = {workspace = true}
 
 chrono      = {workspace = true}

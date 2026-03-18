@@ -12,7 +12,7 @@
 //! - Logging methods
 //! - UI rendering
 //!  
-use eframe::egui;
+use egui;
 use egui_mobius::{Dispatcher, Signal, SignalDispatcher, Slot};
 
 use crate::components::event_logger::log_colors::LogColors;
