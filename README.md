@@ -20,17 +20,15 @@
 > internals, coupling paths, dual-wired atoms, stored vs stateless panels,
 > common pitfalls, and an API reference.
 
-`egui_mobius` is a comprehensive software stack for building sophisticated
-egui applications. It provides the essential layers needed for
-production-ready GUI applications: reactive state management, async
-operations and dedicated threading, and the **citizen pattern** — a
-first-class architecture for dock panels with persistent identity,
-reactive lifecycle state, and central message dispatch.
+`egui_mobius` is a workspace of coordinated crates for building
+organized egui applications. The flagship is the **citizen pattern** —
+first-class dock panel lifecycle, persistent identity, reactive state,
+and central message dispatch. The book above covers it in depth.
 
-The recommended way to organize a non-trivial egui app on this stack is
-the [citizen pattern](https://saturn77.github.io/egui_mobius/). Read the
-book for the full story; the rest of this README sketches the moving
-parts.
+Underneath, a broader stack provides the building blocks: reactive
+primitives (`Dynamic<T>`, `Derived<T>`), an async runtime, and
+signal-slot architecture. Pick whichever layer matches your project;
+most non-trivial apps start with citizen.
 
 ## The citizen pattern in 30 seconds
 
