@@ -21,7 +21,6 @@
 # Patterns
 
 - [Stored vs stateless panels](patterns/stored-vs-stateless.md)
-- [Where does state live?](patterns/state-shape.md)
 
 # Pitfalls
 

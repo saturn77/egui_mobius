@@ -10,9 +10,10 @@ gives the panel three things:
    `on_click`) and reader convenience methods (`is_active`,
    `is_selected`).
 
-This chapter covers the trait surface. For *how to use* it across a
-real app — including which panel-author state goes where — see
-[Where does state live?](../patterns/state-shape.md).
+This chapter covers the trait surface, the way state flows between
+the dispatcher and the panel, where panel-author state lives across
+the three structs that any non-trivial app uses, and the runtime
+story for how the trait actually gets exercised.
 
 ## The trait
 
@@ -65,13 +66,24 @@ impl PlotPanel {
         }
     }
 
-    fn show(&mut self, ui: &mut egui::Ui) {
+    fn show(&mut self, ui: &mut egui::Ui, dispatcher: &mut Dispatcher) {
         ui.heading("Plot");
+
+        // Read direction: dispatcher → panel.
+        // The dispatcher's activate() writes self.citizen_state.active
+        // through the shared Arc; we observe it reactively via
+        // is_active(). No method call from this side is needed.
         if self.is_active() {
             ui.label("(active — drawing live)");
             // ... actual plotting against self.samples ...
         } else {
             ui.label("(inactive — paused)");
+        }
+
+        // Write direction: panel → dispatcher.
+        // The panel can hand control to a sibling citizen explicitly.
+        if ui.button("Switch to settings").clicked() {
+            dispatcher.activate(&CitizenId::new("settings"));
         }
     }
 }
@@ -93,6 +105,19 @@ defaulted method on the trait that reads
 you'd write that path manually every time you wanted to check
 activation. The accessor boilerplate is the price; the readers
 and hooks are what you actually buy.
+
+The two state-flow directions are intentionally asymmetric.
+**Dispatcher → panel happens reactively** — the dispatcher writes
+through the `Arc` underneath `citizen_state.active`, and the panel
+sees the new value the next time `is_active()` reads it. No
+method call from the panel side is needed. **Panel → dispatcher
+requires a method-call surface**, which is what `&mut Dispatcher`
+in the `show()` signature provides — the panel can call
+`dispatcher.activate(...)` to hand control to a sibling, or
+`dispatcher.send(...)` to push a custom message. Some apps wrap
+the dispatcher and shared services in a `PanelCtx` struct
+(`fn show(&mut self, ui: &mut egui::Ui, ctx: &mut PanelCtx)`) to
+keep the parameter list short; either shape works.
 
 The `state` argument to `PlotPanel::new` should always come from
 [`Dispatcher::register()`](dispatcher.md#registerid---citizenstate),
@@ -205,9 +230,151 @@ the day a second reader actually appears. Speculative reactivity
 speculative `Arc<Mutex<...>>` — it pays a cost for an option you
 may never exercise.
 
-The fuller story of where state lives — `CitizenState` vs.
-panel-author-named structs (`PanelState`) vs. app-shared services —
-is in [Where does state live?](../patterns/state-shape.md).
+## Where does state live?
+
+The atoms section above showed the panel-local choice between a
+plain field and a `Dynamic<T>`. Step back, and that's part of a
+broader three-struct model that any non-trivial citizen-panel app
+converges on.
+
+### The three structs
+
+#### 1. `CitizenState` — lifecycle facts only
+
+The library type. Six fixed `Dynamic<T>` fields, reactive by design,
+shared by `Arc`. **You cannot extend it** — it has a fixed contract.
+
+What goes here: questions other panels or the dock ask about *this
+panel's status* (active, clicked, selected, moved, location,
+visible).
+
+What does **not** go here: business data, widget values, anything
+outside the six lifecycle facts.
+
+#### 2. `PanelState` — your panel-local struct
+
+Whatever the panel needs to do its own job that nobody else reads
+or writes. By convention, give it its own struct named
+`FooPanelState` (or just `PanelState` if scoped inside a panel
+module):
+
+```rust,ignore
+struct LoggerPanelState {
+    log_buffer: Vec<LogEntry>,
+    filter_text: String,
+    follow_tail: bool,
+}
+
+struct LoggerPanel {
+    citizen_id: CitizenId,
+    citizen_state: CitizenState,    // bucket 1: library lifecycle
+    panel_state: LoggerPanelState,  // bucket 2: panel-local data
+}
+```
+
+Atoms (slider values, combo-box selections, checkbox flags) live
+here when only the panel reads them — as plain fields, not
+`Dynamic<T>`. Promote to `Dynamic<T>` only when a second reader
+shows up.
+
+Why a named struct instead of loose fields on the panel? Three
+reasons:
+
+1. **It names the bucket.** A reader scanning `LoggerPanel` sees
+   three things — id, citizen state, panel state — instead of a
+   flat list that mixes concerns.
+2. **It mirrors `CitizenState`.** Both are "state for one panel,"
+   one library-defined and one app-defined. The parallel makes the
+   design rule visible.
+3. **It survives refactors.** When the panel grows, panel-local
+   fields stay clustered. When you eventually need to persist or
+   snapshot panel state, it's already a single value.
+
+For tiny panels with one or two fields, inlining on the panel
+struct is fine — promote to a named struct the moment a third
+field appears.
+
+#### 3. App-shared state — data many panels touch
+
+Anything two or more panels need to read or mutate. Project config,
+a database handle, the layer store in a CAD app, a theme. Lives at
+the app level and gets passed by reference into each panel's
+`show()`:
+
+```rust,ignore
+struct App {
+    services: Arc<SharedServices>,
+    dispatcher: Dispatcher,
+    logger: LoggerPanel,
+    bom: BomPanel,
+}
+
+// And inside each panel's show():
+self.logger.show(ui, &mut self.dispatcher, &self.services);
+self.bom.show(ui, &mut self.dispatcher, &self.services);
+```
+
+Whether the shared bits are themselves reactive (`Dynamic<T>`
+inside `SharedServices`) or guarded by `Arc<Mutex<...>>` is a
+separate design choice. The point: shared data lives at the app
+level, not stuffed inside `CitizenState` and not duplicated across
+panel structs.
+
+### The rule of thumb
+
+Ask in this order:
+
+| Question                          | Bucket               |
+|-----------------------------------|----------------------|
+| Is this a lifecycle fact?         | `CitizenState`       |
+| Do two or more panels need it?    | App-shared           |
+| Otherwise                         | `PanelState`         |
+
+If a piece of data fits the lifecycle list — active, clicked,
+selected, moved, location, visible — it belongs in `CitizenState`.
+If not, ask whether anything outside the panel reads or mutates
+it. If yes, app-shared. Otherwise, `PanelState`.
+
+### Anti-patterns
+
+**Trying to extend `CitizenState` with business fields.** It has a
+fixed shape from the library. Wrap it inside your own panel struct
+alongside your fields; don't try to extend it.
+
+```rust,ignore
+// WRONG — won't compile, and shouldn't
+struct CitizenState {
+    active: Dynamic<bool>,
+    // ...
+    bom_rows: Vec<BomRow>, // no
+}
+
+// RIGHT
+struct BomPanel {
+    citizen_id: CitizenId,
+    citizen_state: CitizenState,
+    panel_state: BomPanelState,    // bom_rows lives in here
+}
+```
+
+**Duplicating shared data across panels.** If three panels need to
+read the project config, don't give each one its own copy and try
+to synchronize. Put it in `SharedServices` and pass `&services`
+into each panel's `show()`.
+
+**Putting `PanelState` fields in `Dynamic<T>` "in case someone
+needs them later."** Reactivity has real cost (every `Dynamic<T>`
+is an `Arc` plus a lock plus a notifier list). Promote to
+`Dynamic<T>` the day a second reader actually appears, not before.
+
+### Activation-driven business state
+
+A common variant: "when panel A activates, panel B should switch
+to a particular view of the shared data." That data still lives in
+app-shared state — the *trigger* for the switch is panel A's
+`citizen_state.active`, which panel B reads reactively. Lifecycle
+drives the transition; the data being viewed never moves into
+`CitizenState`.
 
 ## Identities
 
