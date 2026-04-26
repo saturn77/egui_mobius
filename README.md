@@ -14,16 +14,11 @@
 
 </div>
 
-> **📖 [Read the egui-citizen Book](https://saturn77.github.io/egui_mobius/)** —
-> a concept-by-concept guide to building organized egui apps with the
-> citizen pattern. Covers reactive lifecycle, the dispatcher, `Dynamic<T>`
-> internals, coupling paths, dual-wired atoms, stored vs stateless panels,
-> common pitfalls, and an API reference.
-
 `egui_mobius` is a workspace of coordinated crates for building
 organized egui applications. The flagship is the **citizen pattern** —
 first-class dock panel lifecycle, persistent identity, reactive state,
-and central message dispatch. The book above covers it in depth.
+and central message dispatch. The
+[book](https://saturn77.github.io/egui_mobius/) covers it in depth.
 
 Underneath, a broader stack provides the building blocks: reactive
 primitives (`Dynamic<T>`, `Derived<T>`), an async runtime, and
