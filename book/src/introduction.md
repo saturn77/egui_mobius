@@ -1,5 +1,12 @@
 # Introduction
 
+> **Who this book is for**
+>
+> Rust developers building dockable egui applications. Familiarity with
+> egui itself is assumed — this book is not a tutorial on `egui::Ui` or
+> `egui_dock`. It is a guide to using `egui_citizen` to organize a real
+> app on top of those.
+
 You have an `egui_dock` app with three panels and they keep fighting over
 state. Two panels both render every frame, both write to the same `bool`,
 and whichever rendered last wins. You add a "currently active panel"
@@ -67,13 +74,6 @@ the end you should know:
   per-frame — and which trap will silently break the second form.
 - How to forward citizen lifecycle events to backend threads without
   the UI having to know about them.
-
-> **Who this book is for**
->
-> Rust developers building dockable egui applications. Familiarity with
-> egui itself is assumed — this book is not a tutorial on `egui::Ui` or
-> `egui_dock`. It is a guide to using `egui_citizen` to organize a real
-> app on top of those.
 
 ## Key vocabulary
 
