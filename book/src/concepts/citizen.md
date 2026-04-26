@@ -101,6 +101,114 @@ The latter allocate fresh disconnected storage and silently sever
 the reactive link with the dispatcher (see
 [the trap in the state chapter](state.md#the-trap-that-bites-everyone)).
 
+## Atoms — widget state alongside `CitizenState`
+
+A citizen-panel almost always carries its own widget state: slider
+values, combo-box selections, text-input buffers, checkbox flags.
+The [introduction](../introduction.md#key-vocabulary) calls these
+**atoms**. They live on the panel struct *alongside* `citizen_state`,
+not inside it — `CitizenState` has a fixed library-defined shape and
+is for lifecycle facts only. Where you place an atom depends on
+whether anyone outside the panel reads or writes it.
+
+### Atoms only the panel itself touches
+
+These are plain (non-reactive) fields. The panel reads them in
+`show()`, egui mutates them in place via `&mut`. Nothing fancy.
+
+```rust,ignore
+#[derive(Debug, Clone, PartialEq)]
+enum PlotStyle { Line, Scatter, Bar }
+
+struct PlotPanel {
+    citizen_id: CitizenId,
+    citizen_state: CitizenState,
+    samples: Vec<f32>,
+    // Atoms — panel-local widget state:
+    sample_rate_hz: f32,
+    plot_style: PlotStyle,
+    show_grid: bool,
+}
+
+impl PlotPanel {
+    fn show(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Plot");
+
+        ui.add(egui::Slider::new(&mut self.sample_rate_hz, 1.0..=1000.0)
+            .text("Sample rate (Hz)"));
+
+        egui::ComboBox::from_label("Style")
+            .selected_text(format!("{:?}", self.plot_style))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.plot_style, PlotStyle::Line,    "Line");
+                ui.selectable_value(&mut self.plot_style, PlotStyle::Scatter, "Scatter");
+                ui.selectable_value(&mut self.plot_style, PlotStyle::Bar,     "Bar");
+            });
+
+        ui.checkbox(&mut self.show_grid, "Show grid");
+
+        // ... draw the plot using these values ...
+    }
+}
+```
+
+Plain `f32`, plain `bool`, plain enum. The citizen layer never sees
+them, doesn't care about them. This is the right shape for "only
+this panel uses these values."
+
+### Atoms another panel or thread reads
+
+When something outside the panel needs the value — another panel
+mirroring it, a backend thread parameterizing its work, a logger
+recording every change — promote the field to a `Dynamic<T>` so it
+can be cloned and shared:
+
+```rust,ignore
+use egui_mobius_reactive::Dynamic;
+
+struct PlotPanel {
+    citizen_id: CitizenId,
+    citizen_state: CitizenState,
+    samples: Vec<f32>,
+    // Reactive atom — other panels / threads can hold a clone:
+    sample_rate_hz: Dynamic<f32>,
+}
+
+impl PlotPanel {
+    fn show(&mut self, ui: &mut egui::Ui) {
+        let mut local = self.sample_rate_hz.get();
+        if ui
+            .add(egui::Slider::new(&mut local, 1.0..=1000.0).text("Sample rate (Hz)"))
+            .changed()
+        {
+            self.sample_rate_hz.set(local);
+        }
+        // ... rest of show() ...
+    }
+}
+```
+
+`Dynamic<f32>` is the same shape as the fields inside `CitizenState` —
+an `Arc`-backed reactive cell. Cloning it gives another panel or
+backend thread a handle to the same value (see
+[Inside `Dynamic<T>`](inside-dynamic.md) for the mechanics, and
+[Coupling paths](coupling.md) for how an atom can fan out to
+UI-to-UI sharing, UI-to-backend messaging, or both at once).
+
+### Don't reach for `Dynamic<T>` until a second reader exists
+
+Reactivity has a real cost — every `Dynamic<T>` is an `Arc` plus a
+lock plus a notifier list. If only the panel itself reads its slider
+value, a plain `f32` is the right type. Promote to `Dynamic<f32>`
+the day a second reader actually appears. Speculative reactivity
+"in case someone needs this later" is the same kind of mistake as
+speculative `Arc<Mutex<...>>` — it pays a cost for an option you
+may never exercise.
+
+The fuller story of where state lives — `CitizenState` vs.
+panel-author-named structs (`PanelState`) vs. app-shared services —
+is in [Where does state live?](../patterns/state-shape.md).
+
 ## Identities
 
 ```rust,ignore
