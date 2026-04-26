@@ -11,7 +11,6 @@ edit-url-template = "https://github.com/saturn77/egui_mobius/edit/master/book/{p
 default-theme = "navy"
 preferred-dark-theme = "navy"
 no-section-label = false
-copy-fonts = true
 
 [output.html.fold]
 enable = true
