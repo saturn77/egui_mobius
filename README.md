@@ -141,7 +141,6 @@ Real applications running on this stack:
 - **[CopperForge](https://github.com/Atlantix-EDA/CopperForge)** — KiCad companion tool for project management, gerber viewing, and fabrication output. 12 citizen panels, LayerStore-based rendering.
 - **saturn-grid-sim** — IEEE 1547 grid support algorithm simulator with freq-watt, volt-watt, volt-var, and watt-var panels, live serial telemetry, and modbus TCP register access to embedded FPGA hardware.
 - **[quarri](https://github.com/saturn77/quarri)** — Quartus FPGA toolchain launcher with dark theme injection and multi-installation management.
-- **[KiForge](https://github.com/saturn77/KiForge)** — CAM platform for KiCad incorporating `egui_lens`.
 - **[diskforge](https://github.com/saturn77/egui_lens/tree/master/examples/diskforge)** — SD card formatting application built on `egui_lens`.
 - **[egui_lens](https://github.com/saturn77/egui_lens)** — Reactive event logger component built on `egui_mobius_reactive`.
 
