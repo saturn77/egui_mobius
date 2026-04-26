@@ -36,14 +36,24 @@ pub trait Citizen {
 Three required methods. Three defaulted hooks. Two defaulted readers.
 That is the whole trait.
 
-## Minimum-viable impl
+## A working panel
+
+The trait's three required methods (`id`, `citizen_state`,
+`citizen_state_mut`) are pure plumbing — they hand the trait
+references back to the fields you store on the struct. They're
+required because the dispatcher and the defaulted hooks need a
+uniform way to reach into your panel; that's the entire purpose.
+
+What the trait actually *buys* you is the rest of the contract:
+`is_active()`, `is_selected()`, and the defaulted `on_activate` /
+`on_deactivate` / `on_click` hooks. A panel that uses those is
+the real minimum:
 
 ```rust,ignore
-use egui_citizen::{Citizen, CitizenId, CitizenState};
-
 struct PlotPanel {
     citizen_id: CitizenId,
     citizen_state: CitizenState,
+    samples: Vec<f32>,
 }
 
 impl PlotPanel {
@@ -51,27 +61,44 @@ impl PlotPanel {
         Self {
             citizen_id: CitizenId::new("plot"),
             citizen_state: state,
+            samples: Vec::new(),
+        }
+    }
+
+    fn show(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Plot");
+        if self.is_active() {
+            ui.label("(active — drawing live)");
+            // ... actual plotting against self.samples ...
+        } else {
+            ui.label("(inactive — paused)");
         }
     }
 }
 
+// The trait impl below is required boilerplate — three accessors that
+// hand the trait its own data back. There's nothing interesting here.
 impl Citizen for PlotPanel {
-    fn id(&self) -> &CitizenId              { &self.citizen_id }
-    fn citizen_state(&self) -> &CitizenState { &self.citizen_state }
+    fn id(&self) -> &CitizenId               { &self.citizen_id }
+    fn citizen_state(&self) -> &CitizenState  { &self.citizen_state }
     fn citizen_state_mut(&mut self) -> &mut CitizenState {
         &mut self.citizen_state
     }
 }
 ```
 
-Five lines of trait impl, all delegating to fields. That's the
-ceremony to wire a panel into the citizen system.
+`is_active()` is what makes the panel *do* something — it's a
+defaulted method on the trait that reads
+`self.citizen_state().active.get()` for you. Without the trait,
+you'd write that path manually every time you wanted to check
+activation. The accessor boilerplate is the price; the readers
+and hooks are what you actually buy.
 
 The `state` argument to `PlotPanel::new` should always come from
 [`Dispatcher::register()`](dispatcher.md#registerid---citizenstate),
-**never** from `CitizenState::new()` or `CitizenState::default()`. The
-latter allocate fresh disconnected storage and silently sever the
-reactive link with the dispatcher (see
+**never** from `CitizenState::new()` or `CitizenState::default()`.
+The latter allocate fresh disconnected storage and silently sever
+the reactive link with the dispatcher (see
 [the trap in the state chapter](state.md#the-trap-that-bites-everyone)).
 
 ## Identities
