@@ -10,7 +10,7 @@ The app itself is small but realistic: a 50 Hz sine wave with
 200 kHz noise added, run through a Butterworth biquad lowpass
 filter, plotted with linked-axis subplots (matplotlib-style).
 Three panels — a stacked input/output plot, a settings panel with
-sliders, and a scrolling logger log — wired together by the
+sliders, and a scrolling log panel — wired together by the
 dispatcher.
 
 > **Run it now**
@@ -311,7 +311,7 @@ This is where the pattern earns its name. Three jobs:
 pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
     let plot     = dispatcher.register(CitizenId::new(PLOT_ID));
     let settings = dispatcher.register(CitizenId::new(SETTINGS_ID));
-    let logger = dispatcher.register(CitizenId::new(TERMINAL_ID));
+    let logger   = dispatcher.register(CitizenId::new(LOGGER_ID));
     dispatcher.activate(&CitizenId::new(PLOT_ID));
     RegisteredCitizens { plot, settings, logger }
 }
