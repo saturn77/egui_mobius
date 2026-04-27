@@ -11,7 +11,7 @@ use egui_mobius_reactive::Dynamic;
 use crate::backend::BackendKind;
 use crate::messages::AppMessage;
 use crate::state::SharedState;
-use crate::tabs::{PLOT_ID, SETTINGS_ID, TERMINAL_ID};
+use crate::tabs::{LOGGER_ID, PLOT_ID, SETTINGS_ID};
 
 /// The three CitizenStates the app's panels need to hold, kept in a
 /// single struct so the App doesn't have to thread three values out of
@@ -19,7 +19,7 @@ use crate::tabs::{PLOT_ID, SETTINGS_ID, TERMINAL_ID};
 pub struct RegisteredCitizens {
     pub plot:     CitizenState,
     pub settings: CitizenState,
-    pub terminal: CitizenState,
+    pub logger:   CitizenState,
 }
 
 /// Register the three citizens with the dispatcher and activate `plot`
@@ -27,11 +27,11 @@ pub struct RegisteredCitizens {
 pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
     let plot     = dispatcher.register(CitizenId::new(PLOT_ID));
     let settings = dispatcher.register(CitizenId::new(SETTINGS_ID));
-    let terminal = dispatcher.register(CitizenId::new(TERMINAL_ID));
+    let logger   = dispatcher.register(CitizenId::new(LOGGER_ID));
 
     dispatcher.activate(&CitizenId::new(PLOT_ID));
 
-    RegisteredCitizens { plot, settings, terminal }
+    RegisteredCitizens { plot, settings, logger }
 }
 
 /// Drain citizen lifecycle messages from the dispatcher and append them

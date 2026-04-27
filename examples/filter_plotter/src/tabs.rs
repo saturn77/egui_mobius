@@ -3,18 +3,18 @@
 use eframe::egui;
 use egui_citizen::{CitizenId, Dispatcher};
 
-use crate::panels::{plot::PlotPanel, settings::SettingsPanel, terminal::TerminalPanel};
+use crate::panels::{logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel};
 use crate::state::SharedState;
 
 pub const PLOT_ID:     &str = "plot";
 pub const SETTINGS_ID: &str = "settings";
-pub const TERMINAL_ID: &str = "terminal";
+pub const LOGGER_ID:   &str = "logger";
 
 #[derive(Clone, Copy)]
 pub enum TabKind {
     Plot,
     Settings,
-    Terminal,
+    Logger,
 }
 
 pub struct Tab {
@@ -28,7 +28,7 @@ impl Tab {
         match self.kind {
             TabKind::Plot     => "Plot",
             TabKind::Settings => "Settings",
-            TabKind::Terminal => "Terminal",
+            TabKind::Logger   => "Logger",
         }
     }
 
@@ -36,7 +36,7 @@ impl Tab {
         CitizenId::new(match self.kind {
             TabKind::Plot     => PLOT_ID,
             TabKind::Settings => SETTINGS_ID,
-            TabKind::Terminal => TERMINAL_ID,
+            TabKind::Logger   => LOGGER_ID,
         })
     }
 }
@@ -52,7 +52,7 @@ pub struct TabViewer<'a> {
     pub dispatcher: &'a mut Dispatcher,
     pub plot: &'a mut PlotPanel,
     pub settings: &'a mut SettingsPanel,
-    pub terminal: &'a mut TerminalPanel,
+    pub logger: &'a mut LoggerPanel,
 }
 
 impl egui_dock::TabViewer for TabViewer<'_> {
@@ -66,7 +66,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         match tab.kind {
             TabKind::Plot     => self.plot.show(ui, self.state),
             TabKind::Settings => self.settings.show(ui, self.state, self.dispatcher),
-            TabKind::Terminal => self.terminal.show(ui, self.state),
+            TabKind::Logger   => self.logger.show(ui, self.state),
         }
     }
 

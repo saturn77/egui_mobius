@@ -21,7 +21,7 @@ use egui_citizen::Dispatcher;
 use egui_dock::{DockArea, DockState, NodeIndex};
 
 use backend::iir::InProcessIir;
-use panels::{plot::PlotPanel, settings::SettingsPanel, terminal::TerminalPanel};
+use panels::{logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel};
 use state::SharedState;
 use tabs::{Tab, TabKind, TabViewer};
 
@@ -31,7 +31,7 @@ struct App {
     state: SharedState,
     plot: PlotPanel,
     settings: SettingsPanel,
-    terminal: TerminalPanel,
+    logger: LoggerPanel,
     backend: InProcessIir,
 }
 
@@ -46,7 +46,7 @@ impl App {
         //   ┌──────────────┬─────────────┐
         //   │              │  Settings   │
         //   │     Plot     ├─────────────┤
-        //   │              │  Terminal   │
+        //   │              │  Logger     │
         //   └──────────────┴─────────────┘
         let mut dock_state = DockState::new(vec![Tab::new(TabKind::Plot)]);
         let [_, right] = dock_state.main_surface_mut().split_right(
@@ -57,7 +57,7 @@ impl App {
         let [_, _bottom] = dock_state.main_surface_mut().split_below(
             right,
             0.55,
-            vec![Tab::new(TabKind::Terminal)],
+            vec![Tab::new(TabKind::Logger)],
         );
 
         let state = SharedState::new();
@@ -69,7 +69,7 @@ impl App {
             state,
             plot:     PlotPanel::new(citizens.plot),
             settings: SettingsPanel::new(citizens.settings),
-            terminal: TerminalPanel::new(citizens.terminal),
+            logger:   LoggerPanel::new(citizens.logger),
             backend:  InProcessIir::new(),
         }
     }
@@ -84,7 +84,7 @@ impl eframe::App for App {
                 dispatcher: &mut self.dispatcher,
                 plot: &mut self.plot,
                 settings: &mut self.settings,
-                terminal: &mut self.terminal,
+                logger: &mut self.logger,
             },
         );
 

@@ -6,15 +6,15 @@ use egui_citizen::{CitizenId, CitizenState};
 
 use crate::state::SharedState;
 
-pub struct TerminalPanel {
+pub struct LoggerPanel {
     pub citizen_id: CitizenId,
     pub citizen_state: CitizenState,
 }
 
-impl TerminalPanel {
+impl LoggerPanel {
     pub fn new(citizen_state: CitizenState) -> Self {
         Self {
-            citizen_id: CitizenId::new(crate::tabs::TERMINAL_ID),
+            citizen_id: CitizenId::new(crate::tabs::LOGGER_ID),
             citizen_state,
         }
     }

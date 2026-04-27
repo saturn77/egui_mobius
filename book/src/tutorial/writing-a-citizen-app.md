@@ -10,7 +10,7 @@ The app itself is small but realistic: a 50 Hz sine wave with
 200 kHz noise added, run through a Butterworth biquad lowpass
 filter, plotted with linked-axis subplots (matplotlib-style).
 Three panels — a stacked input/output plot, a settings panel with
-sliders, and a scrolling terminal log — wired together by the
+sliders, and a scrolling logger log — wired together by the
 dispatcher.
 
 > **Run it now**
@@ -66,7 +66,7 @@ examples/filter_plotter/
         ├── mod.rs
         ├── plot.rs          # linked stacked plots
         ├── settings.rs      # sliders + Generate button
-        └── terminal.rs      # log scrollback
+        └── logger.rs      # log scrollback
 ```
 
 Each file has one job. The settings panel doesn't know how the
@@ -123,7 +123,7 @@ pub struct SharedState {
 Three reactive fields (`Dynamic<T>`) for things multiple places
 read or write: `params` (settings panel writes, backend reads on
 Generate), `traces` (drain loop writes, plot panel reads), `log`
-(drain loop writes, terminal panel reads). One non-reactive field
+(drain loop writes, logger panel reads). One non-reactive field
 `plot_link` because both plot widgets only need the same `Id`; it
 never changes after construction.
 
@@ -278,7 +278,7 @@ Two key bits:
 The panel reads `state.traces` once at the top, holds the result
 locally for the rest of the frame.
 
-## The terminal panel — `panels/terminal.rs`
+## The logger panel — `panels/logger.rs`
 
 The simplest panel. Reads `state.log`, prints each line in a
 scrolling area:
@@ -300,7 +300,7 @@ egui::ScrollArea::vertical()
 ```
 
 The log is populated entirely from the drain loop in
-`dispatcher.rs::handle()`. The terminal panel doesn't write to it
+`dispatcher.rs::handle()`. The logger panel doesn't write to it
 — it just renders.
 
 ## The dispatcher module — `dispatcher.rs`
@@ -311,9 +311,9 @@ This is where the pattern earns its name. Three jobs:
 pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
     let plot     = dispatcher.register(CitizenId::new(PLOT_ID));
     let settings = dispatcher.register(CitizenId::new(SETTINGS_ID));
-    let terminal = dispatcher.register(CitizenId::new(TERMINAL_ID));
+    let logger = dispatcher.register(CitizenId::new(TERMINAL_ID));
     dispatcher.activate(&CitizenId::new(PLOT_ID));
-    RegisteredCitizens { plot, settings, terminal }
+    RegisteredCitizens { plot, settings, logger }
 }
 
 pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
@@ -362,7 +362,7 @@ impl eframe::App for App {
             dispatcher: &mut self.dispatcher,
             plot: &mut self.plot,
             settings: &mut self.settings,
-            terminal: &mut self.terminal,
+            logger: &mut self.logger,
         });
 
         dispatcher::drain_citizen(&mut self.dispatcher, &self.state.log);
@@ -378,7 +378,7 @@ impl eframe::App for App {
 Five lines of orchestration:
 
 1. Hand the dock area to `egui_dock` with our `TabViewer`.
-2. Drain citizen activation messages into the log so the terminal
+2. Drain citizen activation messages into the log so the logger
    panel can show them.
 3. Take the settings panel's outbox.
 4. Process each `AppMessage` through `handle`.
