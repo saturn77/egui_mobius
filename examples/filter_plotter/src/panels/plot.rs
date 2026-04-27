@@ -8,10 +8,21 @@ use egui_plot::{Line, Plot, PlotPoints};
 
 use crate::state::SharedState;
 
-/// Decimation step for plotting. The backend computes at 1 MHz × 100 ms
-/// = 100,000 samples per trace; egui_plot can render that, but every
-/// 50th sample is visually identical to the eye and much faster.
-const PLOT_STRIDE: usize = 50;
+/// Decimation strides chosen separately for input vs filtered output.
+///
+/// **Why not the same stride for both?** If you stride too aggressively
+/// on the *input* trace, the high-frequency noise gets aliased back to
+/// zero on the displayed plot — at 1 MHz sample rate, the 200 kHz
+/// noise has a period of exactly 5 samples, so a stride of 50 samples
+/// the noise at every 10th period (same phase every time, which
+/// happens to be sin(0) = 0). The noise is still there in the data;
+/// it just lands invisible. Use stride 1 (every sample) for the input
+/// plot so the noise renders correctly.
+///
+/// The *filtered* trace is smooth — anything above the 1 kHz cutoff is
+/// attenuated. Stride 50 is plenty there and keeps the renderer happy.
+const INPUT_STRIDE:    usize = 1;
+const FILTERED_STRIDE: usize = 50;
 
 pub struct PlotPanel {
     pub citizen_id: CitizenId,
@@ -48,7 +59,7 @@ impl PlotPanel {
                         .time
                         .iter()
                         .zip(traces.input.iter())
-                        .step_by(PLOT_STRIDE)
+                        .step_by(INPUT_STRIDE)
                         .map(|(&t, &y)| [t, y])
                         .collect();
                     plot_ui.line(Line::new("input", pts).name("input"));
@@ -66,7 +77,7 @@ impl PlotPanel {
                         .time
                         .iter()
                         .zip(traces.filtered.iter())
-                        .step_by(PLOT_STRIDE)
+                        .step_by(FILTERED_STRIDE)
                         .map(|(&t, &y)| [t, y])
                         .collect();
                     plot_ui.line(Line::new("filtered", pts).name("filtered"));
