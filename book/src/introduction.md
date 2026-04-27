@@ -63,6 +63,15 @@ gap (the [Lineage section](#lineage) covers the technical
 inheritance); CopperForge and other real applications are built
 end-to-end on these primitives.
 
+The scaffolding is also genuinely transplantable. Once you've written
+one citizen app — the dispatcher wiring, the `TabViewer` bridge, the
+`AppMessage::Citizen(...)` wrapping, the drain loop — most of that
+shell is identical in the next app. The panels change. The backend
+changes. The domain-specific message variants change. The dispatcher
+plumbing doesn't. Each new app starts with the wiring already in
+place rather than at zero, which is a different kind of value than
+"fixes a per-frame race."
+
 This book teaches the design vocabulary and the non-obvious rules. By
 the end you should know:
 
