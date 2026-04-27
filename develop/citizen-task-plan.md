@@ -39,10 +39,10 @@ chapters are drafted; rest are stubs awaiting prose.
 - [x] `concepts/messages.md` — content-complete (six variants,
       CopperForge-shaped AppMessage example, intent-vs-outcome,
       sub-domain nesting)
-- [ ] `tutorial/first-citizen.md` — stub (adapt examples/getting_started)
-- [ ] `tutorial/with-egui-dock.md` — stub (adapt examples/citizen_dock)
-- [ ] `tutorial/two-panels.md` — stub (needs new example
-      `examples/two_panels_reactive`)
+- [x] `tutorial/writing-a-citizen-app.md` — content-complete
+      (replaces the three stubs first-citizen / with-egui-dock /
+      two-panels with a single end-to-end walkthrough of the
+      `examples/filter_plotter` biquad lowpass demo)
 - [x] `patterns/stored-vs-stateless.md` — content-complete (both
       lawful forms with code, the CitizenState::default() trap, the
       CopperForge stored-vs-stateless split, decision rule)
@@ -86,3 +86,15 @@ chapters are drafted; rest are stubs awaiting prose.
 - [ ] Derive macro for Citizen trait boilerplate
 - [ ] Persistence — save/restore citizen state and dock layout across sessions
 - [ ] Template repo for cargo-generate
+- [ ] **Lifecycle hooks** — have `Dispatcher::activate()` invoke
+      `panel.on_activate()` (and `.on_deactivate()`, `.on_click()`)
+      callbacks instead of writing `state.active.set(true)` directly.
+      Currently the `Citizen` trait defines these hooks but the
+      framework never calls them — they're sugar for panel code to
+      invoke manually. Making the dispatcher call them turns the
+      trait into a load-bearing part of the framework and gives panels
+      a synchronous place to do side-effect work on activation
+      (start a fetch, allocate a buffer, log) without having to detect
+      state edges manually in `show()`. Implementation requires the
+      dispatcher to hold panel handles (`Box<dyn Citizen>` or
+      similar) — a real architectural change, not a refactor.
