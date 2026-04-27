@@ -62,7 +62,7 @@ impl PlotPanel {
                         .iter()
                         .zip(traces.input.iter())
                         .step_by(INPUT_STRIDE)
-                        .map(|(&t, &y)| [t, y])
+                        .map(|(&t, &y)| [t, y as f64])
                         .collect();
                     plot_ui.line(Line::new("input", pts).name("input"));
 
@@ -72,7 +72,7 @@ impl PlotPanel {
                             .iter()
                             .zip(traces.filtered.iter())
                             .step_by(FILTERED_STRIDE)
-                            .map(|(&t, &y)| [t, y])
+                            .map(|(&t, &y)| [t, y as f64])
                             .collect();
                         plot_ui.line(
                             Line::new("filtered", pts)
@@ -95,7 +95,7 @@ impl PlotPanel {
                         .iter()
                         .zip(traces.filtered.iter())
                         .step_by(FILTERED_STRIDE)
-                        .map(|(&t, &y)| [t, y])
+                        .map(|(&t, &y)| [t, y as f64])
                         .collect();
                     plot_ui.line(Line::new("filtered", pts).name("filtered"));
                 });

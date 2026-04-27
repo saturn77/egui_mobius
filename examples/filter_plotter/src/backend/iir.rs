@@ -65,9 +65,11 @@ impl InProcessIir {
 }
 
 impl BackendKind for InProcessIir {
+    type Sample = f32;
+
     fn name(&self) -> &'static str { "in-process IIR" }
 
-    fn run(&mut self, params: &FilterParams) -> Traces {
+    fn run(&mut self, params: &FilterParams) -> Traces<f32> {
         let n = params.num_samples();
         let sr = params.sample_rate_hz;
         let signal_w = 2.0 * std::f32::consts::PI * params.signal_freq_hz;
@@ -75,8 +77,8 @@ impl BackendKind for InProcessIir {
 
         let mut filter = Biquad::lowpass(params.cutoff_hz, sr);
 
-        let mut time = Vec::with_capacity(n);
-        let mut input = Vec::with_capacity(n);
+        let mut time     = Vec::with_capacity(n);
+        let mut input    = Vec::with_capacity(n);
         let mut filtered = Vec::with_capacity(n);
 
         let noise_amp = params.noise_amplitude;
@@ -86,8 +88,8 @@ impl BackendKind for InProcessIir {
             let out = filter.process(raw);
 
             time.push(t as f64);
-            input.push(raw as f64);
-            filtered.push(out as f64);
+            input.push(raw);
+            filtered.push(out);
         }
 
         Traces { time, input, filtered }

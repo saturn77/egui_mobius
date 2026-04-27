@@ -46,7 +46,7 @@ impl ParamsState {
 /// writes `params`.
 pub struct SharedState {
     pub params: ParamsState,
-    pub traces: Dynamic<Traces>,
+    pub traces: Dynamic<Traces<f32>>,
     pub log: Dynamic<Vec<String>>,
     /// Linked-axis group id — both Plot widgets pass this same Id to
     /// `Plot::link_axis(...)` so pan/zoom on either propagates to the
@@ -62,7 +62,7 @@ impl SharedState {
     pub fn new() -> Self {
         Self {
             params: ParamsState::defaults(),
-            traces: Dynamic::new(Traces::default()),
+            traces: Dynamic::new(Traces::<f32>::default()),
             log: Dynamic::new(Vec::new()),
             plot_link: egui::Id::new("filter_plotter::axis_link"),
             overlay_filtered: Dynamic::new(false),

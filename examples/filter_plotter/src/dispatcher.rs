@@ -44,12 +44,15 @@ pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
 
 /// Route an app-level message. `Generate` runs the backend synchronously
 /// and stores the resulting traces in shared state; the others log.
-pub fn handle<B: BackendKind>(
+pub fn handle<B>(
     msg: AppMessage,
     state: &SharedState,
     backend: &mut B,
     log: &Dynamic<Vec<String>>,
-) {
+)
+where
+    B: BackendKind<Sample = f32>,
+{
     match msg {
         // Already drained directly via `drain_citizen`.
         AppMessage::Citizen(_) => {}

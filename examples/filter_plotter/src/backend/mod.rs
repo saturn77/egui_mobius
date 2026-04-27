@@ -28,14 +28,29 @@ impl FilterParams {
 }
 
 /// One pair of traces resulting from a Generate run.
-#[derive(Debug, Clone, Default)]
-pub struct Traces {
-    pub time: Vec<f64>,      // seconds
-    pub input: Vec<f64>,     // raw noisy signal
-    pub filtered: Vec<f64>,  // lowpass output
+///
+/// `T` is the sample type. The in-process IIR backend uses `f32`; a
+/// serial-port backend feeding raw ADC counts could use `i16` or `i32`
+/// without a lossy upcast at the boundary. Time stays `f64` regardless
+/// — timestamps are the same kind of value across all backends.
+#[derive(Debug, Clone)]
+pub struct Traces<T> {
+    pub time:     Vec<f64>,  // seconds
+    pub input:    Vec<T>,    // raw noisy signal
+    pub filtered: Vec<T>,    // lowpass output
 }
 
-impl Traces {
+impl<T> Default for Traces<T> {
+    fn default() -> Self {
+        Self {
+            time:     Vec::new(),
+            input:    Vec::new(),
+            filtered: Vec::new(),
+        }
+    }
+}
+
+impl<T> Traces<T> {
     pub fn is_empty(&self) -> bool {
         self.time.is_empty()
     }
@@ -43,7 +58,12 @@ impl Traces {
 
 /// What every backend variant must do: turn a parameter snapshot into a
 /// pair of traces (input, filtered).
+///
+/// `Sample` is the per-trace sample type. Pick the type that matches
+/// where the data comes from (`f32` for the in-process IIR; `i16` for a
+/// 16-bit ADC over serial; `f64` for a high-precision simulator).
 pub trait BackendKind {
-    fn run(&mut self, params: &FilterParams) -> Traces;
+    type Sample;
+    fn run(&mut self, params: &FilterParams) -> Traces<Self::Sample>;
     fn name(&self) -> &'static str;
 }

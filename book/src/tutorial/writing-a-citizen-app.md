@@ -114,7 +114,7 @@ pub struct ParamsState {
 
 pub struct SharedState {
     pub params: ParamsState,
-    pub traces: Dynamic<Traces>,
+    pub traces: Dynamic<Traces<f32>>,
     pub log: Dynamic<Vec<String>>,
     pub plot_link: egui::Id,
 }
@@ -127,28 +127,125 @@ Generate), `traces` (drain loop writes, plot panel reads), `log`
 `plot_link` because both plot widgets only need the same `Id`; it
 never changes after construction.
 
+The `f32` in `Dynamic<Traces<f32>>` is where this app commits to
+the in-process IIR backend's sample type — see
+[The backend](#the-backend--backend) below for why `Traces<T>` is
+generic and how a fixed-point backend would change just this one
+type.
+
 This is the **app-shared services** bucket from
 [Where does state live?](../concepts/citizen.md#where-does-state-live)
 in concrete form.
 
 ## The backend — `backend/`
 
-The `BackendKind` trait abstracts what generates samples:
+Two plain data types and a trait. The data types come first
+because the trait signature uses them.
+
+```rust,ignore
+/// Parameters captured at "Generate" time — a snapshot of the reactive
+/// fields on `SharedState::params` so the backend has a stable, owned
+/// view of what to compute.
+#[derive(Debug, Clone, Copy)]
+pub struct FilterParams {
+    pub signal_freq_hz:  f32,
+    pub noise_freq_hz:   f32,
+    pub noise_amplitude: f32,
+    pub cutoff_hz:       f32,
+    pub sample_rate_hz:  f32,
+    pub duration_ms:     f32,
+}
+
+impl FilterParams {
+    pub fn num_samples(&self) -> usize {
+        (self.sample_rate_hz * self.duration_ms / 1000.0).round() as usize
+    }
+}
+
+/// One pair of traces resulting from a Generate run.
+///
+/// `T` is the sample type. The in-process IIR backend uses `f32`; a
+/// serial-port backend feeding raw ADC counts could use `i16` or `i32`
+/// without a lossy upcast at the boundary. Time stays `f64` regardless
+/// — timestamps are the same kind of value across all backends.
+#[derive(Debug, Clone)]
+pub struct Traces<T> {
+    pub time:     Vec<f64>,  // seconds
+    pub input:    Vec<T>,    // raw noisy signal
+    pub filtered: Vec<T>,    // lowpass output
+}
+
+impl<T> Default for Traces<T> {
+    fn default() -> Self {
+        Self {
+            time:     Vec::new(),
+            input:    Vec::new(),
+            filtered: Vec::new(),
+        }
+    }
+}
+
+impl<T> Traces<T> {
+    pub fn is_empty(&self) -> bool { self.time.is_empty() }
+}
+```
+
+Three things worth pointing out:
+
+- **`FilterParams` is `Copy`** because it's a plain bag of `f32`s.
+  The settings panel writes reactive `Dynamic<f32>` fields; on
+  Generate we *snapshot* them into a `FilterParams` (see
+  `state.rs::ParamsState::snapshot()`) so the backend gets a
+  stable, owned value. No reactivity crosses the trait boundary.
+- **`Traces<T>` is generic over the sample type, not the time type.**
+  This is the difference between an emulator backend producing
+  `f32` samples and a serial-port backend producing `i16` ADC
+  counts — neither needs to lossily upcast at the boundary. The
+  *time* axis stays `Vec<f64>` because seconds-since-start is the
+  same kind of quantity everywhere; only the sample magnitudes
+  vary in representation.
+- **`Traces` uses parallel `Vec`s columnar**, three vectors of the
+  same length, not a `Vec<(f64, T, T)>` of points. Columnar is
+  what the plot library wants — `traces.time.iter()
+  .zip(traces.input.iter())` to produce points only at render time
+  — and it's what a streaming backend would also produce. Keeping
+  the shape columnar from day one means swapping in a streaming
+  backend later doesn't reshape the data.
+
+`Default` is implemented manually instead of derived because the
+derive would inject a spurious `T: Default` bound; `Vec::new()`
+doesn't need it.
+
+The `BackendKind` trait then abstracts what produces a `Traces`
+from a `FilterParams`. The sample type is an associated type, so
+each backend names exactly one:
 
 ```rust,ignore
 pub trait BackendKind {
-    fn run(&mut self, params: &FilterParams) -> Traces;
+    type Sample;
+    fn run(&mut self, params: &FilterParams) -> Traces<Self::Sample>;
     fn name(&self) -> &'static str;
 }
 ```
 
-The tutorial ships `InProcessIir` (in `backend/iir.rs`), which
-generates a sine wave, adds a 200 kHz tone for noise, applies a
-biquad lowpass, and returns both traces. A `SerialPort` impl
-would have the same shape: `run` reads samples off a port; `name`
-reports `"serial port"` instead. **The rest of the app — settings
-panel, plot panel, dispatcher — does not change.** Swap the
-backend type, the wiring stays.
+The tutorial ships `InProcessIir` (in `backend/iir.rs`) with
+`type Sample = f32;` — it generates a sine wave, adds a 200 kHz
+tone for noise, applies a biquad lowpass, and returns both traces
+as `Traces<f32>`. A `SerialPort` impl would set
+`type Sample = i16;` (or whatever the ADC width is) and `run`
+would read samples off a port. **The rest of the app — settings
+panel, plot panel, dispatcher — does not change shape.** Swap the
+backend type and the wiring stays.
+
+The one place that *commits* to a sample type is `SharedState`:
+```rust,ignore
+pub traces: Dynamic<Traces<f32>>,
+```
+The reactive cell has to hold a concrete `T`. Using a different
+backend means changing this `f32` to match
+`Backend::Sample`, but the dispatcher's `handle` function uses
+`B: BackendKind<Sample = f32>` to enforce the match at compile
+time, so the wiring stays honest.
 
 The biquad itself is direct-form-II-transposed Butterworth
 (Q = 1/√2):
@@ -322,12 +419,15 @@ pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
     }
 }
 
-pub fn handle<B: BackendKind>(
+pub fn handle<B>(
     msg: AppMessage,
     state: &SharedState,
     backend: &mut B,
     log: &Dynamic<Vec<String>>,
-) {
+)
+where
+    B: BackendKind<Sample = f32>,
+{
     match msg {
         AppMessage::Citizen(_) => {} // already drained directly
         AppMessage::Generate => {
@@ -347,10 +447,151 @@ pub fn handle<B: BackendKind>(
 
 `register_citizens` runs once at startup. `drain_citizen` and
 `handle` run once per frame. `handle` is generic over backend
-shape (`B: BackendKind`), which is what makes the dispatcher truly
-app-agnostic — the same module would work with a `SerialPort`
-backend, a `CsvImporter`, or anything else implementing
-`BackendKind`.
+shape (`B: BackendKind<Sample = f32>`), which is what makes the
+dispatcher app-agnostic at the *behavior* layer — the same module
+would work with a `SerialPort` backend, a `CsvImporter`, or
+anything else implementing `BackendKind` whose `Sample` matches
+what `SharedState::traces` holds. Pinning the sample type at the
+`where` clause means the compiler catches any backend swap that
+forgot to update `SharedState`.
+
+## The tabs module — `tabs.rs`
+
+`egui_dock` needs two things from your app: a tab type, and a
+`TabViewer` impl that knows how to render each tab. `tabs.rs` is
+where both live, plus the citizen IDs that name each panel.
+
+```rust,ignore
+pub const PLOT_ID:     &str = "plot";
+pub const SETTINGS_ID: &str = "settings";
+pub const LOGGER_ID:   &str = "logger";
+
+#[derive(Clone, Copy)]
+pub enum TabKind {
+    Plot,
+    Settings,
+    Logger,
+}
+
+pub struct Tab {
+    pub kind: TabKind,
+}
+
+impl Tab {
+    pub fn new(kind: TabKind) -> Self { Self { kind } }
+
+    pub fn title(&self) -> &'static str {
+        match self.kind {
+            TabKind::Plot     => "Plot",
+            TabKind::Settings => "Settings",
+            TabKind::Logger   => "Logger",
+        }
+    }
+
+    pub fn citizen_id(&self) -> CitizenId {
+        CitizenId::new(match self.kind {
+            TabKind::Plot     => PLOT_ID,
+            TabKind::Settings => SETTINGS_ID,
+            TabKind::Logger   => LOGGER_ID,
+        })
+    }
+}
+```
+
+`TabKind` is the closed set of panels the app knows about. `Tab`
+wraps a `TabKind` because `egui_dock::DockState<T>` stores `T`
+directly — wrapping it in a struct gives us a stable place to hang
+helpers like `title()` and `citizen_id()`. Adding a fourth panel is
+one new variant plus a match arm in each helper; no other file
+moves.
+
+The `citizen_id()` method is what links `egui_dock`'s tab-click
+event back into the citizen layer — clicking the Settings tab needs
+to activate `CitizenId::new("settings")` so the dispatcher knows
+that panel is now in focus. Keeping the IDs as `pub const` strings
+in this file means `dispatcher.rs` and `tabs.rs` agree by import,
+not by typo-prone string duplication.
+
+### The `TabViewer` bridge
+
+`egui_dock::TabViewer` is the trait the dock area calls into to
+render each tab. Our impl is the *one place* in the app that holds
+mutable references to every panel and the dispatcher at once:
+
+```rust,ignore
+pub struct TabViewer<'a> {
+    pub state: &'a SharedState,
+    pub dispatcher: &'a mut Dispatcher,
+    pub plot: &'a mut PlotPanel,
+    pub settings: &'a mut SettingsPanel,
+    pub logger: &'a mut LoggerPanel,
+}
+
+impl egui_dock::TabViewer for TabViewer<'_> {
+    type Tab = Tab;
+
+    fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
+        tab.title().into()
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
+        match tab.kind {
+            TabKind::Plot     => self.plot.show(ui, self.state),
+            TabKind::Settings => self.settings.show(ui, self.state, self.dispatcher),
+            TabKind::Logger   => self.logger.show(ui, self.state),
+        }
+    }
+
+    fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
+        if response.clicked() {
+            self.dispatcher.activate(&tab.citizen_id());
+        }
+    }
+}
+```
+
+Three methods, each doing one thing:
+
+1. **`title`** — return whatever the tab strip should display.
+   We delegate to `Tab::title()` so the strings live next to the
+   enum.
+2. **`ui`** — `egui_dock` calls this once per visible tab per
+   frame. We match on `tab.kind` and dispatch to the corresponding
+   panel's `show()`. Note that `settings.show` takes the dispatcher
+   too — most panels won't need it, but the settings panel uses it
+   for activation hooks. The other panels just need `&SharedState`.
+3. **`on_tab_button`** — fired when the user clicks a tab header.
+   We forward the click into `dispatcher.activate(...)`. This is
+   the canonical citizen hook: `egui_dock` knows about the click;
+   the dispatcher knows about activation; this method is the
+   bridge. Even if your app doesn't currently *do* anything on
+   activation, register the click — the dispatcher's queue stays
+   accurate, and adding behavior later doesn't require revisiting
+   this file.
+
+The borrow story is worth a moment: `TabViewer` holds five `&mut`
+references at once, which would be a problem in a long-lived
+struct, but it's constructed inline in `update()` and dropped at
+the end of `DockArea::show()`. Short-lived, single-frame — the
+compiler is happy because no two methods on `TabViewer` borrow
+overlapping fields.
+
+### Why this file barely changes between apps
+
+Look back at the *reusable scaffolding* list at the top of the
+chapter. `tabs.rs` is on it because:
+
+- The `TabKind` enum changes (new panels) but the *shape* doesn't.
+- The `Tab` struct, `title()`, `citizen_id()` pattern is verbatim
+  across apps.
+- The `TabViewer` impl gains/loses fields as panels come and go,
+  but the three methods (`title`, `ui`, `on_tab_button`) are always
+  the same three methods doing the same three jobs.
+
+Adding a panel is mechanical: new const, new `TabKind` variant,
+new title, new `citizen_id` arm, new `&mut Panel` field on
+`TabViewer`, new arm in `ui`. Six edits, no thinking — exactly
+the kind of change the citizen pattern is designed to make boring.
 
 ## Wiring it together — `main.rs`
 
