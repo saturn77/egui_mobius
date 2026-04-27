@@ -8,32 +8,35 @@ use crate::backend::{FilterParams, Traces};
 /// Reactive parameters edited by the settings panel and consumed by the
 /// backend at Generate time.
 pub struct ParamsState {
-    pub signal_freq_hz: Dynamic<f32>,
-    pub noise_freq_hz:  Dynamic<f32>,
-    pub cutoff_hz:      Dynamic<f32>,
-    pub sample_rate_hz: Dynamic<f32>,
-    pub duration_ms:    Dynamic<f32>,
+    pub signal_freq_hz:  Dynamic<f32>,
+    pub noise_freq_hz:   Dynamic<f32>,
+    pub noise_amplitude: Dynamic<f32>,
+    pub cutoff_hz:       Dynamic<f32>,
+    pub sample_rate_hz:  Dynamic<f32>,
+    pub duration_ms:     Dynamic<f32>,
 }
 
 impl ParamsState {
     pub fn defaults() -> Self {
         Self {
-            signal_freq_hz: Dynamic::new(50.0),
-            noise_freq_hz:  Dynamic::new(200_000.0),
-            cutoff_hz:      Dynamic::new(1_000.0),
-            sample_rate_hz: Dynamic::new(1_000_000.0),
-            duration_ms:    Dynamic::new(100.0),
+            signal_freq_hz:  Dynamic::new(50.0),
+            noise_freq_hz:   Dynamic::new(200_000.0),
+            noise_amplitude: Dynamic::new(0.5),
+            cutoff_hz:       Dynamic::new(1_000.0),
+            sample_rate_hz:  Dynamic::new(1_000_000.0),
+            duration_ms:     Dynamic::new(100.0),
         }
     }
 
     /// Capture an owned snapshot for the backend.
     pub fn snapshot(&self) -> FilterParams {
         FilterParams {
-            signal_freq_hz: self.signal_freq_hz.get(),
-            noise_freq_hz:  self.noise_freq_hz.get(),
-            cutoff_hz:      self.cutoff_hz.get(),
-            sample_rate_hz: self.sample_rate_hz.get(),
-            duration_ms:    self.duration_ms.get(),
+            signal_freq_hz:  self.signal_freq_hz.get(),
+            noise_freq_hz:   self.noise_freq_hz.get(),
+            noise_amplitude: self.noise_amplitude.get(),
+            cutoff_hz:       self.cutoff_hz.get(),
+            sample_rate_hz:  self.sample_rate_hz.get(),
+            duration_ms:     self.duration_ms.get(),
         }
     }
 }

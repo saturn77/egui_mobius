@@ -54,6 +54,16 @@ impl SettingsPanel {
             state.params.noise_freq_hz.set(noise);
         }
 
+        // Noise amplitude
+        let mut noise_amp = state.params.noise_amplitude.get();
+        if ui.add(egui::Slider::new(&mut noise_amp, 0.0..=2.0)
+            .text("Noise amplitude")
+            .fixed_decimals(2))
+            .changed()
+        {
+            state.params.noise_amplitude.set(noise_amp);
+        }
+
         // Cutoff
         let mut cutoff = state.params.cutoff_hz.get();
         if ui.add(egui::Slider::new(&mut cutoff, 100.0..=50_000.0)

@@ -15,6 +15,7 @@ pub mod iir;
 pub struct FilterParams {
     pub signal_freq_hz: f32,
     pub noise_freq_hz: f32,
+    pub noise_amplitude: f32,
     pub cutoff_hz: f32,
     pub sample_rate_hz: f32,
     pub duration_ms: f32,

@@ -79,9 +79,10 @@ impl BackendKind for InProcessIir {
         let mut input = Vec::with_capacity(n);
         let mut filtered = Vec::with_capacity(n);
 
+        let noise_amp = params.noise_amplitude;
         for i in 0..n {
             let t = i as f32 / sr;
-            let raw = (signal_w * t).sin() + 0.5 * (noise_w * t).sin();
+            let raw = (signal_w * t).sin() + noise_amp * (noise_w * t).sin();
             let out = filter.process(raw);
 
             time.push(t as f64);
