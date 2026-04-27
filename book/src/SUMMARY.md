@@ -14,9 +14,7 @@
 
 # Tutorial
 
-- [Your first citizen](tutorial/first-citizen.md)
-- [Wiring into egui_dock](tutorial/with-egui-dock.md)
-- [Two panels talking](tutorial/two-panels.md)
+- [Writing a citizen app](tutorial/writing-a-citizen-app.md)
 
 # Patterns
 
