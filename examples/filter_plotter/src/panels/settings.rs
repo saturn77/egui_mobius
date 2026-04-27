@@ -95,6 +95,16 @@ impl SettingsPanel {
 
         ui.add_space(12.0);
 
+        // Display options.
+        let mut overlay = state.overlay_filtered.get();
+        if ui.checkbox(&mut overlay, "Overlay filtered output on input plot (green)")
+            .changed()
+        {
+            state.overlay_filtered.set(overlay);
+        }
+
+        ui.add_space(8.0);
+
         if ui.add_sized(
             [ui.available_width(), 28.0],
             egui::Button::new("Generate"),

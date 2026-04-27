@@ -50,6 +50,8 @@ impl PlotPanel {
         let total = ui.available_height();
         let half = (total - 8.0).max(120.0) / 2.0;
 
+        let overlay = state.overlay_filtered.get();
+
         ui.allocate_ui(egui::vec2(ui.available_width(), half), |ui| {
             Plot::new("input_plot")
                 .link_axis(state.plot_link, [true, false])
@@ -63,6 +65,21 @@ impl PlotPanel {
                         .map(|(&t, &y)| [t, y])
                         .collect();
                     plot_ui.line(Line::new("input", pts).name("input"));
+
+                    if overlay {
+                        let pts: PlotPoints = traces
+                            .time
+                            .iter()
+                            .zip(traces.filtered.iter())
+                            .step_by(FILTERED_STRIDE)
+                            .map(|(&t, &y)| [t, y])
+                            .collect();
+                        plot_ui.line(
+                            Line::new("filtered", pts)
+                                .color(egui::Color32::from_rgb(0x90, 0xe0, 0x90))
+                                .name("filtered"),
+                        );
+                    }
                 });
         });
 

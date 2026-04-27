@@ -52,6 +52,10 @@ pub struct SharedState {
     /// `Plot::link_axis(...)` so pan/zoom on either propagates to the
     /// other (matplotlib-style linked subplots).
     pub plot_link: egui::Id,
+    /// When true, the input plot also shows the filtered trace as a
+    /// green overlay so the two can be compared without zooming
+    /// between subplots.
+    pub overlay_filtered: Dynamic<bool>,
 }
 
 impl SharedState {
@@ -61,6 +65,7 @@ impl SharedState {
             traces: Dynamic::new(Traces::default()),
             log: Dynamic::new(Vec::new()),
             plot_link: egui::Id::new("filter_plotter::axis_link"),
+            overlay_filtered: Dynamic::new(false),
         }
     }
 }
