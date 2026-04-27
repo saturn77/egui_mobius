@@ -13,6 +13,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/logger_component",
     "examples/citizen_dock",
     "examples/citizen_fetch",
+    "examples/filter_plotter",
     "examples/getting_started",
     "examples"
 ]
