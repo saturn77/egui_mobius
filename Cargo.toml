@@ -15,6 +15,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/citizen_fetch",
     "examples/filter_plotter",
     "examples/getting_started",
+    "examples/citizen_signal_async",
     "examples"
 ]
 # exclude = [

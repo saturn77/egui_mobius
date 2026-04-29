@@ -1,0 +1,14 @@
+[package]
+name = "citizen_signal_async"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+egui_mobius          = { workspace = true }
+egui_mobius_reactive = { workspace = true }
+egui_citizen         = { workspace = true }
+egui                 = { workspace = true }
+egui_dock            = { workspace = true }
+eframe               = { workspace = true, features = ["default"] }
+tokio                = { version = "1", features = ["full"] }
