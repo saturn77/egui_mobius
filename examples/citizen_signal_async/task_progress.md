@@ -48,19 +48,31 @@ clean before moving on.
       `[backend] result:`, and `last result:` updating after the
       slider's duration. Spinner shown while in-flight.
 
-## Phase 3 — citizen panels
+## Phase 3 — citizen panels + dock layout
 
-- [ ] `src/panels/control.rs`
-- [ ] `src/panels/result.rs` (with spinner on `in_flight`)
-- [ ] `src/panels/logger.rs`
-- [ ] `src/tabs.rs` — `TabKind`, `Tab`, `TabViewer`
-- [ ] `src/main.rs` updated to dock layout + drain loop
+- [x] `src/panels/mod.rs` — module root
+- [x] `src/panels/control.rs` — duration / seed sliders + Compute
+      button → `outbox.push(AppMessage::Compute)`
+- [x] `src/panels/result.rs` — last_result heading + in_flight spinner
+- [x] `src/panels/logger.rs` — log scrollback (mirrors filter_plotter)
+- [x] `src/tabs.rs` — `TabKind`, `Tab`, `TabViewer`. Citizen IDs moved
+      here from `dispatcher.rs` (their canonical home alongside
+      `TabKind`).
+- [x] `src/main.rs` rewritten: `DockArea` + `TabViewer`, layout is
+      `Result | (Control / Logger)`. Drain loop unchanged.
+- [x] `cargo check` clean (4 unused-item warnings on panel
+      `citizen_id` / `citizen_state` fields — same warnings
+      filter_plotter has; convention is to leave them in)
+- [ ] **Manual smoke test (user)**: dock layout opens, Compute on the
+      Control panel updates the Result panel, tab clicks log
+      `[citizen] X activated/deactivated` lines in the Logger.
 
-## Phase 4 — citizen activation logging
+## Phase 4 — citizen activation logging (already done in Phase 3)
 
-- [ ] Tab clicks call `citizen_dispatcher.activate(&id)`
-- [ ] `drain_messages()` appended to `state.log` so Logger shows
-      both backend events and citizen lifecycle events
+- [x] Tab clicks call `citizen_dispatcher.activate(&id)` (via
+      `TabViewer::on_tab_button`)
+- [x] `drain_messages()` appended to `state.log` so Logger shows both
+      backend events and citizen lifecycle events
 
 ## Phase 5 — polish
 

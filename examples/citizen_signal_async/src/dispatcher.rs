@@ -12,13 +12,7 @@ use egui_mobius_reactive::Dynamic;
 
 use crate::messages::AppMessage;
 use crate::state::{SharedState, WorkRequest};
-
-// Citizen IDs. These will move to `tabs.rs` in Phase 3 alongside the
-// `TabKind` enum and `TabViewer` impl; keeping them here for now so the
-// dispatcher module is self-contained until the dock layout exists.
-pub const CONTROL_ID: &str = "control";
-pub const RESULT_ID:  &str = "result";
-pub const LOGGER_ID:  &str = "logger";
+use crate::tabs::{CONTROL_ID, LOGGER_ID, RESULT_ID};
 
 /// The three CitizenStates the panels need to hold, kept together so
 /// `App::new()` doesn't have to thread three values out of
