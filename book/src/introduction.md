@@ -1,7 +1,12 @@
 # Introduction
 
+This book provides know-how to build solid professional graphical user
+interfaces with the Rust programming languge employing the `egui` GUI library. `egui_mobius` is a framwork ecosystem that has been in solid use now approaching two years. 
+
 `egui_mobius` primarily consists of itself, `egui_mobius_reactive`, and `egui_citizen.` The citizen crate is a design pattern on top of egui_mobius_reactive which facilitates robust development of 
 flexible, maintainable applications. 
+
+
 
 Overall egui_citizen is the preferred general pattern of working with egui_mobius in the sense that most modern applications will typically have dockable panels to make the Ui ergonomic and modern. Coupled with background threading, these are the two primary focus areas of GUI design, well supported by the citizen pattern: 
 
@@ -10,6 +15,7 @@ Overall egui_citizen is the preferred general pattern of working with egui_mobiu
 
 This book goes through `egui_citizen` and `egui_mobius_reactive` to illustrate the fundamental design pattern and provide explanations of the underlying code so that one knows what the framework and patterns are doing under the hood. 
 
+
 ![CopperForge running on egui_citizen — a docked layout with a 3D gerber view, settings, terminal, and logger panels updating live as the user drives the app.](images/citizen-copper.gif)
 
 *[CopperForge](https://github.com/Atlantix-EDA/CopperForge) — a
@@ -17,6 +23,22 @@ real-world `egui_citizen` + `egui_dock` application for PCB gerber
 inspection. Each docked region is a citizen-panel; the panels share
 state through reactive cells, and the 3D rendering thread is
 coordinated through the dispatcher.*
+
+
+It must also be noted that there are three general levels to a mobius-citizen application. One is
+where shared state is between panels, and the dispatcher simply does
+state management of panels. A second is where the dispatcher is extended
+to handle backend processing. Finally the third level is where signals
+and slots are employed between the dispatcher and the backend. The
+first two stages employ citizen and mobius_reactive while the third
+stage uses all elements of the ecosystem. Thus the signals and slots
+are explored via `egui_mobius` for third level applications.
+
+Worked examples for each level live in `examples/`:
+
+- **Level 1** — `getting_started`, `citizen_dock`
+- **Level 2** — `filter_plotter`, `citizen_fetch`
+- **Level 3** — `citizen_signal_async`
 
 This guide is written organically, with the human focus, and is meant to be free-flowing and logical and yet easy to read. 
 
@@ -50,7 +72,7 @@ approaches.
 
 `egui_mobius` Signals and Slots can be employed by the dispatcher for
 more advanced applications, in which case there is likely multiple background threads all receiving a signal from the dispatcher. Each
-background thread cand then send a Signal back to a Slot on the dispatcher for task / thread completion. 
+background thread can then send a Signal back to a Slot on the dispatcher for task / thread completion. 
 
 This book presents background material related to an examination of 
 `Dynamic<T>`, `egui_dock`, and general vocabulary associated with the
