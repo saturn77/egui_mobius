@@ -1,21 +1,27 @@
-# Coupling paths: UI-to-UI and UI-to-backend
+# Coupling
 
-`egui_citizen` gives you two distinct ways for a state change in one
-place to influence work somewhere else. They serve different jobs,
-they have different timing, and a single widget — what we'll call an
-**atom** (a widget inside a citizen panel) — can use either path or
-both at once.
+Panel-to-panel coupling is what shared `Dynamic<T>` already gives you:
+one panel writes, another reads, `egui` redraws on the next frame.
+Most apps need nothing more than that to get state from one panel to
+another. This chapter calls that **Path A**, and it is the default.
 
-Get this vocabulary clear before you design anything substantial.
+There is also an opt-in second path — `dispatcher.send()` — for the
+specific case where a state change needs to leave the UI thread or
+land on a queue: a backend thread, an off-thread logger, a persistence
+sink, anything that wants events rather than just the current value.
+That's **Path B**. Most of this chapter exists to keep its trade-offs
+straight from Path A's, because conflating the two is where designs
+go sideways.
 
-## The two paths
+A single widget — what we'll call an **atom** (a widget inside a
+citizen panel) — can use either path or both at once.
 
 | Path | Mechanism           | Good for                    | Timing           |
 |------|---------------------|-----------------------------|------------------|
-| A    | Shared `Dynamic<T>` | Panel → panel               | Immediate        |
+| A    | Shared `Dynamic<T>` | Panel ↔ panel (default)     | Immediate        |
 | B    | `dispatcher.send()` | Panel → backend / logger    | Next drain pass  |
 
-### Path A — shared `Dynamic<T>` (panel to panel)
+## Path A — shared `Dynamic<T>` (panel to panel)
 
 Two panels share a clone of the same `Dynamic<T>`. One writes, the
 other reads. That's the whole mechanism.
@@ -41,7 +47,7 @@ No subscription, no callback, no event bus. egui already redraws
 frequently enough that polling-per-frame is effectively free. **Path A
 carries state, not events.**
 
-### Path B — dispatcher messages (panel to backend)
+## Path B — dispatcher messages (panel to backend, opt-in)
 
 The settings panel explicitly enqueues a message; the app's update
 loop drains it after `DockArea::show()` and forwards it onward — to a

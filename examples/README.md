@@ -1,132 +1,76 @@
-# Examples in `egui_mobius`
+# Examples
 
-This directory contains examples demonstrating the capabilities and architectural patterns of the `egui_mobius` ecosystem. Each example is designed to showcase specific aspects of the framework.
+Working examples covering the three approaches in the `egui_mobius`
+ecosystem: the citizen pattern (`egui_citizen`), the reactive
+primitives (`egui_mobius_reactive`), and the older signal-slot
+paradigm in `egui_mobius` core.
 
-## 🚀 Learning Path
+If you are new to the ecosystem, start with `getting_started` and
+`reactive`. The first shows the citizen pattern end-to-end in a
+single file; the second shows what `Dynamic<T>` actually does in
+about twenty lines.
 
-For the best learning experience, we recommend exploring these examples in the following order:
+## Citizen pattern
 
-### 1. Core Paradigms
+- `getting_started` — three panels (Config, Display, Logger) wired
+  through a dispatcher. Clicking a tab activates the citizen and the
+  logger shows the lifecycle messages flowing through.
+- `citizen_dock` — citizen + `egui_dock` with three algorithm tabs
+  (Alpha, Beta, Gamma); the plot panel reacts to whichever tab is
+  active, no per-frame fighting.
+- `filter_plotter` — settings, plot, and logger panels driving a
+  biquad lowpass filter backend. The book's tutorial walks through
+  this example file by file.
+- `citizen_fetch` — backend thread doing HTTP fetches off the UI
+  thread; image and response panels read the result reactively.
 
-Start with these to understand the three primary paradigms in egui_mobius:
+## Reactive primitives
 
-- **Reactive Pattern**: `reactive` → `reactive_slider` → `dashboard_async` → `clock_reactive`
-- **Signal-Slot Pattern**: `ui_refresh_events` → `dashboard` → `clock_async` 
-- **Components**: `logger_component`
+- `reactive` — minimal `Dynamic<T>` counter. Read this first if you
+  haven't used the reactive crate before.
+- `reactive_slider` — `ReactiveWidgetRef` and weak references for
+  composing widgets without cloning `Arc<T>` everywhere.
+- `dashboard_async` — `Dynamic<T>` shared between the UI and an
+  async background task running on `MobiusRuntime`.
+- `clock_reactive` — full clock app: reactive state, multiple views,
+  background processing through `MobiusRuntime`.
 
-### 2. Integration Patterns
+## Signal-slot / dispatcher
 
-After understanding the basics, explore how these paradigms work together:
+- `ui_refresh_events` — the smallest signal-slot example. Custom
+  timed and programmatic UI refresh events.
+- `dashboard` — `Dispatcher` pattern: register slots, send signals,
+  separate UI from backend handlers.
+- `clock_async` — signal-slot with `AsyncDispatcher` integrated
+  against Tokio for concurrent processing.
 
-- **Reactive + Async**: `clock_reactive` (shows MobiusRuntime integration)
-- **Signals + Async**: `clock_async` (shows AsyncDispatcher with Tokio)
-- **Real-time Data Visualization**: `realtime_plot` (shows data streaming patterns)
+## Components and streaming
 
-## 🏗️ Example Architecture
+- `logger_component` — uses `EventLogger` from
+  `egui_mobius_components`. Multi-level severity, rich text,
+  timestamp filtering.
+- `realtime_plot` — streaming data visualization, mixing reactive
+  state and signal-slot for the data path.
 
-### Signal-Slot Pattern Examples
+## Running
 
-- **`ui_refresh_events`** - Introduction to signal-slot basics
-  - Custom timed and programmatic UI refresh events
-  - Simple RequestRepaint pattern
-
-- **`dashboard`** - Core Dispatcher pattern for event handling
-  - Demonstrates separation of UI and backend concerns
-  - Shows how to register slots and handle responses
-
-- **`clock_async`** - Comprehensive signal-slot architecture
-  - Thread-safe state management using Value<T>
-  - Shows signal-slot system with true concurrent processing
-  - Type-safe message passing between UI and background
-  - Uses AsyncDispatcher for Tokio integration
-
-### Reactive Pattern Examples
-
-- **`reactive`** - Basic reactive state management with Dynamic<T>
-  - Thread-safe state with automatic UI updates
-  - Basic dependency tracking
-  - Simple counter patterns
-
-- **`reactive_slider`** - Demonstrates ReactiveWidgetRef
-  - Retained-mode style component references
-  - Weak references for cleaner composition
-  - Reduced Arc<T> cloning pattern
-
-- **`dashboard_async`** - Reactive state with async integration
-  - Uses Dynamic<T> for reactive state management
-  - Integrates async tasks using MobiusRuntime
-  - Demonstrates reactive UI updates with background processing
-
-- **`clock_reactive`** - Complete reactive app with async integration
-  - MobiusRuntime for background processing
-  - Clean UI/logic separation with reactive state
-  - Comprehensive UI with multiple views
-
-### Component Examples
-
-- **`logger_component`** - Demonstrates EventLogger component
-  - Sophisticated event logging with customizable styles
-  - Thread-safe implementation with signal-slot architecture
-  - Multi-level message severity
-  - Timestamp filtering and rich text formatting
-
-## 🔧 Running Examples
-
-Each example is a standalone crate that can be run directly:
+Each example is a workspace crate:
 
 ```bash
-# Run any example by name
-cargo run -p <example_name>
-
-# For instance:
+cargo run -p getting_started
 cargo run -p reactive
-cargo run -p logger_component
-cargo run -p clock_reactive
+cargo run -p filter_plotter
 ```
 
-## 📊 Feature Matrix
+Most examples respect `RUST_LOG` for verbose output:
 
-| Example | Reactive State | Signal-Slot | Async | Components | Complexity |
-|---------|:-------------:|:-----------:|:-----:|:----------:|:----------:|
-| reactive | ✅ | - | - | - | 🟢 Basic |
-| reactive_slider | ✅ | - | - | - | 🟢 Basic |
-| ui_refresh_events | - | ✅ | - | - | 🟢 Basic |
-| logger_component | ✅ | ✅ | - | ✅ | 🟡 Moderate |
-| dashboard | - | ✅ | - | - | 🟡 Moderate |
-| realtime_plot | ✅ | ✅ | - | - | 🟡 Moderate |
-| dashboard_async | ✅ | - | ✅ | - | 🟡 Moderate |
-| clock_reactive | ✅ | - | ✅ | - | 🔴 Advanced |
-| clock_async | ✅ | ✅ | ✅ | - | 🔴 Advanced |
+```bash
+RUST_LOG=debug cargo run -p clock_reactive
+```
 
-## 🧩 Ecosystem Integration
+## More
 
-These examples demonstrate different aspects of the egui_mobius ecosystem:
-
-- `egui_mobius_reactive`: Used in all reactive examples
-- `egui_mobius_widgets`: Used in most UI-heavy examples
-- `egui_mobius_components`: Used in `logger_component`
-
-## 📝 Configuration & Debugging
-
-- **Logging**: Most examples support detailed logging
-  ```bash
-  # Run with debug logging enabled
-  RUST_LOG=debug cargo run -p <example_name>
-  ```
-
-- **State Persistence**: Some examples support:
-  - RON files for static configuration
-  - JSON for runtime state persistence
-
-## 📚 Documentation
-
-Each example has its own README with:
-- Detailed feature explanations
-- Architecture notes
-- Example-specific configuration options
-
-For a comprehensive introduction to egui_mobius patterns, also check out our [template repository](https://github.com/saturn77/egui_mobius_template).
-
----
-
-Feel free to explore these examples when building your own application with `egui_mobius`. They cover the full range of architectural patterns and showcase best practices for production use.
+The book in `egui_mobius/book/` covers the citizen pattern and the
+reactive primitives in depth. The
+[`egui_mobius_template`](https://github.com/saturn77/egui_mobius_template)
+repository is a starting scaffold for new applications.

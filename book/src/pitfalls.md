@@ -128,10 +128,11 @@ fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Tab) {
 }
 ```
 
-This is the single most common foot-gun and the one
-[the problem chapter](concepts/problem.md) is built around. `ui()` is
-for rendering; `on_tab_button` is for state transitions. Keep them
-separate.
+This is the single most common foot-gun and the reason
+[the egui_dock background chapter](background/egui_dock.md) draws the
+distinction between `ui()` (render) and `on_tab_button` (event) so
+sharply. `ui()` is for rendering; `on_tab_button` is for state
+transitions. Keep them separate.
 
 ## 4. Mixing panel-local state into `CitizenState`
 

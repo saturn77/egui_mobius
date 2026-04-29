@@ -1,12 +1,24 @@
 # The Dispatcher
 
-The `Dispatcher` is the hub between citizens and the rest of your
-app. It does three jobs:
+The `Dispatcher` is opt-in infrastructure, not the entry point of an
+`egui_citizen` app. Many apps that share state between panels through
+`Dynamic<T>` never reach for one. You reach for a dispatcher when the
+reactive primitives don't already give you what you need:
 
-1. **Owns the canonical reactive state.** Every registered citizen's
-   `CitizenState` lives in a `HashMap` inside the dispatcher. Panels
-   hold *clones* of those handles; the dispatcher holds the original
-   entries.
+- **One-hot activation arbitration.** Exactly one panel "active" at a
+  time, atomically, across an arbitrary number of citizens. Useful
+  any time focus, selection, or panel priority matters — even in a
+  pure-UI app with no backend.
+- **A queue for outbound events.** A place to push events that the
+  update loop drains once per frame and forwards onward to backend
+  threads, loggers, persistence, or anywhere else outside the UI tick.
+
+Whichever of those you need, the dispatcher does three jobs:
+
+1. **Owns the registered citizens' `CitizenState` handles.** Every
+   citizen you call `register()` on has its `CitizenState` cloned into
+   a `HashMap` inside the dispatcher. Panels hold the other clone;
+   both refer to the same `Arc`-backed storage.
 2. **Enforces the one-hot activation invariant.**
    `Dispatcher::activate(&id)` sets the named citizen's `active` flag
    to `true` and clears every other registered citizen's flag,
@@ -14,9 +26,9 @@ app. It does three jobs:
 3. **Buffers outbound messages.** Lifecycle changes and explicit
    `send()` calls accumulate in a queue that you drain once per frame.
 
-That is the whole job. The dispatcher does *not* know about dock
-layout, does *not* fire UI events on its own, and does *not* observe
-arbitrary `Dynamic<T>` writes (see
+The dispatcher does *not* know about dock layout, does *not* fire UI
+events on its own, and does *not* observe arbitrary `Dynamic<T>`
+writes (see
 [the coupling chapter](coupling.md#the-dispatcher-is-not-a-reactive-bus)).
 
 ![Six panels (Project, Settings, Plotter 1, Plotter 2, Logger, Terminal/Shell) in a 2×2 dock layout. Each panel contains a labelled state cloud — ProjectState, SettingsState, Plotter1State, Plotter2State, LoggerState, TerminalState. Arrows from every state cloud converge on a single DISPATCHER block on the right.](../images/Basic_App_State.drawio.png)
