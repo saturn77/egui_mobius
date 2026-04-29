@@ -24,12 +24,13 @@ This guide is written organically, with the human focus, and is meant to be free
 >
 > This book is best served by those familiar with egui, and some
 > notion of dockable widgets either through use of something like Qt
-> Ads (Qt's Advanced Docking Widgets) or through **egui_dock** itself. > Familiarty with shared memory concepts and threading is important. 
+> Ads (Qt's Advanced Docking Widgets) or through **egui_dock** itself
+> Familiarity with shared memory concepts and threading is important. 
 
 The general scope and area of application of egui_citizen is building 
 engineering tooling and small to medium sized applications, particularly
 where dockable panels help organize the app and provide the modern
-Ui polish. Whe one develops tools, it is often done after not looking
+Ui polish. When one develops tools, it is often done after not looking
 at a framework for a while. 
 
 So a framework or pattern that is easy to pick back up is essential ! 
@@ -39,7 +40,7 @@ basis in which to make applications such as:
 
 - Instrumentation apps (serial / usb port monitors, modbus, plotting)
 - Simulation front end apps (provide parameters, thread simulation)
-- Project apps (datbase management, project tracking)
+- Project apps (database management, project tracking)
 - 2D and 3D graphics interfacing with egui 
 - Web interfacing and storage (fetch / async)
 
@@ -47,11 +48,17 @@ basis in which to make applications such as:
 more involved in the overall design. This guide will illustrate both
 approaches. 
 
+`egui_mobius` Signals and Slots can be employed by the dispatcher for
+more advanced applications, in which case there is likely multiple background threads all receiving a signal from the dispatcher. Each
+background thread cand then send a Signal back to a Slot on the dispatcher for task / thread completion. 
 
-![A typical multi-panel egui_citizen / egui_dock app: top and bottom ribbons frame a 2×2 dock layout — Project / Settings (top-left), Plotter 1 / Plotter 2 (top-right), Logger (bottom-left), and Terminal / Shell (bottom-right).](images/Basic_App.drawio.png)
+This book presents background material related to an examination of 
+`Dynamic<T>`, `egui_dock`, and general vocabulary associated with the
+`egui_mobius` traits. Concepts are then presented, in an appropriate
+level of detail, followed by the Tutorial. A user may go directly to
+the Tutorial and refer back to concepts sections as needed. Finally
+the book ends with suggestions on patterns and a reference sheet. 
 
-*A typical multi-panel app layout. Every labelled region is a
-candidate citizen-panel; the ribbons are app-shared chrome.*
 
 
 
