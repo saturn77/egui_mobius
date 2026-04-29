@@ -24,19 +24,29 @@ clean before moving on.
       live here for now; will move to `tabs.rs` in Phase 3.
 - [x] `cargo check` clean (17 unused-item warnings; expected until
       Phase 2 wires the bus and Phase 3 builds the panels)
-- [ ] Minimal eframe app shell in `main.rs` (no panels yet, just a
-      central panel saying "ready")
+- [x] Minimal eframe app shell in `main.rs` (CentralPanel with sliders,
+      Compute button, in-flight spinner, last-result label, log
+      scrollback) — folded into Phase 2 since the shell and the
+      backend wiring are tested together
 
-## Phase 2 — backend wiring
+## Phase 2 — backend wiring + smoke-test shell
 
-- [ ] `src/backend.rs` — async work function + helper that builds the
-      `AsyncDispatcher`, signal/slot pairs, and returns the handles
-      the UI needs (`Signal<WorkRequest>`, `Slot<WorkResponse>`)
-- [ ] Hook the result slot to write `last_result`, `in_flight`,
-      `log` in `SharedState`
-- [ ] Manual smoke test: send a synthetic `WorkRequest` from a button
-      in the central panel; verify `last_result` updates after the
-      sleep
+- [x] `src/backend.rs` — `wire_backend()` builds the `AsyncDispatcher`,
+      both signal/slot pairs, attaches the async `work()` function;
+      returns `Signal<WorkRequest>`, `Slot<WorkResponse>`,
+      `BackendHandle` (keepalive for the Tokio runtime)
+- [x] Result slot handler in `App::new` writes `last_result`,
+      `in_flight`, log line; calls `ctx.request_repaint()` so the UI
+      paints the new value next frame
+- [x] AppMessage drain in `update()` — `outbox` filled by Compute
+      button, drained by `dispatcher::handle`, which forwards to
+      `work_signal.send(req)`
+- [x] `cargo check -p citizen_signal_async` clean (2 unused-item
+      warnings; expected until Phase 3 wires panels through `AppMessage`)
+- [ ] **Manual smoke test (user)**: `cargo run -p citizen_signal_async`,
+      move sliders, click Compute. Expect log lines: `[ui] submit:`,
+      `[backend] result:`, and `last result:` updating after the
+      slider's duration. Spinner shown while in-flight.
 
 ## Phase 3 — citizen panels
 
