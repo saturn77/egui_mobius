@@ -15,10 +15,15 @@ clean before moving on.
 - [x] Added to root `Cargo.toml` workspace `members`
 - [x] `cargo check -p citizen_signal_async` clean
 
-## Phase 1 — types + state
+## Phase 1 — types + state + dispatcher routing
 
-- [ ] `src/state.rs` — `SharedState`, `WorkRequest`, `WorkResponse`
-- [ ] `src/messages.rs` — `AppMessage` enum
+- [x] `src/state.rs` — `SharedState`, `ParamsState`, `WorkRequest`, `WorkResponse`
+- [x] `src/messages.rs` — `AppMessage` enum
+- [x] `src/dispatcher.rs` — `register_citizens`, `drain_citizen`,
+      `handle()`, `append_log()`, `format_citizen()`. Citizen IDs
+      live here for now; will move to `tabs.rs` in Phase 3.
+- [x] `cargo check` clean (17 unused-item warnings; expected until
+      Phase 2 wires the bus and Phase 3 builds the panels)
 - [ ] Minimal eframe app shell in `main.rs` (no panels yet, just a
       central panel saying "ready")
 
