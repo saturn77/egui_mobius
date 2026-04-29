@@ -2,7 +2,7 @@
 authors = ["James Bonanno"]
 language = "en"
 src = "src"
-title = "egui-citizen"
+title = "egui-mobius && egui-citizen"
 description = "A framework for clean, reusable architecture in egui apps — identities, reactive state, and message dispatch."
 
 [output.html]
