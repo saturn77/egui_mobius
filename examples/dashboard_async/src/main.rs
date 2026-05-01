@@ -209,8 +209,8 @@ impl UiMainWindow {
 }
 
 impl eframe::App for UiMainWindow {
-    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Cryptocurrency Prices");
                 ui.label("Powered by egui_mobius");

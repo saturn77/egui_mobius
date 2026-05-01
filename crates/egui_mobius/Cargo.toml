@@ -22,7 +22,7 @@ all-features = true
 rustdoc-args = ["--generate-link-to-definition"]
 
 [dependencies]
-tokio = {version = "1.43.0", features = ["full"]}
+tokio = { workspace = true, features = ["full"] }
 futures = "0.3"
 serde = { version = "1.0.218", optional = true }
 

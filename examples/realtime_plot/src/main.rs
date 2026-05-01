@@ -117,7 +117,7 @@ impl UiApp {
 // updates the UI based on the received messages.
 //----------------------------------------------------------------------------
 impl eframe::App for UiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let fabric_data = &self.fabric_data;
         let mut inlet_temp = fabric_data.inlet_temp.lock().unwrap();
         let mut exhaust_temp = fabric_data.exhaust_temp.lock().unwrap();
@@ -127,7 +127,7 @@ impl eframe::App for UiApp {
         let ambient_history = fabric_data.ambient_history.lock().unwrap();
         let y_bounds = fabric_data.y_bounds.lock().unwrap();
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.heading("SiC MOSFET Half-Bridge Thermal Simulation");
             ui.add_space(20.0);
 
@@ -197,7 +197,7 @@ impl eframe::App for UiApp {
                         let pixels = image_buffer.as_flat_samples();
                         let color_image =
                             ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
-                        self.circuit_texture = Some(ctx.load_texture(
+                        self.circuit_texture = Some(ui.ctx().load_texture(
                             "circuit-diagram",
                             color_image,
                             Default::default(),
@@ -256,7 +256,7 @@ impl eframe::App for UiApp {
                     );
                 });
         });
-        ctx.request_repaint_after(Duration::from_secs(1));
+        ui.ctx().request_repaint_after(Duration::from_secs(1));
     }
 }
 

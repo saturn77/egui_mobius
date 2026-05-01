@@ -368,7 +368,7 @@ impl FetchApp {
 }
 
 impl eframe::App for FetchApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // Process responses from backend thread
         while let Ok(response) = self.response_rx.try_recv() {
             self.is_fetching = false;
@@ -384,7 +384,7 @@ impl eframe::App for FetchApp {
                         [width as usize, height as usize],
                         &data,
                     );
-                    self.image_texture = Some(ctx.load_texture(
+                    self.image_texture = Some(ui.load_texture(
                         format!("fetched_image_{}", id),
                         color_image,
                         egui::TextureOptions::LINEAR,
@@ -433,7 +433,7 @@ impl eframe::App for FetchApp {
                 fetch_count: self.fetch_count,
                 log: &mut self.log,
             };
-            DockArea::new(&mut dock_state).show(ctx, &mut viewer);
+            DockArea::new(&mut dock_state).show_inside(ui, &mut viewer);
         }
 
         // Drain citizen messages
@@ -454,7 +454,7 @@ impl eframe::App for FetchApp {
 
         // Keep repainting during fetch or auto-fetch
         if self.is_fetching || self.auto_fetch {
-            ctx.request_repaint();
+            ui.ctx().request_repaint();
         }
     }
 }

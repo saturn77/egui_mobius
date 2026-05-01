@@ -100,7 +100,7 @@ impl UiApp {
 // updates the UI based on the received messages.
 //----------------------------------------------------------------------------
 impl eframe::App for UiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let mut should_repaint = false;
 
         self.slot_on_uiapp.start({
@@ -138,7 +138,7 @@ impl eframe::App for UiApp {
             }
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.label("Buttons");
             ui.add_space(5.0);
 
@@ -275,7 +275,7 @@ impl eframe::App for UiApp {
 
         let mut update_needed = self.update_needed.lock().unwrap();
         if *update_needed || should_repaint {
-            ctx.request_repaint();
+            ui.ctx().request_repaint();
             *update_needed = false;
         }
     }

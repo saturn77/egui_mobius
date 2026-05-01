@@ -43,9 +43,9 @@ impl UiApp {
 }
 
 impl eframe::App for UiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // Main layout using egui_taffy
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             tui(ui, "main_panel")
                 .reserve_available_space()
                 .style(taffy::Style {
