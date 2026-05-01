@@ -35,8 +35,8 @@ struct App {
     /// Keeps the Tokio runtime alive. Dropping this silences the backend.
     _backend: backend::BackendHandle,
     control: ControlPanel,
-    result:  ResultPanel,
-    logger:  LoggerPanel,
+    result: ResultPanel,
+    logger: LoggerPanel,
 }
 
 impl App {
@@ -58,11 +58,10 @@ impl App {
             0.6,
             vec![Tab::new(TabKind::Control)],
         );
-        let [_, _bottom] = dock_state.main_surface_mut().split_below(
-            right,
-            0.5,
-            vec![Tab::new(TabKind::Logger)],
-        );
+        let [_, _bottom] =
+            dock_state
+                .main_surface_mut()
+                .split_below(right, 0.5, vec![Tab::new(TabKind::Logger)]);
 
         let (work_signal, mut result_slot, backend_handle) = backend::wire_backend();
 
@@ -70,9 +69,9 @@ impl App {
         // backend response arrives. Writes through the shared `Dynamic`
         // handles, then wakes the UI so the new value paints next frame.
         let last_result = state.last_result.clone();
-        let in_flight   = state.in_flight.clone();
-        let log         = state.log.clone();
-        let ctx         = cc.egui_ctx.clone();
+        let in_flight = state.in_flight.clone();
+        let log = state.log.clone();
+        let ctx = cc.egui_ctx.clone();
         result_slot.start(move |resp| {
             last_result.set(resp.value);
             in_flight.set(false);
@@ -95,8 +94,8 @@ impl App {
             work_signal,
             _backend: backend_handle,
             control: ControlPanel::new(citizens.control),
-            result:  ResultPanel::new(citizens.result),
-            logger:  LoggerPanel::new(citizens.logger),
+            result: ResultPanel::new(citizens.result),
+            logger: LoggerPanel::new(citizens.logger),
         }
     }
 }
@@ -109,8 +108,8 @@ impl eframe::App for App {
                 state: &self.state,
                 dispatcher: &mut self.dispatcher,
                 control: &mut self.control,
-                result:  &mut self.result,
-                logger:  &mut self.logger,
+                result: &mut self.result,
+                logger: &mut self.logger,
             },
         );
 

@@ -110,7 +110,9 @@ impl<'a> LoggerPanel<'a> {
                                         entry.message
                                     ))
                                     .monospace();
-                                    ui.label(text.color(entry.color.unwrap_or(colors.custom_event)));
+                                    ui.label(
+                                        text.color(entry.color.unwrap_or(colors.custom_event)),
+                                    );
                                 }
                             },
                         );

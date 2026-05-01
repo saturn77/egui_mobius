@@ -97,10 +97,12 @@ impl Dispatcher {
         for (cid, state) in &self.citizens {
             if cid == id {
                 state.active.set(true);
-                self.message_queue.push(CitizenMessage::Activated { id: cid.clone() });
+                self.message_queue
+                    .push(CitizenMessage::Activated { id: cid.clone() });
             } else if state.active.get() {
                 state.active.set(false);
-                self.message_queue.push(CitizenMessage::Deactivated { id: cid.clone() });
+                self.message_queue
+                    .push(CitizenMessage::Deactivated { id: cid.clone() });
             }
         }
     }

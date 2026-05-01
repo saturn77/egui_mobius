@@ -10,12 +10,12 @@
 //!
 //! Run: cargo run -p citizen_fetch
 
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use eframe::egui;
 use egui::Color32;
-use egui_dock::{DockArea, DockState, NodeIndex};
-use egui_citizen::{CitizenMessage, Dispatcher};
 use egui_citizen::message::CitizenId;
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use egui_citizen::{CitizenMessage, Dispatcher};
+use egui_dock::{DockArea, DockState, NodeIndex};
 use std::time::{Duration, Instant};
 
 // ── Colors (Tokyo Night subset) ─────────────────────────────────────────
@@ -36,18 +36,37 @@ enum FetchRequest {
 }
 
 enum FetchResponse {
-    Text { url: String, body: String, status: u16 },
-    Image { id: u64, data: Vec<u8>, width: u32, height: u32 },
-    Error { url: String, error: String },
+    Text {
+        url: String,
+        body: String,
+        status: u16,
+    },
+    Image {
+        id: u64,
+        data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
+    Error {
+        url: String,
+        error: String,
+    },
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
-enum TabKind { Fetch, Image, Response, Logger }
+enum TabKind {
+    Fetch,
+    Image,
+    Response,
+    Logger,
+}
 
 #[derive(Clone)]
-struct Tab { kind: TabKind }
+struct Tab {
+    kind: TabKind,
+}
 
 impl Tab {
     fn title(&self) -> &str {
@@ -89,7 +108,9 @@ struct TabViewer<'a> {
 impl egui_dock::TabViewer for TabViewer<'_> {
     type Tab = Tab;
 
-    fn title(&mut self, tab: &mut Tab) -> egui::WidgetText { tab.title().into() }
+    fn title(&mut self, tab: &mut Tab) -> egui::WidgetText {
+        tab.title().into()
+    }
 
     fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
         if response.clicked() {
@@ -111,122 +132,162 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
 impl TabViewer<'_> {
     fn render_fetch(&mut self, ui: &mut egui::Ui) {
-        egui::Frame::new().fill(BG).inner_margin(12.0).show(ui, |ui| {
-            ui.heading(egui::RichText::new("HTTP Fetch").color(CYAN));
-            ui.add_space(8.0);
+        egui::Frame::new()
+            .fill(BG)
+            .inner_margin(12.0)
+            .show(ui, |ui| {
+                ui.heading(egui::RichText::new("HTTP Fetch").color(CYAN));
+                ui.add_space(8.0);
 
-            // Manual URL fetch
-            ui.horizontal(|ui| {
-                ui.label("URL:");
-                ui.text_edit_singleline(self.url);
+                // Manual URL fetch
+                ui.horizontal(|ui| {
+                    ui.label("URL:");
+                    ui.text_edit_singleline(self.url);
+                });
+
+                ui.add_space(4.0);
+
+                let button_text = if *self.is_fetching {
+                    "Fetching..."
+                } else {
+                    "Fetch"
+                };
+                if ui
+                    .add_enabled(!*self.is_fetching, egui::Button::new(button_text))
+                    .clicked()
+                {
+                    let url = self.url.clone();
+                    self.log.push(format!("[FETCH] Requesting: {}", url));
+                    let _ = self.request_tx.send(FetchRequest::GetText(url));
+                    *self.is_fetching = true;
+                }
+
+                ui.add_space(12.0);
+                ui.separator();
+                ui.add_space(8.0);
+
+                // Auto-fetch random images
+                ui.heading(egui::RichText::new("Auto Fetch Images").color(ORANGE));
+                ui.add_space(4.0);
+
+                ui.checkbox(self.auto_fetch, "Enable auto-fetch");
+
+                ui.horizontal(|ui| {
+                    ui.label("Interval:");
+                    ui.add(
+                        egui::Slider::new(self.auto_interval_secs, 2.0..=30.0)
+                            .suffix("s")
+                            .step_by(1.0),
+                    );
+                });
+
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new(format!("Fetches: {}", self.fetch_count))
+                        .color(GREEN)
+                        .monospace(),
+                );
+
+                ui.add_space(8.0);
+                ui.label(
+                    egui::RichText::new(
+                        "Pulls random images from picsum.photos.\n\
+                     Each fetch runs on a background thread.",
+                    )
+                    .color(COMMENT),
+                );
             });
-
-            ui.add_space(4.0);
-
-            let button_text = if *self.is_fetching { "Fetching..." } else { "Fetch" };
-            if ui.add_enabled(!*self.is_fetching, egui::Button::new(button_text)).clicked() {
-                let url = self.url.clone();
-                self.log.push(format!("[FETCH] Requesting: {}", url));
-                let _ = self.request_tx.send(FetchRequest::GetText(url));
-                *self.is_fetching = true;
-            }
-
-            ui.add_space(12.0);
-            ui.separator();
-            ui.add_space(8.0);
-
-            // Auto-fetch random images
-            ui.heading(egui::RichText::new("Auto Fetch Images").color(ORANGE));
-            ui.add_space(4.0);
-
-            ui.checkbox(self.auto_fetch, "Enable auto-fetch");
-
-            ui.horizontal(|ui| {
-                ui.label("Interval:");
-                ui.add(egui::Slider::new(self.auto_interval_secs, 2.0..=30.0)
-                    .suffix("s")
-                    .step_by(1.0));
-            });
-
-            ui.add_space(4.0);
-            ui.label(
-                egui::RichText::new(format!("Fetches: {}", self.fetch_count))
-                    .color(GREEN).monospace()
-            );
-
-            ui.add_space(8.0);
-            ui.label(
-                egui::RichText::new(
-                    "Pulls random images from picsum.photos.\n\
-                     Each fetch runs on a background thread."
-                ).color(COMMENT)
-            );
-        });
     }
 
     fn render_image(&self, ui: &mut egui::Ui) {
-        egui::Frame::new().fill(BG).inner_margin(8.0).show(ui, |ui| {
-            if !self.image_info.is_empty() {
-                ui.label(egui::RichText::new(self.image_info).color(CYAN).monospace());
-                ui.separator();
-            }
+        egui::Frame::new()
+            .fill(BG)
+            .inner_margin(8.0)
+            .show(ui, |ui| {
+                if !self.image_info.is_empty() {
+                    ui.label(egui::RichText::new(self.image_info).color(CYAN).monospace());
+                    ui.separator();
+                }
 
-            if let Some(texture) = self.image_texture {
-                let available = ui.available_size();
-                let tex_size = texture.size_vec2();
-                let scale = (available.x / tex_size.x).min(available.y / tex_size.y).min(1.0);
-                let display_size = tex_size * scale;
-                ui.centered_and_justified(|ui| {
-                    ui.image((texture.id(), display_size));
-                });
-            } else {
-                ui.centered_and_justified(|ui| {
-                    ui.label(egui::RichText::new("No image loaded yet.\nEnable auto-fetch or fetch a URL.").color(COMMENT));
-                });
-            }
-        });
+                if let Some(texture) = self.image_texture {
+                    let available = ui.available_size();
+                    let tex_size = texture.size_vec2();
+                    let scale = (available.x / tex_size.x)
+                        .min(available.y / tex_size.y)
+                        .min(1.0);
+                    let display_size = tex_size * scale;
+                    ui.centered_and_justified(|ui| {
+                        ui.image((texture.id(), display_size));
+                    });
+                } else {
+                    ui.centered_and_justified(|ui| {
+                        ui.label(
+                            egui::RichText::new(
+                                "No image loaded yet.\nEnable auto-fetch or fetch a URL.",
+                            )
+                            .color(COMMENT),
+                        );
+                    });
+                }
+            });
     }
 
     fn render_response(&self, ui: &mut egui::Ui) {
-        egui::Frame::new().fill(BG).inner_margin(12.0).show(ui, |ui| {
-            ui.heading(egui::RichText::new("Response").color(GREEN));
-            ui.add_space(4.0);
+        egui::Frame::new()
+            .fill(BG)
+            .inner_margin(12.0)
+            .show(ui, |ui| {
+                ui.heading(egui::RichText::new("Response").color(GREEN));
+                ui.add_space(4.0);
 
-            if !self.response_status.is_empty() {
-                ui.label(egui::RichText::new(self.response_status).color(CYAN).monospace());
-                ui.separator();
-            }
-
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                if self.response_body.is_empty() {
-                    ui.label(egui::RichText::new("No text response yet.").color(COMMENT));
-                } else {
-                    ui.label(egui::RichText::new(self.response_body).color(FG).monospace());
+                if !self.response_status.is_empty() {
+                    ui.label(
+                        egui::RichText::new(self.response_status)
+                            .color(CYAN)
+                            .monospace(),
+                    );
+                    ui.separator();
                 }
+
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    if self.response_body.is_empty() {
+                        ui.label(egui::RichText::new("No text response yet.").color(COMMENT));
+                    } else {
+                        ui.label(
+                            egui::RichText::new(self.response_body)
+                                .color(FG)
+                                .monospace(),
+                        );
+                    }
+                });
             });
-        });
     }
 
     fn render_logger(&self, ui: &mut egui::Ui) {
-        egui::Frame::new().fill(BG).inner_margin(8.0).show(ui, |ui| {
-            ui.heading(egui::RichText::new("Messages").color(CYAN));
-            ui.add_space(4.0);
+        egui::Frame::new()
+            .fill(BG)
+            .inner_margin(8.0)
+            .show(ui, |ui| {
+                ui.heading(egui::RichText::new("Messages").color(CYAN));
+                ui.add_space(4.0);
 
-            egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-                for line in self.log.iter() {
-                    let color = if line.contains("[CITIZEN]") {
-                        GREEN
-                    } else if line.contains("[ERROR]") {
-                        RED
-                    } else if line.contains("[IMAGE]") {
-                        ORANGE
-                    } else {
-                        COMMENT
-                    };
-                    ui.label(egui::RichText::new(line).color(color).monospace());
-                }
+                egui::ScrollArea::vertical()
+                    .stick_to_bottom(true)
+                    .show(ui, |ui| {
+                        for line in self.log.iter() {
+                            let color = if line.contains("[CITIZEN]") {
+                                GREEN
+                            } else if line.contains("[ERROR]") {
+                                RED
+                            } else if line.contains("[IMAGE]") {
+                                ORANGE
+                            } else {
+                                COMMENT
+                            };
+                            ui.label(egui::RichText::new(line).color(color).monospace());
+                        }
+                    });
             });
-        });
     }
 }
 
@@ -268,18 +329,29 @@ impl FetchApp {
         // ├──────────┼───────────┤
         // │  Logger  │ Response  │
         // └──────────┴───────────┘
-        let mut dock_state = DockState::new(vec![Tab { kind: TabKind::Image }]);
+        let mut dock_state = DockState::new(vec![Tab {
+            kind: TabKind::Image,
+        }]);
         let [left, right] = dock_state.main_surface_mut().split_left(
-            NodeIndex::root(), 0.30,
-            vec![Tab { kind: TabKind::Fetch }],
+            NodeIndex::root(),
+            0.30,
+            vec![Tab {
+                kind: TabKind::Fetch,
+            }],
         );
         dock_state.main_surface_mut().split_below(
-            left, 0.65,
-            vec![Tab { kind: TabKind::Logger }],
+            left,
+            0.65,
+            vec![Tab {
+                kind: TabKind::Logger,
+            }],
         );
         dock_state.main_surface_mut().split_below(
-            right, 0.65,
-            vec![Tab { kind: TabKind::Response }],
+            right,
+            0.65,
+            vec![Tab {
+                kind: TabKind::Response,
+            }],
         );
 
         let (request_tx, request_rx) = unbounded::<FetchRequest>();
@@ -289,34 +361,38 @@ impl FetchApp {
         std::thread::spawn(move || {
             for req in request_rx {
                 match req {
-                    FetchRequest::GetText(url) => {
-                        match ureq::get(&url).call() {
-                            Ok(resp) => {
-                                let status = resp.status();
-                                let body = resp.into_string()
-                                    .unwrap_or_else(|e| format!("(read error: {})", e));
-                                let body = if body.len() > 4000 {
-                                    format!("{}...\n\n[truncated, {} bytes total]",
-                                        &body[..4000], body.len())
-                                } else {
-                                    body
-                                };
-                                let _ = response_tx.send(FetchResponse::Text { url, body, status });
-                            }
-                            Err(e) => {
-                                let _ = response_tx.send(FetchResponse::Error {
-                                    url, error: e.to_string(),
-                                });
-                            }
+                    FetchRequest::GetText(url) => match ureq::get(&url).call() {
+                        Ok(resp) => {
+                            let status = resp.status();
+                            let body = resp
+                                .into_string()
+                                .unwrap_or_else(|e| format!("(read error: {})", e));
+                            let body = if body.len() > 4000 {
+                                format!(
+                                    "{}...\n\n[truncated, {} bytes total]",
+                                    &body[..4000],
+                                    body.len()
+                                )
+                            } else {
+                                body
+                            };
+                            let _ = response_tx.send(FetchResponse::Text { url, body, status });
                         }
-                    }
+                        Err(e) => {
+                            let _ = response_tx.send(FetchResponse::Error {
+                                url,
+                                error: e.to_string(),
+                            });
+                        }
+                    },
                     FetchRequest::GetImage { url, id } => {
                         match ureq::get(&url).call() {
                             Ok(resp) => {
                                 let mut bytes = Vec::new();
                                 if let Err(e) = resp.into_reader().read_to_end(&mut bytes) {
                                     let _ = response_tx.send(FetchResponse::Error {
-                                        url, error: format!("Read error: {}", e),
+                                        url,
+                                        error: format!("Read error: {}", e),
                                     });
                                     continue;
                                 }
@@ -326,19 +402,24 @@ impl FetchApp {
                                         let rgba = img.to_rgba8();
                                         let (w, h) = rgba.dimensions();
                                         let _ = response_tx.send(FetchResponse::Image {
-                                            id, data: rgba.into_raw(), width: w, height: h,
+                                            id,
+                                            data: rgba.into_raw(),
+                                            width: w,
+                                            height: h,
                                         });
                                     }
                                     Err(e) => {
                                         let _ = response_tx.send(FetchResponse::Error {
-                                            url, error: format!("Image decode error: {}", e),
+                                            url,
+                                            error: format!("Image decode error: {}", e),
                                         });
                                     }
                                 }
                             }
                             Err(e) => {
                                 let _ = response_tx.send(FetchResponse::Error {
-                                    url, error: e.to_string(),
+                                    url,
+                                    error: e.to_string(),
                                 });
                             }
                         }
@@ -374,12 +455,23 @@ impl eframe::App for FetchApp {
             self.is_fetching = false;
             match response {
                 FetchResponse::Text { url, body, status } => {
-                    self.log.push(format!("[FETCH] {} → {} ({} bytes)", url, status, body.len()));
+                    self.log.push(format!(
+                        "[FETCH] {} → {} ({} bytes)",
+                        url,
+                        status,
+                        body.len()
+                    ));
                     self.response_status = format!("HTTP {} — {}", status, url);
                     self.response_body = body;
                 }
-                FetchResponse::Image { id, data, width, height } => {
-                    self.log.push(format!("[IMAGE] #{} received — {}x{}", id, width, height));
+                FetchResponse::Image {
+                    id,
+                    data,
+                    width,
+                    height,
+                } => {
+                    self.log
+                        .push(format!("[IMAGE] #{} received — {}x{}", id, width, height));
                     let color_image = egui::ColorImage::from_rgba_unmultiplied(
                         [width as usize, height as usize],
                         &data,
@@ -405,7 +497,8 @@ impl eframe::App for FetchApp {
             if elapsed >= Duration::from_secs_f32(self.auto_interval_secs) && !self.is_fetching {
                 self.fetch_count += 1;
                 let url = format!("https://picsum.photos/600/400?random={}", self.fetch_count);
-                self.log.push(format!("[IMAGE] Auto-fetch #{}: {}", self.fetch_count, url));
+                self.log
+                    .push(format!("[IMAGE] Auto-fetch #{}: {}", self.fetch_count, url));
                 let _ = self.request_tx.send(FetchRequest::GetImage {
                     url,
                     id: self.fetch_count,

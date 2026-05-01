@@ -35,16 +35,16 @@ impl FilterParams {
 /// — timestamps are the same kind of value across all backends.
 #[derive(Debug, Clone)]
 pub struct Traces<T> {
-    pub time:     Vec<f64>,  // seconds
-    pub input:    Vec<T>,    // raw noisy signal
-    pub filtered: Vec<T>,    // lowpass output
+    pub time: Vec<f64>,   // seconds
+    pub input: Vec<T>,    // raw noisy signal
+    pub filtered: Vec<T>, // lowpass output
 }
 
 impl<T> Default for Traces<T> {
     fn default() -> Self {
         Self {
-            time:     Vec::new(),
-            input:    Vec::new(),
+            time: Vec::new(),
+            input: Vec::new(),
             filtered: Vec::new(),
         }
     }

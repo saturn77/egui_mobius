@@ -25,20 +25,18 @@ impl SettingsPanel {
         }
     }
 
-    pub fn show(
-        &mut self,
-        ui: &mut egui::Ui,
-        state: &SharedState,
-        _dispatcher: &mut Dispatcher,
-    ) {
+    pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState, _dispatcher: &mut Dispatcher) {
         ui.heading("Filter parameters");
         ui.add_space(8.0);
 
         // Signal frequency
         let mut signal = state.params.signal_freq_hz.get();
-        if ui.add(egui::Slider::new(&mut signal, 1.0..=500.0)
-            .text("Signal frequency (Hz)")
-            .logarithmic(true))
+        if ui
+            .add(
+                egui::Slider::new(&mut signal, 1.0..=500.0)
+                    .text("Signal frequency (Hz)")
+                    .logarithmic(true),
+            )
             .changed()
         {
             state.params.signal_freq_hz.set(signal);
@@ -46,9 +44,12 @@ impl SettingsPanel {
 
         // Noise frequency
         let mut noise = state.params.noise_freq_hz.get();
-        if ui.add(egui::Slider::new(&mut noise, 10_000.0..=400_000.0)
-            .text("Noise frequency (Hz)")
-            .logarithmic(true))
+        if ui
+            .add(
+                egui::Slider::new(&mut noise, 10_000.0..=400_000.0)
+                    .text("Noise frequency (Hz)")
+                    .logarithmic(true),
+            )
             .changed()
         {
             state.params.noise_freq_hz.set(noise);
@@ -56,9 +57,12 @@ impl SettingsPanel {
 
         // Noise amplitude
         let mut noise_amp = state.params.noise_amplitude.get();
-        if ui.add(egui::Slider::new(&mut noise_amp, 0.0..=2.0)
-            .text("Noise amplitude")
-            .fixed_decimals(2))
+        if ui
+            .add(
+                egui::Slider::new(&mut noise_amp, 0.0..=2.0)
+                    .text("Noise amplitude")
+                    .fixed_decimals(2),
+            )
             .changed()
         {
             state.params.noise_amplitude.set(noise_amp);
@@ -66,9 +70,12 @@ impl SettingsPanel {
 
         // Cutoff
         let mut cutoff = state.params.cutoff_hz.get();
-        if ui.add(egui::Slider::new(&mut cutoff, 100.0..=50_000.0)
-            .text("Lowpass cutoff (Hz)")
-            .logarithmic(true))
+        if ui
+            .add(
+                egui::Slider::new(&mut cutoff, 100.0..=50_000.0)
+                    .text("Lowpass cutoff (Hz)")
+                    .logarithmic(true),
+            )
             .changed()
         {
             state.params.cutoff_hz.set(cutoff);
@@ -76,9 +83,12 @@ impl SettingsPanel {
 
         // Sample rate (read-only display + small range)
         let mut sr = state.params.sample_rate_hz.get();
-        if ui.add(egui::Slider::new(&mut sr, 100_000.0..=2_000_000.0)
-            .text("Sample rate (Hz)")
-            .logarithmic(true))
+        if ui
+            .add(
+                egui::Slider::new(&mut sr, 100_000.0..=2_000_000.0)
+                    .text("Sample rate (Hz)")
+                    .logarithmic(true),
+            )
             .changed()
         {
             state.params.sample_rate_hz.set(sr);
@@ -86,8 +96,8 @@ impl SettingsPanel {
 
         // Duration
         let mut dur = state.params.duration_ms.get();
-        if ui.add(egui::Slider::new(&mut dur, 10.0..=500.0)
-            .text("Duration (ms)"))
+        if ui
+            .add(egui::Slider::new(&mut dur, 10.0..=500.0).text("Duration (ms)"))
             .changed()
         {
             state.params.duration_ms.set(dur);
@@ -97,7 +107,11 @@ impl SettingsPanel {
 
         // Display options.
         let mut overlay = state.overlay_filtered.get();
-        if ui.checkbox(&mut overlay, "Overlay filtered output on input plot (green)")
+        if ui
+            .checkbox(
+                &mut overlay,
+                "Overlay filtered output on input plot (green)",
+            )
             .changed()
         {
             state.overlay_filtered.set(overlay);
@@ -105,10 +119,9 @@ impl SettingsPanel {
 
         ui.add_space(8.0);
 
-        if ui.add_sized(
-            [ui.available_width(), 28.0],
-            egui::Button::new("Generate"),
-        ).clicked()
+        if ui
+            .add_sized([ui.available_width(), 28.0], egui::Button::new("Generate"))
+            .clicked()
         {
             self.outbox.push(AppMessage::Generate);
         }

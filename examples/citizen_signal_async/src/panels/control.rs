@@ -52,10 +52,7 @@ impl ControlPanel {
         ui.add_space(12.0);
 
         if ui
-            .add_sized(
-                [ui.available_width(), 28.0],
-                egui::Button::new("Compute"),
-            )
+            .add_sized([ui.available_width(), 28.0], egui::Button::new("Compute"))
             .clicked()
         {
             self.outbox.push(AppMessage::Compute);

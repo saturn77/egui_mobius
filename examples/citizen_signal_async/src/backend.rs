@@ -43,13 +43,21 @@ pub struct BackendHandle {
 ///   to receive completions and update `SharedState`
 /// - `BackendHandle` — keep alive on the App struct
 pub fn wire_backend() -> (Signal<WorkRequest>, Slot<WorkResponse>, BackendHandle) {
-    let (work_signal,   work_slot)   = factory::create_signal_slot::<WorkRequest>();
+    let (work_signal, work_slot) = factory::create_signal_slot::<WorkRequest>();
     let (result_signal, result_slot) = factory::create_signal_slot::<WorkResponse>();
 
     let dispatcher = AsyncDispatcher::<WorkRequest, WorkResponse>::new();
-    dispatcher.attach_async(work_slot, result_signal, |req| async move {
-        work(req).await
-    });
+    dispatcher.attach_async(
+        work_slot,
+        result_signal,
+        |req| async move { work(req).await },
+    );
 
-    (work_signal, result_slot, BackendHandle { _dispatcher: dispatcher })
+    (
+        work_signal,
+        result_slot,
+        BackendHandle {
+            _dispatcher: dispatcher,
+        },
+    )
 }
