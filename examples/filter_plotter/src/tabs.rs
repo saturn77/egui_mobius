@@ -6,9 +6,9 @@ use egui_citizen::{CitizenId, Dispatcher};
 use crate::panels::{logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel};
 use crate::state::SharedState;
 
-pub const PLOT_ID:     &str = "plot";
+pub const PLOT_ID: &str = "plot";
 pub const SETTINGS_ID: &str = "settings";
-pub const LOGGER_ID:   &str = "logger";
+pub const LOGGER_ID: &str = "logger";
 
 #[derive(Clone, Copy)]
 pub enum TabKind {
@@ -22,21 +22,23 @@ pub struct Tab {
 }
 
 impl Tab {
-    pub fn new(kind: TabKind) -> Self { Self { kind } }
+    pub fn new(kind: TabKind) -> Self {
+        Self { kind }
+    }
 
     pub fn title(&self) -> &'static str {
         match self.kind {
-            TabKind::Plot     => "Plot",
+            TabKind::Plot => "Plot",
             TabKind::Settings => "Settings",
-            TabKind::Logger   => "Logger",
+            TabKind::Logger => "Logger",
         }
     }
 
     pub fn citizen_id(&self) -> CitizenId {
         CitizenId::new(match self.kind {
-            TabKind::Plot     => PLOT_ID,
+            TabKind::Plot => PLOT_ID,
             TabKind::Settings => SETTINGS_ID,
-            TabKind::Logger   => LOGGER_ID,
+            TabKind::Logger => LOGGER_ID,
         })
     }
 }
@@ -64,9 +66,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
-            TabKind::Plot     => self.plot.show(ui, self.state),
+            TabKind::Plot => self.plot.show(ui, self.state),
             TabKind::Settings => self.settings.show(ui, self.state, self.dispatcher),
-            TabKind::Logger   => self.logger.show(ui, self.state),
+            TabKind::Logger => self.logger.show(ui, self.state),
         }
     }
 

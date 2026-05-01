@@ -21,7 +21,7 @@ use crate::state::SharedState;
 ///
 /// The *filtered* trace is smooth — anything above the 1 kHz cutoff is
 /// attenuated. Stride 50 is plenty there and keeps the renderer happy.
-const INPUT_STRIDE:    usize = 1;
+const INPUT_STRIDE: usize = 1;
 const FILTERED_STRIDE: usize = 50;
 
 pub struct PlotPanel {

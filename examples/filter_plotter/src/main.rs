@@ -54,11 +54,10 @@ impl App {
             0.65,
             vec![Tab::new(TabKind::Settings)],
         );
-        let [_, _bottom] = dock_state.main_surface_mut().split_below(
-            right,
-            0.55,
-            vec![Tab::new(TabKind::Logger)],
-        );
+        let [_, _bottom] =
+            dock_state
+                .main_surface_mut()
+                .split_below(right, 0.55, vec![Tab::new(TabKind::Logger)]);
 
         let state = SharedState::new();
         dispatcher::append_log(&state.log, "[INFO] filter_plotter started".into());
@@ -67,10 +66,10 @@ impl App {
             dispatcher: dispatcher_handle,
             dock_state,
             state,
-            plot:     PlotPanel::new(citizens.plot),
+            plot: PlotPanel::new(citizens.plot),
             settings: SettingsPanel::new(citizens.settings),
-            logger:   LoggerPanel::new(citizens.logger),
-            backend:  InProcessIir::new(),
+            logger: LoggerPanel::new(citizens.logger),
+            backend: InProcessIir::new(),
         }
     }
 }

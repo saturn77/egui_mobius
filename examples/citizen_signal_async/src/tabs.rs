@@ -7,8 +7,8 @@ use crate::panels::{control::ControlPanel, logger::LoggerPanel, result::ResultPa
 use crate::state::SharedState;
 
 pub const CONTROL_ID: &str = "control";
-pub const RESULT_ID:  &str = "result";
-pub const LOGGER_ID:  &str = "logger";
+pub const RESULT_ID: &str = "result";
+pub const LOGGER_ID: &str = "logger";
 
 #[derive(Clone, Copy)]
 pub enum TabKind {
@@ -22,21 +22,23 @@ pub struct Tab {
 }
 
 impl Tab {
-    pub fn new(kind: TabKind) -> Self { Self { kind } }
+    pub fn new(kind: TabKind) -> Self {
+        Self { kind }
+    }
 
     pub fn title(&self) -> &'static str {
         match self.kind {
             TabKind::Control => "Control",
-            TabKind::Result  => "Result",
-            TabKind::Logger  => "Logger",
+            TabKind::Result => "Result",
+            TabKind::Logger => "Logger",
         }
     }
 
     pub fn citizen_id(&self) -> CitizenId {
         CitizenId::new(match self.kind {
             TabKind::Control => CONTROL_ID,
-            TabKind::Result  => RESULT_ID,
-            TabKind::Logger  => LOGGER_ID,
+            TabKind::Result => RESULT_ID,
+            TabKind::Logger => LOGGER_ID,
         })
     }
 }
@@ -51,8 +53,8 @@ pub struct TabViewer<'a> {
     pub state: &'a SharedState,
     pub dispatcher: &'a mut CitizenDispatcher,
     pub control: &'a mut ControlPanel,
-    pub result:  &'a mut ResultPanel,
-    pub logger:  &'a mut LoggerPanel,
+    pub result: &'a mut ResultPanel,
+    pub logger: &'a mut LoggerPanel,
 }
 
 impl egui_dock::TabViewer for TabViewer<'_> {
@@ -65,8 +67,8 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
             TabKind::Control => self.control.show(ui, self.state),
-            TabKind::Result  => self.result.show(ui, self.state),
-            TabKind::Logger  => self.logger.show(ui, self.state),
+            TabKind::Result => self.result.show(ui, self.state),
+            TabKind::Logger => self.logger.show(ui, self.state),
         }
     }
 

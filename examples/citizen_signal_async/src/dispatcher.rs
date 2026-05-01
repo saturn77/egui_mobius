@@ -19,8 +19,8 @@ use crate::tabs::{CONTROL_ID, LOGGER_ID, RESULT_ID};
 /// `register_citizens`.
 pub struct RegisteredCitizens {
     pub control: CitizenState,
-    pub result:  CitizenState,
-    pub logger:  CitizenState,
+    pub result: CitizenState,
+    pub logger: CitizenState,
 }
 
 /// Register the three citizens with the dispatcher and activate
@@ -28,12 +28,16 @@ pub struct RegisteredCitizens {
 /// handles.
 pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
     let control = dispatcher.register(CitizenId::new(CONTROL_ID));
-    let result  = dispatcher.register(CitizenId::new(RESULT_ID));
-    let logger  = dispatcher.register(CitizenId::new(LOGGER_ID));
+    let result = dispatcher.register(CitizenId::new(RESULT_ID));
+    let logger = dispatcher.register(CitizenId::new(LOGGER_ID));
 
     dispatcher.activate(&CitizenId::new(CONTROL_ID));
 
-    RegisteredCitizens { control, result, logger }
+    RegisteredCitizens {
+        control,
+        result,
+        logger,
+    }
 }
 
 /// Drain citizen lifecycle messages and append them to the shared log.
@@ -103,14 +107,18 @@ pub fn append_log(log: &Dynamic<Vec<String>>, line: String) {
 
 fn format_citizen(msg: &CitizenMessage) -> String {
     match msg {
-        CitizenMessage::Activated   { id } => format!("[citizen] {} activated",   id),
+        CitizenMessage::Activated { id } => format!("[citizen] {} activated", id),
         CitizenMessage::Deactivated { id } => format!("[citizen] {} deactivated", id),
-        CitizenMessage::Clicked     { id } => format!("[citizen] {} clicked",     id),
-        CitizenMessage::Selected    { id, selected } =>
-            format!("[citizen] {} selected={}", id, selected),
-        CitizenMessage::Moved       { id, location } =>
-            format!("[citizen] {} moved to [{:.1}, {:.1}]", id, location[0], location[1]),
-        CitizenMessage::VisibilityChanged { id, visible } =>
-            format!("[citizen] {} visible={}", id, visible),
+        CitizenMessage::Clicked { id } => format!("[citizen] {} clicked", id),
+        CitizenMessage::Selected { id, selected } => {
+            format!("[citizen] {} selected={}", id, selected)
+        }
+        CitizenMessage::Moved { id, location } => format!(
+            "[citizen] {} moved to [{:.1}, {:.1}]",
+            id, location[0], location[1]
+        ),
+        CitizenMessage::VisibilityChanged { id, visible } => {
+            format!("[citizen] {} visible={}", id, visible)
+        }
     }
 }

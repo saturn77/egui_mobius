@@ -10,9 +10,9 @@
 
 use eframe::egui;
 use egui::Color32;
-use egui_dock::{DockArea, DockState, NodeIndex};
-use egui_citizen::{CitizenMessage, Dispatcher};
 use egui_citizen::message::CitizenId;
+use egui_citizen::{CitizenMessage, Dispatcher};
+use egui_dock::{DockArea, DockState, NodeIndex};
 use egui_mobius_reactive::Dynamic;
 
 // ---------------------------------------------------------------------------
@@ -46,10 +46,10 @@ impl Tab {
 
     fn title(&self) -> &str {
         match self.kind {
-            TabKind::Alpha  => "Alpha",
-            TabKind::Beta   => "Beta",
-            TabKind::Gamma  => "Gamma",
-            TabKind::Plot   => "Plot",
+            TabKind::Alpha => "Alpha",
+            TabKind::Beta => "Beta",
+            TabKind::Gamma => "Gamma",
+            TabKind::Plot => "Plot",
             TabKind::Logger => "Logger",
         }
     }
@@ -58,7 +58,7 @@ impl Tab {
     fn citizen_id(&self) -> Option<CitizenId> {
         match self.kind {
             TabKind::Alpha => Some(CitizenId::new(ALPHA)),
-            TabKind::Beta  => Some(CitizenId::new(BETA)),
+            TabKind::Beta => Some(CitizenId::new(BETA)),
             TabKind::Gamma => Some(CitizenId::new(GAMMA)),
             _ => None,
         }
@@ -107,9 +107,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
             TabKind::Alpha => render_algo_panel(ui, "Alpha", "Frequency response curve", CYAN),
-            TabKind::Beta  => render_algo_panel(ui, "Beta", "Voltage droop curve", GREEN),
+            TabKind::Beta => render_algo_panel(ui, "Beta", "Voltage droop curve", GREEN),
             TabKind::Gamma => render_algo_panel(ui, "Gamma", "Reactive power curve", MAGENTA),
-            TabKind::Plot  => render_plot_panel(ui, &self.active_algo.get()),
+            TabKind::Plot => render_plot_panel(ui, &self.active_algo.get()),
             TabKind::Logger => render_logger(ui, self.log),
         }
     }
@@ -144,9 +144,9 @@ fn render_algo_panel(ui: &mut egui::Ui, name: &str, description: &str, color: Co
 fn render_plot_panel(ui: &mut egui::Ui, active: &str) {
     let (label, color) = match active {
         ALPHA => ("Alpha Curve", CYAN),
-        BETA  => ("Beta Curve", GREEN),
+        BETA => ("Beta Curve", GREEN),
         GAMMA => ("Gamma Curve", MAGENTA),
-        _     => ("No algo selected", COMMENT),
+        _ => ("No algo selected", COMMENT),
     };
 
     egui::Frame::new()
@@ -175,9 +175,9 @@ fn render_plot_panel(ui: &mut egui::Ui, active: &str) {
                     let x = rect.left() + t * rect.width();
                     let y = match active {
                         ALPHA => rect.center().y - 40.0 * (t * 6.0).sin(),
-                        BETA  => rect.center().y - 30.0 * (1.0 - t).powf(0.5) * (t * 4.0).cos(),
+                        BETA => rect.center().y - 30.0 * (1.0 - t).powf(0.5) * (t * 4.0).cos(),
                         GAMMA => rect.center().y - 50.0 * t * (1.0 - t) * (t * 8.0).sin(),
-                        _     => rect.center().y,
+                        _ => rect.center().y,
                     };
                     egui::pos2(x, y)
                 })

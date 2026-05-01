@@ -8,8 +8,8 @@
 
 use eframe::egui;
 use egui::Color32;
+use egui_citizen::{Citizen, CitizenId, CitizenMessage, CitizenState, Dispatcher};
 use egui_dock::{DockArea, DockState, NodeIndex};
-use egui_citizen::{Citizen, CitizenId, CitizenState, CitizenMessage, Dispatcher};
 
 // ── Panel structs implementing Citizen ──────────────────────────────────
 
@@ -21,7 +21,11 @@ struct ConfigPanel {
 
 impl ConfigPanel {
     fn new(state: CitizenState) -> Self {
-        Self { citizen_id: CitizenId::new("config"), citizen_state: state, value: 50.0 }
+        Self {
+            citizen_id: CitizenId::new("config"),
+            citizen_state: state,
+            value: 50.0,
+        }
     }
 
     fn show(&mut self, ui: &mut egui::Ui) {
@@ -30,17 +34,29 @@ impl ConfigPanel {
         ui.add(egui::Slider::new(&mut self.value, 0.0..=100.0).text("Value"));
         ui.add_space(8.0);
         if self.is_active() {
-            ui.label(egui::RichText::new("This panel is active").color(Color32::from_rgb(0x9e, 0xce, 0x6a)));
+            ui.label(
+                egui::RichText::new("This panel is active")
+                    .color(Color32::from_rgb(0x9e, 0xce, 0x6a)),
+            );
         } else {
-            ui.label(egui::RichText::new("Click this tab to activate").color(Color32::from_rgb(0x56, 0x5f, 0x89)));
+            ui.label(
+                egui::RichText::new("Click this tab to activate")
+                    .color(Color32::from_rgb(0x56, 0x5f, 0x89)),
+            );
         }
     }
 }
 
 impl Citizen for ConfigPanel {
-    fn id(&self) -> &CitizenId { &self.citizen_id }
-    fn citizen_state(&self) -> &CitizenState { &self.citizen_state }
-    fn citizen_state_mut(&mut self) -> &mut CitizenState { &mut self.citizen_state }
+    fn id(&self) -> &CitizenId {
+        &self.citizen_id
+    }
+    fn citizen_state(&self) -> &CitizenState {
+        &self.citizen_state
+    }
+    fn citizen_state_mut(&mut self) -> &mut CitizenState {
+        &mut self.citizen_state
+    }
 }
 
 struct DisplayPanel {
@@ -50,33 +66,54 @@ struct DisplayPanel {
 
 impl DisplayPanel {
     fn new(state: CitizenState) -> Self {
-        Self { citizen_id: CitizenId::new("display"), citizen_state: state }
+        Self {
+            citizen_id: CitizenId::new("display"),
+            citizen_state: state,
+        }
     }
 
     fn show(&self, ui: &mut egui::Ui) {
         ui.heading("Display");
         ui.add_space(8.0);
         if self.is_active() {
-            ui.label(egui::RichText::new("This panel is active").color(Color32::from_rgb(0x9e, 0xce, 0x6a)));
+            ui.label(
+                egui::RichText::new("This panel is active")
+                    .color(Color32::from_rgb(0x9e, 0xce, 0x6a)),
+            );
         } else {
-            ui.label(egui::RichText::new("Click this tab to activate").color(Color32::from_rgb(0x56, 0x5f, 0x89)));
+            ui.label(
+                egui::RichText::new("Click this tab to activate")
+                    .color(Color32::from_rgb(0x56, 0x5f, 0x89)),
+            );
         }
     }
 }
 
 impl Citizen for DisplayPanel {
-    fn id(&self) -> &CitizenId { &self.citizen_id }
-    fn citizen_state(&self) -> &CitizenState { &self.citizen_state }
-    fn citizen_state_mut(&mut self) -> &mut CitizenState { &mut self.citizen_state }
+    fn id(&self) -> &CitizenId {
+        &self.citizen_id
+    }
+    fn citizen_state(&self) -> &CitizenState {
+        &self.citizen_state
+    }
+    fn citizen_state_mut(&mut self) -> &mut CitizenState {
+        &mut self.citizen_state
+    }
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
-enum TabKind { Config, Display, Logger }
+enum TabKind {
+    Config,
+    Display,
+    Logger,
+}
 
 #[derive(Clone)]
-struct Tab { kind: TabKind }
+struct Tab {
+    kind: TabKind,
+}
 
 impl Tab {
     fn title(&self) -> &str {
@@ -127,16 +164,18 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             TabKind::Logger => {
                 ui.heading("Messages");
                 ui.add_space(4.0);
-                egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-                    for line in self.log.iter() {
-                        let color = if line.contains("Activated") {
-                            Color32::from_rgb(0x9e, 0xce, 0x6a)
-                        } else {
-                            Color32::from_rgb(0x56, 0x5f, 0x89)
-                        };
-                        ui.label(egui::RichText::new(line).color(color).monospace());
-                    }
-                });
+                egui::ScrollArea::vertical()
+                    .stick_to_bottom(true)
+                    .show(ui, |ui| {
+                        for line in self.log.iter() {
+                            let color = if line.contains("Activated") {
+                                Color32::from_rgb(0x9e, 0xce, 0x6a)
+                            } else {
+                                Color32::from_rgb(0x56, 0x5f, 0x89)
+                            };
+                            ui.label(egui::RichText::new(line).color(color).monospace());
+                        }
+                    });
             }
         }
     }
@@ -168,14 +207,22 @@ impl MyApp {
         let display = DisplayPanel::new(display_state);
 
         // Dock layout
-        let mut dock_state = DockState::new(vec![Tab { kind: TabKind::Display }]);
+        let mut dock_state = DockState::new(vec![Tab {
+            kind: TabKind::Display,
+        }]);
         let [left, _right] = dock_state.main_surface_mut().split_left(
-            NodeIndex::root(), 0.35,
-            vec![Tab { kind: TabKind::Config }],
+            NodeIndex::root(),
+            0.35,
+            vec![Tab {
+                kind: TabKind::Config,
+            }],
         );
         dock_state.main_surface_mut().split_below(
-            left, 0.65,
-            vec![Tab { kind: TabKind::Logger }],
+            left,
+            0.65,
+            vec![Tab {
+                kind: TabKind::Logger,
+            }],
         );
 
         Self {
@@ -226,8 +273,7 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Getting Started — egui-citizen",
         eframe::NativeOptions {
-            viewport: egui::ViewportBuilder::default()
-                .with_inner_size([700.0, 450.0]),
+            viewport: egui::ViewportBuilder::default().with_inner_size([700.0, 450.0]),
             ..Default::default()
         },
         Box::new(|cc| Ok(Box::new(MyApp::new(cc)))),

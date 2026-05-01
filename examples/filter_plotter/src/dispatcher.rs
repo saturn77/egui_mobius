@@ -17,21 +17,25 @@ use crate::tabs::{LOGGER_ID, PLOT_ID, SETTINGS_ID};
 /// single struct so the App doesn't have to thread three values out of
 /// `register_citizens`.
 pub struct RegisteredCitizens {
-    pub plot:     CitizenState,
+    pub plot: CitizenState,
     pub settings: CitizenState,
-    pub logger:   CitizenState,
+    pub logger: CitizenState,
 }
 
 /// Register the three citizens with the dispatcher and activate `plot`
 /// as the default focus. Returns the panel-bound state handles.
 pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
-    let plot     = dispatcher.register(CitizenId::new(PLOT_ID));
+    let plot = dispatcher.register(CitizenId::new(PLOT_ID));
     let settings = dispatcher.register(CitizenId::new(SETTINGS_ID));
-    let logger   = dispatcher.register(CitizenId::new(LOGGER_ID));
+    let logger = dispatcher.register(CitizenId::new(LOGGER_ID));
 
     dispatcher.activate(&CitizenId::new(PLOT_ID));
 
-    RegisteredCitizens { plot, settings, logger }
+    RegisteredCitizens {
+        plot,
+        settings,
+        logger,
+    }
 }
 
 /// Drain citizen lifecycle messages from the dispatcher and append them
@@ -44,12 +48,7 @@ pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
 
 /// Route an app-level message. `Generate` runs the backend synchronously
 /// and stores the resulting traces in shared state; the others log.
-pub fn handle<B>(
-    msg: AppMessage,
-    state: &SharedState,
-    backend: &mut B,
-    log: &Dynamic<Vec<String>>,
-)
+pub fn handle<B>(msg: AppMessage, state: &SharedState, backend: &mut B, log: &Dynamic<Vec<String>>)
 where
     B: BackendKind<Sample = f32>,
 {
@@ -64,16 +63,15 @@ where
             state.traces.set(traces);
             append_log(
                 log,
-                format!(
-                    "[INFO] backend ({}) produced {} samples",
-                    backend.name(),
-                    n,
-                ),
+                format!("[INFO] backend ({}) produced {} samples", backend.name(), n,),
             );
         }
 
         AppMessage::GenerateCompleted { samples } => {
-            append_log(log, format!("[INFO] generate completed: {} samples", samples));
+            append_log(
+                log,
+                format!("[INFO] generate completed: {} samples", samples),
+            );
         }
     }
 }
@@ -94,14 +92,18 @@ pub fn append_log(log: &Dynamic<Vec<String>>, line: String) {
 
 fn format_citizen(msg: &CitizenMessage) -> String {
     match msg {
-        CitizenMessage::Activated   { id } => format!("[citizen] {} activated",   id),
+        CitizenMessage::Activated { id } => format!("[citizen] {} activated", id),
         CitizenMessage::Deactivated { id } => format!("[citizen] {} deactivated", id),
-        CitizenMessage::Clicked     { id } => format!("[citizen] {} clicked",     id),
-        CitizenMessage::Selected    { id, selected } =>
-            format!("[citizen] {} selected={}", id, selected),
-        CitizenMessage::Moved       { id, location } =>
-            format!("[citizen] {} moved to [{:.1}, {:.1}]", id, location[0], location[1]),
-        CitizenMessage::VisibilityChanged { id, visible } =>
-            format!("[citizen] {} visible={}", id, visible),
+        CitizenMessage::Clicked { id } => format!("[citizen] {} clicked", id),
+        CitizenMessage::Selected { id, selected } => {
+            format!("[citizen] {} selected={}", id, selected)
+        }
+        CitizenMessage::Moved { id, location } => format!(
+            "[citizen] {} moved to [{:.1}, {:.1}]",
+            id, location[0], location[1]
+        ),
+        CitizenMessage::VisibilityChanged { id, visible } => {
+            format!("[citizen] {} visible={}", id, visible)
+        }
     }
 }
