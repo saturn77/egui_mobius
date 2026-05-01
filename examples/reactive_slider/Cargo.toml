@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 egui_mobius_reactive = { path = "../../crates/egui_mobius_reactive", features = ["widgets"] }
 egui = { workspace = true }
-eframe = { workspace = true, features = ["glow"] }
+eframe = { workspace = true, features = ["default", "glow"] }

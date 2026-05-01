@@ -7,4 +7,4 @@ publish = false
 [dependencies]
 egui_mobius_components = { path = "../../crates/egui_mobius_components" }
 egui = { workspace = true }
-eframe = { workspace = true, features = ["glow"] }
+eframe = { workspace = true, features = ["default", "glow"] }

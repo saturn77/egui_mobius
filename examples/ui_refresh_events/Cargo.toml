@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 egui_mobius = { path = "../../crates/egui_mobius" }
 egui = { workspace = true }
-eframe = {  workspace = true, features = ["glow"] }
+eframe = { workspace = true, features = ["default", "glow"] }
 log = "0.4"
 env_logger = "0.9"
 

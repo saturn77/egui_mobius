@@ -9,7 +9,7 @@ egui_mobius = { path = "../../crates/egui_mobius" }
 egui_mobius_widgets = { path = "../../crates/egui_mobius_widgets" }
 egui_mobius_reactive = { path = "../../crates/egui_mobius_reactive" }
 egui = { workspace = true }
-eframe = { workspace = true, features = ["glow"] }
+eframe = { workspace = true, features = ["default", "glow"] }
 tokio = { workspace = true, features = ["full"] }
 chrono = "0.4"
 serde = { workspace = true }
