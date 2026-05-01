@@ -43,3 +43,7 @@ docs/
 
 # Duplicate config files (src version is canonical)
 examples/clock_async/default_config.ron
+
+# WASM build artifacts (Trunk)
+**/dist/
+**/.trunk/
