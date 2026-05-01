@@ -8,7 +8,7 @@
 ///
 /// Route these in your update loop after `DockArea::show()`:
 ///
-/// ```rust,ignore
+/// ```text
 /// for msg in dispatcher.drain_messages() {
 ///     match msg {
 ///         CitizenMessage::Activated { id } => { /* panel became active */ }

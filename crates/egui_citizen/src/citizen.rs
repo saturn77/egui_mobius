@@ -11,7 +11,7 @@ use crate::state::CitizenState;
 ///
 /// # Minimal implementation
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use egui_citizen::{Citizen, CitizenId, CitizenState};
 ///
 /// struct PlotPanel {

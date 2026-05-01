@@ -13,5 +13,4 @@ keywords               = ["egui", "dock", "citizen", "reactive", "state-machine"
 include                = ["LICENSE", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
-egui = { workspace = true }
 egui_mobius_reactive = { workspace = true }

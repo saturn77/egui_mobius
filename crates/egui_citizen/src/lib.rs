@@ -54,7 +54,7 @@
 //!
 //! Wire citizen activation into `TabViewer::on_tab_button()`:
 //!
-//! ```rust,ignore
+//! ```text
 //! impl egui_dock::TabViewer for MyTabViewer<'_> {
 //!     type Tab = MyTab;
 //!
@@ -83,7 +83,7 @@
 //!
 //! Each panel struct holds its own `CitizenId` and `CitizenState`:
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use egui_citizen::{Citizen, CitizenId, CitizenState};
 //!
 //! struct SettingsPanel {
@@ -112,7 +112,7 @@
 //!
 //! Route citizen messages to a backend thread via a channel:
 //!
-//! ```rust,ignore
+//! ```text
 //! use crossbeam_channel::{unbounded, Sender};
 //!
 //! // At startup: spawn backend thread
