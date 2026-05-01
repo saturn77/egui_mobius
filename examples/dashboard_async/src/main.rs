@@ -16,7 +16,6 @@
 ///
 /// James Bonanno, <atlantix-eda@proton.me>, 15 March 2025
 ///
-use egui::Context;
 use egui_mobius::dispatching::AsyncDispatcher;
 use egui_mobius::factory;
 use egui_mobius::signals::*;

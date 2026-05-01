@@ -1,4 +1,4 @@
-use egui::{CentralPanel, Context};
+use egui::CentralPanel;
 use egui_mobius_reactive::*;
 
 use eframe::{App, Frame};

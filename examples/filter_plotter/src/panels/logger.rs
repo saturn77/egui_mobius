@@ -2,21 +2,14 @@
 //! drain loop in main.rs.
 
 use eframe::egui;
-use egui_citizen::{CitizenId, CitizenState};
 
 use crate::state::SharedState;
 
-pub struct LoggerPanel {
-    pub citizen_id: CitizenId,
-    pub citizen_state: CitizenState,
-}
+pub struct LoggerPanel {}
 
 impl LoggerPanel {
-    pub fn new(citizen_state: CitizenState) -> Self {
-        Self {
-            citizen_id: CitizenId::new(crate::tabs::LOGGER_ID),
-            citizen_state,
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {

@@ -122,13 +122,12 @@ impl UiApp {
 
 impl eframe::App for UiApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let ctx = ui.ctx();
         {
             let mut app_state = self.state.lock().unwrap();
 
             //let mut app_state = self.state.get();
 
-            egui::TopBottomPanel::bottom("log_panel")
+            egui::Panel::bottom("log_panel")
                 .resizable(true)
                 .show_inside(ui, |ui| {
                     ui.heading("Logs");
