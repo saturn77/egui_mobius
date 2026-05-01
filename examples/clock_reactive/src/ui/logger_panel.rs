@@ -43,69 +43,79 @@ impl<'a> LoggerPanel<'a> {
             self.state.logs.set(logs);
         }
 
-        // Get logs and colors
         let filtered_logs = self.state.filtered_logs.get();
         let colors = self.state.colors.get();
 
+        let time_updates: Vec<_> = filtered_logs
+            .iter()
+            .filter(|entry| entry.source == "clock")
+            .collect();
+        let ui_events: Vec<_> = filtered_logs
+            .iter()
+            .filter(|entry| entry.source == "ui")
+            .collect();
+
         ui.add_space(8.0);
+
+        ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(280.0, 0.0),
+                egui::Layout::left_to_right(egui::Align::Center),
+                |ui| {
+                    ui.label(egui::RichText::new("Time Updates").strong().monospace());
+                },
+            );
+            ui.add_space(20.0);
+            ui.label(egui::RichText::new("UI Events").strong().monospace());
+        });
+        ui.add_space(8.0);
+
+        let num_rows = time_updates.len().max(ui_events.len());
+        let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
 
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .stick_to_bottom(true)
-            .show(ui, |ui| {
-                ui.add_space(4.0);
+            .show_rows(ui, row_height, num_rows, |ui, row_range| {
+                for row in row_range {
+                    ui.horizontal(|ui| {
+                        ui.allocate_ui_with_layout(
+                            egui::vec2(280.0, row_height),
+                            egui::Layout::left_to_right(egui::Align::Center),
+                            |ui| {
+                                if row < time_updates.len() {
+                                    let entry = time_updates[time_updates.len() - 1 - row];
+                                    let text = egui::RichText::new(format!(
+                                        "[{}] {}",
+                                        entry.timestamp.format("%H:%M:%S"),
+                                        entry.message
+                                    ))
+                                    .monospace();
+                                    ui.label(text.color(colors.clock));
+                                }
+                            },
+                        );
 
-                // Headers
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Time Updates").strong().monospace());
-                    ui.add_space(20.0);
-                    ui.label(egui::RichText::new("UI Events").strong().monospace());
-                });
-                ui.add_space(8.0);
+                        ui.add_space(20.0);
 
-                // Sort logs by source
-                let time_updates: Vec<_> = filtered_logs
-                    .iter()
-                    .filter(|entry| entry.source == "clock")
-                    .collect();
-                let ui_events: Vec<_> = filtered_logs
-                    .iter()
-                    .filter(|entry| entry.source == "ui")
-                    .collect();
-
-                // Display entries side by side
-                ui.horizontal(|ui| {
-                    // Time Updates column
-                    ui.vertical(|ui| {
-                        ui.set_min_width(280.0);
-                        for entry in time_updates.iter().rev() {
-                            let text = egui::RichText::new(format!(
-                                "[{}] {}",
-                                entry.timestamp.format("%H:%M:%S"),
-                                entry.message
-                            ))
-                            .monospace();
-                            ui.label(text.color(colors.clock));
-                        }
+                        ui.allocate_ui_with_layout(
+                            egui::vec2(400.0, row_height),
+                            egui::Layout::left_to_right(egui::Align::Center),
+                            |ui| {
+                                if row < ui_events.len() {
+                                    let entry = ui_events[ui_events.len() - 1 - row];
+                                    let text = egui::RichText::new(format!(
+                                        "[{}] {}",
+                                        entry.timestamp.format("%H:%M:%S"),
+                                        entry.message
+                                    ))
+                                    .monospace();
+                                    ui.label(text.color(entry.color.unwrap_or(colors.custom_event)));
+                                }
+                            },
+                        );
                     });
-
-                    // Spacer
-                    ui.add_space(20.0);
-
-                    // UI Events column
-                    ui.vertical(|ui| {
-                        ui.set_min_width(400.0);
-                        for entry in ui_events.iter().rev() {
-                            let text = egui::RichText::new(format!(
-                                "[{}] {}",
-                                entry.timestamp.format("%H:%M:%S"),
-                                entry.message
-                            ))
-                            .monospace();
-                            ui.label(text.color(entry.color.unwrap_or(colors.custom_event)));
-                        }
-                    });
-                });
+                }
             });
     }
 }
