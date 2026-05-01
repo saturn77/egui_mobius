@@ -4,8 +4,8 @@
 /// The AppState struct contains all the reactive values and derived values that are used to manage
 /// the state of the application.
 ///
-/// Dynamic<T> is a reactive value that can be updated and read from any part of the application.
-/// Derived<T> is a reactive value that is derived from other reactive values. It is recomputed
+/// `Dynamic<T>` is a reactive value that can be updated and read from any part of the application.
+/// `Derived<T>` is a reactive value that is derived from other reactive values. It is recomputed
 /// whenever any of the dependent reactive values change.
 ///
 ///
@@ -18,18 +18,18 @@ use std::sync::Arc;
 
 /// AppState struct holds all the reactive state for the clock_reactive example.
 ///
-/// Dynamic<T> Member of AppState:
-///  - slider_value: Dynamic<f32>
-///  - combo_value: Dynamic<String>
-///  - current_time: Dynamic<String>
-///  - logs: Dynamic<VecDeque<LogEntry>>
-///  - log_filters: Dynamic<Vec<String>>
-///  - buffer_size: Dynamic<usize>
+/// `Dynamic<T>` Member of AppState:
+///  - slider_value: `Dynamic<f32>`
+///  - combo_value: `Dynamic<String>`
+///  - current_time: `Dynamic<String>`
+///  - logs: `Dynamic<VecDeque<LogEntry>>`
+///  - log_filters: `Dynamic<Vec<String>>`
+///  - buffer_size: `Dynamic<usize>`
 ///  - repaint: egui::Context
-///  - colors: Dynamic<LogColors>
-///  - button_colors: Dynamic<ButtonColors>
-///  - button_started: Dynamic<bool>
-///  - use_24h: Dynamic<bool>
+///  - colors: `Dynamic<LogColors>`
+///  - button_colors: `Dynamic<ButtonColors>`
+///  - button_started: `Dynamic<bool>`
+///  - use_24h: `Dynamic<bool>`
 ///
 /// The logs are what is displayed in the log window. The log_filters are used to filter the logs
 /// based on the source of the log. The buffer_size is the maximum number of logs to keep in the
@@ -40,10 +40,10 @@ use std::sync::Arc;
 /// buttons. The button_started is used to keep track of the state of the run/stop button. The use_24h
 /// is used to keep track of whether the clock should display time in 24h format or 12h format.
 ///
-/// Derived<T> Member of AppState:
-///  - filtered_logs: Derived<VecDeque<LogEntry>>
-///  - log_count: Derived<usize>
-///  - formatted_time: Derived<String>
+/// `Derived<T>` Member of AppState:
+///  - filtered_logs: `Derived<VecDeque<LogEntry>>`
+///  - log_count: `Derived<usize>`
+///  - formatted_time: `Derived<String>`
 ///
 /// The filtered_logs is a derived value that filters the logs based on the log_filters. The log_count
 /// is a derived value that keeps track of the number of logs in the logs buffer. The formatted_time
