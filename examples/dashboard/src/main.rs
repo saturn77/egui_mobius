@@ -121,7 +121,8 @@ impl UiApp {
 }
 
 impl eframe::App for UiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx();
         {
             let mut app_state = self.state.lock().unwrap();
 
@@ -129,7 +130,7 @@ impl eframe::App for UiApp {
 
             egui::TopBottomPanel::bottom("log_panel")
                 .resizable(true)
-                .show(ctx, |ui| {
+                .show_inside(ui, |ui| {
                     ui.heading("Logs");
 
                     ui.horizontal(|ui| {
@@ -198,7 +199,7 @@ impl eframe::App for UiApp {
                 });
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             // Your UI code here
 
             let counter = self.state.lock().unwrap().dashboard.counter;

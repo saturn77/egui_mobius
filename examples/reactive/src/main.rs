@@ -82,8 +82,8 @@ impl AppState {
 }
 
 impl eframe::App for AppState {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.vertical_centered(|ui| {
                 ui.heading("Reactive UI with egui_mobius");
             });
@@ -164,7 +164,7 @@ impl eframe::App for AppState {
                 });
         });
 
-        egui::Window::new("🔍 Reactive Graph Debug").show(ctx, |ui| {
+        egui::Window::new("🔍 Reactive Graph Debug").show(ui.ctx(), |ui| {
             ui.label("⚙️ Registered Signals:");
             for (name, signal) in self.registry.list_signals() {
                 let any = signal.as_any();

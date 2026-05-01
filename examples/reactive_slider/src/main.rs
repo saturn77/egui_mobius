@@ -24,8 +24,8 @@ impl ReactiveSliderDemo {
 // Remove the #[derive(Default)] attribute
 
 impl App for ReactiveSliderDemo {
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut Frame) {
+        CentralPanel::default().show_inside(ui, |ui| {
             ui.heading("Reactive Slider Demo");
             ui.spacing();
 

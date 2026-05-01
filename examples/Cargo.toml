@@ -12,11 +12,11 @@ path = "lib.rs"
 egui_mobius = { path = "../crates/egui_mobius" }
 egui_mobius_widgets = { path = "../crates/egui_mobius_widgets" }
 egui_mobius_reactive = { path = "../crates/egui_mobius_reactive" }
-egui = { version = "0.33.0" }
-eframe = { version = "0.33.0", default-features = false }
-tokio = { version = "1.43.0", features = ["full"] }
-egui_plot = { version = "0.34.0" }
-egui_taffy = "0.10.0"
+egui = { workspace = true }
+eframe = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+egui_plot = { workspace = true }
+egui_taffy = { workspace = true }
 rand = "0.9.0"
 chrono = "0.4.40"
 tracing = "0.1"

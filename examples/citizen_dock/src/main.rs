@@ -279,9 +279,9 @@ impl CitizenDockApp {
 }
 
 impl eframe::App for CitizenDockApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        DockArea::new(&mut self.dock_state).show(
-            ctx,
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        DockArea::new(&mut self.dock_state).show_inside(
+            ui,
             &mut TabViewer {
                 dispatcher: &mut self.dispatcher,
                 active_algo: &self.active_algo,

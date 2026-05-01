@@ -189,7 +189,8 @@ impl MyApp {
 }
 
 impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx();
         // Step 2 + 3: Render dock, then drain messages
         let mut dock_state = self.dock_state.clone();
         let mut dispatcher = std::mem::take(&mut self.dispatcher);
@@ -200,7 +201,7 @@ impl eframe::App for MyApp {
                 display: &self.display,
                 log: &mut self.log,
             };
-            DockArea::new(&mut dock_state).show(ctx, &mut viewer);
+            DockArea::new(&mut dock_state).show_inside(ui, &mut viewer);
         }
 
         // Drain citizen lifecycle messages
