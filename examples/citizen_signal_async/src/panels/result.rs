@@ -4,21 +4,14 @@
 //! result-slot handler off the UI thread.
 
 use eframe::egui;
-use egui_citizen::{CitizenId, CitizenState};
 
 use crate::state::SharedState;
 
-pub struct ResultPanel {
-    pub citizen_id: CitizenId,
-    pub citizen_state: CitizenState,
-}
+pub struct ResultPanel {}
 
 impl ResultPanel {
-    pub fn new(citizen_state: CitizenState) -> Self {
-        Self {
-            citizen_id: CitizenId::new(crate::tabs::RESULT_ID),
-            citizen_state,
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {

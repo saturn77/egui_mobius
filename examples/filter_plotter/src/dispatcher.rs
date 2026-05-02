@@ -5,38 +5,12 @@
 //! shell + dock layout) and gives the dispatcher code one place to
 //! evolve as the app grows.
 
-use egui_citizen::{CitizenId, CitizenMessage, CitizenState, Dispatcher};
+use egui_citizen::{CitizenMessage, Dispatcher};
 use egui_mobius_reactive::Dynamic;
 
 use crate::backend::BackendKind;
 use crate::messages::AppMessage;
 use crate::state::SharedState;
-use crate::tabs::{LOGGER_ID, PLOT_ID, SETTINGS_ID};
-
-/// The three CitizenStates the app's panels need to hold, kept in a
-/// single struct so the App doesn't have to thread three values out of
-/// `register_citizens`.
-pub struct RegisteredCitizens {
-    pub plot: CitizenState,
-    pub settings: CitizenState,
-    pub logger: CitizenState,
-}
-
-/// Register the three citizens with the dispatcher and activate `plot`
-/// as the default focus. Returns the panel-bound state handles.
-pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
-    let plot = dispatcher.register(CitizenId::new(PLOT_ID));
-    let settings = dispatcher.register(CitizenId::new(SETTINGS_ID));
-    let logger = dispatcher.register(CitizenId::new(LOGGER_ID));
-
-    dispatcher.activate(&CitizenId::new(PLOT_ID));
-
-    RegisteredCitizens {
-        plot,
-        settings,
-        logger,
-    }
-}
 
 /// Drain citizen lifecycle messages from the dispatcher and append them
 /// to the shared log. Call once per frame after `DockArea::show`.
@@ -53,9 +27,6 @@ where
     B: BackendKind<Sample = f32>,
 {
     match msg {
-        // Already drained directly via `drain_citizen`.
-        AppMessage::Citizen(_) => {}
-
         AppMessage::Generate => {
             let params = state.params.snapshot();
             let traces = backend.run(&params);
@@ -64,13 +35,6 @@ where
             append_log(
                 log,
                 format!("[INFO] backend ({}) produced {} samples", backend.name(), n,),
-            );
-        }
-
-        AppMessage::GenerateCompleted { samples } => {
-            append_log(
-                log,
-                format!("[INFO] generate completed: {} samples", samples),
             );
         }
     }

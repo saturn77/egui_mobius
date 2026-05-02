@@ -12,10 +12,3 @@ pub fn apply_visuals(ctx: &egui::Context) {
     v.extreme_bg_color = Color32::from_rgb(0x16, 0x16, 0x1e);
     ctx.set_visuals(v);
 }
-
-/// Apply a global UI font scale (100 = default). Useful on high-DPI
-/// displays or for screen-recording the demo at a larger size.
-pub fn apply_font_scale(ctx: &egui::Context, scale_pct: u32) {
-    let scale = (scale_pct.max(50).min(200)) as f32 / 100.0;
-    ctx.set_pixels_per_point(scale);
-}

@@ -83,22 +83,22 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 
     fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
-        if response.clicked() {
-            if let Some(id) = tab.citizen_id() {
-                self.dispatcher.activate(&id);
-                self.active_algo.set(id.0.clone());
+        if response.clicked()
+            && let Some(id) = tab.citizen_id()
+        {
+            self.dispatcher.activate(&id);
+            self.active_algo.set(id.0.clone());
 
-                // Drain messages into the log so we can see the one-hot activation
-                for msg in self.dispatcher.drain_messages() {
-                    match &msg {
-                        CitizenMessage::Activated { id } => {
-                            self.log.push(format!("[CITIZEN] Activated: {id}"));
-                        }
-                        CitizenMessage::Deactivated { id } => {
-                            self.log.push(format!("[CITIZEN] Deactivated: {id}"));
-                        }
-                        _ => {}
+            // Drain messages into the log so we can see the one-hot activation
+            for msg in self.dispatcher.drain_messages() {
+                match &msg {
+                    CitizenMessage::Activated { id } => {
+                        self.log.push(format!("[CITIZEN] Activated: {id}"));
                     }
+                    CitizenMessage::Deactivated { id } => {
+                        self.log.push(format!("[CITIZEN] Deactivated: {id}"));
+                    }
+                    _ => {}
                 }
             }
         }

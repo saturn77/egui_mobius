@@ -3,26 +3,19 @@
 //! it and forwards through `dispatcher::handle` to the work signal.
 
 use eframe::egui;
-use egui_citizen::{CitizenId, CitizenState};
 
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
 pub struct ControlPanel {
-    pub citizen_id: CitizenId,
-    pub citizen_state: CitizenState,
     /// Outgoing app-level messages. Populated by show() and drained by
     /// main.rs each frame.
     pub outbox: Vec<AppMessage>,
 }
 
 impl ControlPanel {
-    pub fn new(citizen_state: CitizenState) -> Self {
-        Self {
-            citizen_id: CitizenId::new(crate::tabs::CONTROL_ID),
-            citizen_state,
-            outbox: Vec::new(),
-        }
+    pub fn new() -> Self {
+        Self { outbox: Vec::new() }
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {

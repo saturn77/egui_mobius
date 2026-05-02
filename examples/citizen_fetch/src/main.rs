@@ -113,10 +113,10 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 
     fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
-        if response.clicked() {
-            if let Some(id) = tab.citizen_id() {
-                self.dispatcher.activate(&id);
-            }
+        if response.clicked()
+            && let Some(id) = tab.citizen_id()
+        {
+            self.dispatcher.activate(&id);
         }
     }
 

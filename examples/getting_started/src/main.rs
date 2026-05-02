@@ -150,10 +150,10 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 
     fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
-        if response.clicked() {
-            if let Some(id) = tab.citizen_id() {
-                self.dispatcher.activate(&id);
-            }
+        if response.clicked()
+            && let Some(id) = tab.citizen_id()
+        {
+            self.dispatcher.activate(&id);
         }
     }
 
@@ -237,7 +237,6 @@ impl MyApp {
 
 impl eframe::App for MyApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let ctx = ui.ctx();
         // Step 2 + 3: Render dock, then drain messages
         let mut dock_state = self.dock_state.clone();
         let mut dispatcher = std::mem::take(&mut self.dispatcher);

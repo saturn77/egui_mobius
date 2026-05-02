@@ -3,26 +3,20 @@
 //! the backend.
 
 use eframe::egui;
-use egui_citizen::{CitizenId, CitizenState, Dispatcher};
+use egui_citizen::Dispatcher;
 
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
 pub struct SettingsPanel {
-    pub citizen_id: CitizenId,
-    pub citizen_state: CitizenState,
     /// Outgoing app-level messages routed through the dispatcher.
     /// Populated by show() and drained by main.rs each frame.
     pub outbox: Vec<AppMessage>,
 }
 
 impl SettingsPanel {
-    pub fn new(citizen_state: CitizenState) -> Self {
-        Self {
-            citizen_id: CitizenId::new(crate::tabs::SETTINGS_ID),
-            citizen_state,
-            outbox: Vec::new(),
-        }
+    pub fn new() -> Self {
+        Self { outbox: Vec::new() }
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState, _dispatcher: &mut Dispatcher) {

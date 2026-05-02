@@ -43,8 +43,7 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let state = SharedState::new();
 
-        let mut dispatcher = CitizenDispatcher::new();
-        let citizens = dispatcher::register_citizens(&mut dispatcher);
+        let dispatcher = CitizenDispatcher::new();
 
         // Dock layout:
         //   ┌──────────────┬─────────────┐
@@ -93,9 +92,9 @@ impl App {
             state,
             work_signal,
             _backend: backend_handle,
-            control: ControlPanel::new(citizens.control),
-            result: ResultPanel::new(citizens.result),
-            logger: LoggerPanel::new(citizens.logger),
+            control: ControlPanel::new(),
+            result: ResultPanel::new(),
+            logger: LoggerPanel::new(),
         }
     }
 }

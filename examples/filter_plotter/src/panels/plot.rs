@@ -3,7 +3,6 @@
 //! plot drives both, matplotlib-style.
 
 use eframe::egui;
-use egui_citizen::{CitizenId, CitizenState};
 use egui_plot::{Line, Plot, PlotPoints};
 
 use crate::state::SharedState;
@@ -24,17 +23,11 @@ use crate::state::SharedState;
 const INPUT_STRIDE: usize = 1;
 const FILTERED_STRIDE: usize = 50;
 
-pub struct PlotPanel {
-    pub citizen_id: CitizenId,
-    pub citizen_state: CitizenState,
-}
+pub struct PlotPanel {}
 
 impl PlotPanel {
-    pub fn new(citizen_state: CitizenState) -> Self {
-        Self {
-            citizen_id: CitizenId::new(crate::tabs::PLOT_ID),
-            citizen_state,
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {

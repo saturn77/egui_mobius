@@ -39,8 +39,7 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         theme::apply_visuals(&cc.egui_ctx);
 
-        let mut dispatcher_handle = Dispatcher::new();
-        let citizens = dispatcher::register_citizens(&mut dispatcher_handle);
+        let dispatcher_handle = Dispatcher::new();
 
         // Dock layout:
         //   ┌──────────────┬─────────────┐
@@ -66,9 +65,9 @@ impl App {
             dispatcher: dispatcher_handle,
             dock_state,
             state,
-            plot: PlotPanel::new(citizens.plot),
-            settings: SettingsPanel::new(citizens.settings),
-            logger: LoggerPanel::new(citizens.logger),
+            plot: PlotPanel::new(),
+            settings: SettingsPanel::new(),
+            logger: LoggerPanel::new(),
             backend: InProcessIir::new(),
         }
     }
