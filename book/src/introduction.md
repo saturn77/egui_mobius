@@ -1,19 +1,17 @@
 # Introduction
 
-This book provides know-how to build solid professional graphical user
-interfaces with the Rust programming languge employing the `egui` GUI library. `egui_mobius` is a framwork ecosystem that has been in solid use now approaching two years. 
+This book provides know-how for building solid, professional, and flexible graphical user
+interfaces. The language of choice is Rust employing the `egui` GUI library and the `egui_mobius` framework.
 
-`egui_mobius` primarily consists of itself, `egui_mobius_reactive`, and `egui_citizen.` The citizen crate is a design pattern on top of egui_mobius_reactive which facilitates robust development of 
-flexible, maintainable applications. 
-
-
+`egui_mobius` is also the overall name of this mono-repo, and primarily consists of itself, `egui_mobius_reactive`, and `egui_citizen.` 
 
 Overall egui_citizen is the preferred general pattern of working with egui_mobius in the sense that most modern applications will typically have dockable panels to make the Ui ergonomic and modern. Coupled with background threading, these are the two primary focus areas of GUI design, well supported by the citizen pattern: 
 
 - Dockable panels & modern Ui 
 - Threading and support for async operation 
 
-This book goes through `egui_citizen` and `egui_mobius_reactive` to illustrate the fundamental design pattern and provide explanations of the underlying code so that one knows what the framework and patterns are doing under the hood. 
+This book goes through `egui_citizen` and `egui_mobius_reactive` to illustrate the fundamental design pattern and provide explanations of the underlying code to facilitate a deep level of understanding when
+employing the framework.  
 
 
 ![CopperForge running on egui_citizen — a docked layout with a 3D gerber view, settings, terminal, and logger panels updating live as the user drives the app.](images/citizen-copper.gif)
