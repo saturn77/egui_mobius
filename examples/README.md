@@ -18,10 +18,10 @@ about twenty lines.
 - `citizen_dock` — citizen + `egui_dock` with three algorithm tabs
   (Alpha, Beta, Gamma); the plot panel reacts to whichever tab is
   active, no per-frame fighting.
-- **`filter_plotter` 🌐** — settings, plot, and logger panels driving a
-  biquad lowpass filter backend. The book's tutorial walks through
-  this example file by file. **Supports both native and WASM builds** — see
-  [`filter_plotter/WASM_BUILD_GUIDE.md`](filter_plotter/WASM_BUILD_GUIDE.md).
+- **`filter_plotter` 🌐** — settings, plot, and logger panels driving
+  a biquad lowpass filter backend. The book's tutorial walks through
+  this example file by file. Runs both native and in the browser
+  (WASM) — see `examples/filter_plotter/README.md`.
 - `citizen_fetch` — backend thread doing HTTP fetches off the UI
   thread; image and response panels read the result reactively.
 
@@ -74,13 +74,15 @@ RUST_LOG=debug cargo run -p clock_reactive
 🌐 **`filter_plotter`** can run in the browser:
 
 ```bash
-cd filter_plotter
+cargo install trunk
+rustup target add wasm32-unknown-unknown
+cd examples/filter_plotter
 trunk serve --open
 ```
 
-See [`filter_plotter/WASM_BUILD_GUIDE.md`](filter_plotter/WASM_BUILD_GUIDE.md)
-for setup instructions. Other examples require threading/async and
-would need core library changes to support WASM.
+See `examples/filter_plotter/README.md` for details. Other examples
+require threading or async and would need core library changes to
+support WASM.
 
 ## More
 

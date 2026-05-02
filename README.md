@@ -75,8 +75,8 @@ cd examples/filter_plotter
 trunk serve --open
 ```
 
-See [`examples/filter_plotter/WASM_BUILD_GUIDE.md`](examples/filter_plotter/WASM_BUILD_GUIDE.md)
-for detailed instructions.
+See [`examples/filter_plotter/README.md`](examples/filter_plotter/README.md)
+for details.
 
 Other examples (reactive primitives in isolation, signal/slot
 without citizens, etc.) are catalogued in
