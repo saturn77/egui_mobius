@@ -1,8 +1,9 @@
 # Inside `Dynamic<T>`
 
-The [introduction](../introduction.md#the-dynamict-primitive) covers
-what `Dynamic<T>` looks like from outside: a thread-safe cell with
-`get`, `set`, `lock`, and `on_change`. This chapter opens the box.
+The [background chapter on `Dynamic<T>`](../background/dynamic_type.md)
+covers what the type looks like from outside: a thread-safe cell with
+`get`, `set`, `lock`, and `on_change` (via `ValueExt`). This chapter
+opens the box.
 
 You don't *need* this material to use `egui_citizen` — Path A
 (shared-state polling, see [Coupling paths](coupling.md)) only needs

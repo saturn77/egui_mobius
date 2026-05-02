@@ -24,6 +24,33 @@ dispatcher.
 > cutoff slider and click Generate again to see the noise creep
 > back in.
 
+> **Run it in the browser (WASM)**
+>
+> `filter_plotter` is also the workspace's reference implementation
+> for browser deployment. One-time setup:
+>
+> ```bash
+> cargo install trunk
+> rustup target add wasm32-unknown-unknown
+> ```
+>
+> Then, from the example directory:
+>
+> ```bash
+> cd examples/filter_plotter
+> trunk serve --open       # development; opens http://127.0.0.1:8080
+> trunk build --release    # production; output in ./dist/
+> ```
+>
+> The release `dist/` directory is a self-contained static site —
+> drop it on any web host. Everything in this tutorial works in
+> the browser identically: the citizen pattern, the dispatcher,
+> the reactive cells, the IIR backend. The only platform-specific
+> code is the `#[cfg(target_arch = "wasm32")]` entrypoint in
+> `main.rs` that hands eframe a canvas instead of a native
+> window. See `examples/filter_plotter/README.md` for the full
+> wasm story.
+
 ## The reusable scaffolding
 
 Before the code, the punchline of the citizen pattern: most of

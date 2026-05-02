@@ -130,7 +130,7 @@ the reactive link with the dispatcher (see
 
 A citizen-panel almost always carries its own widget state: slider
 values, combo-box selections, text-input buffers, checkbox flags.
-The [introduction](../introduction.md#key-vocabulary) calls these
+The [vocabulary chapter](../background/vocabulary.md) calls these
 **atoms**. They live on the panel struct *alongside* `citizen_state`,
 not inside it — `CitizenState` has a fixed library-defined shape and
 is for lifecycle facts only. Where you place an atom depends on
