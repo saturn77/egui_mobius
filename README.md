@@ -37,11 +37,14 @@ matches your app's complexity — the ecosystem supports each:
 | Level | What you reach for | When | Examples |
 |------:|--------------------|------|----------|
 | **1** | Shared `Dynamic<T>` + `Dispatcher` for panel activation | Pure UI; no backend | `getting_started`, `citizen_dock` |
-| **2** | Above + `AppMessage` routed through `Dispatcher::handle` | Synchronous backend (filter, parser, anything in-process) | `filter_plotter`, `citizen_fetch` |
+| **2** | Above + `AppMessage` routed through `Dispatcher::handle` | Synchronous backend (filter, parser, anything in-process) | `filter_plotter` 🌐, `citizen_fetch` |
 | **3** | Above + `egui_mobius` signal/slot + `AsyncDispatcher` | Async / multi-threaded backend | `citizen_signal_async` |
 
+🌐 = WASM-enabled (runs in browser)
+
 `filter_plotter` is the tutorial example — the book walks through
-it file by file.
+it file by file. It also serves as the reference implementation for
+WASM deployment.
 
 ## Quick start
 
@@ -51,12 +54,29 @@ cargo run -p getting_started       # smallest possible citizen app
 cargo run -p citizen_dock          # citizen + egui_dock, three panels
 
 # Level 2 — shared state + backend routing
-cargo run -p filter_plotter        # tutorial: biquad filter + plotter
+cargo run -p filter_plotter        # tutorial: biquad filter + plotter (WASM-ready!)
 cargo run -p citizen_fetch         # backend thread doing HTTP fetches
 
 # Level 3 — signals/slots + async
 cargo run -p citizen_signal_async  # citizen + signal/slot + Tokio backend
 ```
+
+### Running in the browser (WASM)
+
+`filter_plotter` can run as a web application:
+
+```bash
+# Install trunk (one-time)
+cargo install trunk
+rustup target add wasm32-unknown-unknown
+
+# Build and serve
+cd examples/filter_plotter
+trunk serve --open
+```
+
+See [`examples/filter_plotter/README.md`](examples/filter_plotter/README.md)
+for details.
 
 Other examples (reactive primitives in isolation, signal/slot
 without citizens, etc.) are catalogued in
