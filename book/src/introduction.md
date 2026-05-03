@@ -1,9 +1,16 @@
 # Introduction
 
+> **Book version:** 0.4.0 &nbsp;·&nbsp; **Last updated:** 2026-05-03 &nbsp;·&nbsp; tracks `egui_mobius` v0.4.0
+>
+> The book is *live* — it evolves alongside the framework. Each
+> chapter footer notes the date of its last substantive revision.
+> Versioning follows the framework's own version: when egui_mobius
+> ships v0.5.0, this book becomes 0.5.0.
+
 This book provides know-how for building solid, professional, and flexible graphical user
 interfaces. The language of choice is Rust employing the `egui` GUI library and the `egui_mobius` framework.
 
-`egui_mobius` is also the overall name of this mono-repo, and primarily consists of itself, `egui_mobius_reactive`, and `egui_citizen.` 
+`egui_mobius` is also the overall name of this mono-repo, and primarily consists of itself, `egui_mobius_reactive`, `egui_citizen`, and `egui_lens` (the canonical reactive event logger).
 
 Overall egui_citizen is the preferred general pattern of working with egui_mobius in the sense that most modern applications will typically have dockable panels to make the Ui ergonomic and modern. Coupled with background threading, these are the two primary focus areas of GUI design, well supported by the citizen pattern: 
 
