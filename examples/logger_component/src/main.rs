@@ -1,158 +1,204 @@
+//! Custom Log Types Example — port of `egui_lens/examples/basic_custom/`.
+//!
+//! Demonstrates lens's full feature surface in the workspace context:
+//! reactive shared state via `Dynamic<ReactiveEventLoggerState>`, custom
+//! per-type colors via `Dynamic<LogColors>`, named custom log types
+//! (network, database, security, etc.), system-info logging, and the
+//! `with_colors` constructor for color-aware logger views.
+
 use eframe::egui;
-use egui_mobius_components::components::event_logger::processor::run_logger_backend;
-use egui_mobius_components::*;
-use std::thread;
-use std::time::Duration;
+use egui_lens::{LogColors, ReactiveEventLogger, ReactiveEventLoggerState};
+use egui_mobius_reactive::Dynamic;
+
+mod platform;
+use platform::{banner, details, parameters::gui};
 
 fn main() -> Result<(), eframe::Error> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_titlebar_buttons_shown(true)
-            .with_inner_size([800.0, 600.0])
-            .with_min_inner_size([400.0, 300.0])
+            .with_inner_size([gui::VIEWPORT_X * 1.25, gui::VIEWPORT_Y * 1.25])
+            .with_min_inner_size([gui::VIEWPORT_X, gui::VIEWPORT_Y])
             .with_resizable(true),
         ..Default::default()
     };
 
     eframe::run_native(
-        "Event Logger Example",
+        "Custom Log Types Example",
         native_options,
-        Box::new(|cc| {
-            // Initialize logger with signal/slot
-            let (logger, event_slot, response_signal) =
-                create_event_logger(cc.egui_ctx.clone(), LogColors::default());
-
-            // Run the logger backend
-            run_logger_backend(event_slot, response_signal);
-
-            // Create the app with the logger
-            Ok(Box::new(MyApp::new(logger)))
-        }),
+        Box::new(|cc| Ok(Box::new(ExampleApp::new(cc)))),
     )
 }
 
-struct MyApp {
-    logger: EguiMobiusEventLogger,
-    counter: i32,
+struct ExampleApp {
+    logger_state: Dynamic<ReactiveEventLoggerState>,
+    log_colors: Dynamic<LogColors>,
+    banner: banner::Banner,
+    details: details::Details,
 }
 
-impl MyApp {
-    fn new(logger: EguiMobiusEventLogger) -> Self {
-        // Add a welcome message
-        logger.info(
-            "Application started".to_string(),
-            LogSender::system(),
-            LogType::Default,
-        );
+impl ExampleApp {
+    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+        let logger_state = Dynamic::new(ReactiveEventLoggerState::new());
 
-        Self { logger, counter: 0 }
+        let mut log_colors = Dynamic::new(LogColors::default());
+        configure_custom_log_colors(&mut log_colors);
+
+        let mut banner = banner::Banner::new();
+        let mut details = details::Details::new();
+
+        banner.format();
+        details.get_os();
+
+        let app = Self {
+            logger_state,
+            log_colors,
+            banner,
+            details,
+        };
+
+        app.add_example_logs();
+
+        app
     }
 
-    fn add_random_log(&mut self) {
-        self.counter += 1;
+    fn add_example_logs(&self) {
+        let logger = ReactiveEventLogger::with_colors(&self.logger_state, &self.log_colors);
 
-        // Create different message types based on counter
-        let message = match self.counter % 4 {
-            0 => Message::Info(format!("Info message #{}", self.counter)),
-            1 => Message::Warn(format!("Warning message #{}", self.counter)),
-            2 => Message::Debug(format!("Debug message #{}", self.counter)),
-            _ => Message::Error(format!("Error message #{}", self.counter)),
-        };
+        logger.log_info(&self.banner.message);
 
-        // Create different sender types based on counter
-        let sender = match self.counter % 5 {
-            0 => LogSender::button(format!("button_{}", self.counter)),
-            1 => LogSender::slider(format!("slider_{}", self.counter)),
-            2 => LogSender::checkbox(format!("checkbox_{}", self.counter)),
-            3 => LogSender::text_field(format!("text_field_{}", self.counter)),
-            _ => LogSender::custom(format!("custom_widget_{}", self.counter)),
-        };
+        let details_text = self.details.clone().format_os();
+        logger.log_info(&details_text);
 
-        // Create different log styles based on counter
-        let style = match self.counter % 6 {
-            0 => LogType::Default,
-            1 => LogType::Slider,
-            2 => LogType::OptionA,
-            3 => LogType::OptionB,
-            4 => LogType::CustomEvent,
-            _ => LogType::RunStop,
-        };
+        logger.log_info("This is a standard info message");
+        logger.log_warning("This is a standard warning message");
+        logger.log_error("This is a standard error message");
+        logger.log_debug("This is a standard debug message");
 
-        // Add the log entry
-        self.logger.add_log(message, sender, style);
+        logger.log_custom("network", "Connected to server on port 8080");
+        logger.log_custom("database", "Executed query in 42ms");
+        logger.log_custom("security", "User authentication successful");
+        logger.log_custom("performance", "Rendering took 16ms");
+        logger.log_custom("analytics", "Page view recorded for /dashboard");
+        logger.log_custom("http", "GET /api/users - 200 OK - 12ms");
+        logger.log_custom("websocket", "Client connected: user_123");
+        logger.log_custom("auth", "JWT token issued");
     }
 }
 
-impl eframe::App for MyApp {
+impl eframe::App for ExampleApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+
+        // Honor a "show system info" request stashed in egui memory by the
+        // logger's UI (matches basic_custom's behavior).
+        let show_system_info = ctx.memory(|mem| {
+            mem.data
+                .get_temp::<bool>(egui::Id::new("show_system_info"))
+                .unwrap_or(false)
+        });
+
+        if show_system_info {
+            ctx.memory_mut(|mem| {
+                mem.data.remove::<bool>(egui::Id::new("show_system_info"));
+            });
+
+            let logger = ReactiveEventLogger::with_colors(&self.logger_state, &self.log_colors);
+            let details_text = self.details.format_os();
+            logger.log_info(&details_text);
+            logger.log_info(&self.banner.message);
+        }
+
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.vertical(|ui| {
-                ui.heading("Event Logger Example");
+            ui.heading("Custom Log Types Example");
+            ui.add_space(8.0);
 
-                // Button row
-                ui.horizontal(|ui| {
-                    if ui.button("Add Random Log").clicked() {
-                        self.add_random_log();
-                    }
+            ui.label("This example demonstrates the flexible custom log types feature.");
+            ui.label("Each custom log type has its own specific color and identifier.");
+            ui.add_space(16.0);
 
-                    if ui.button("Add Info Log").clicked() {
-                        self.counter += 1;
-                        self.logger.info(
-                            format!("Information log at time {}", self.counter),
-                            LogSender::button("Info Button"),
-                            LogType::Default,
-                        );
-                    }
+            let logger = ReactiveEventLogger::with_colors(&self.logger_state, &self.log_colors);
+            logger.show(ui);
 
-                    if ui.button("Add Warning Log").clicked() {
-                        self.counter += 1;
-                        self.logger.warn(
-                            format!("Warning log at time {}", self.counter),
-                            LogSender::slider("Warning Slider"),
-                            LogType::Slider,
-                        );
-                    }
+            ui.add_space(16.0);
+            ui.heading("Add more logs");
 
-                    if ui.button("Add Error Log").clicked() {
-                        self.counter += 1;
-                        self.logger.error(
-                            format!("Error log at time {}", self.counter),
-                            LogSender::text_field("Error Text Field"),
-                            LogType::RunStop,
-                        );
-                    }
+            ui.horizontal(|ui| {
+                if ui.button("System Info").clicked() {
+                    let details_text = self.details.format_os();
+                    logger.log_info(&details_text);
+                }
+                if ui.button("Add Network Log").clicked() {
+                    logger.log_custom("network", "New client connected from 192.168.1.5");
+                }
+                if ui.button("Add Database Log").clicked() {
+                    logger.log_custom("database", "Inserted 5 records in 18ms");
+                }
+            });
 
-                    if ui.button("Clear Log").clicked() {
-                        self.logger.clear();
-                    }
+            ui.horizontal(|ui| {
+                if ui.button("Add Security Log").clicked() {
+                    logger.log_custom("security", "Failed login attempt: incorrect password");
+                }
+                if ui.button("Add Custom HTTP Log").clicked() {
+                    logger.log_custom("http", "POST /api/data - 201 Created - 45ms");
+                }
+                if ui.button("Add Standard Info Log").clicked() {
+                    logger.log_info("This is a standard info message");
+                }
+            });
 
-                    // Background thread button
-                    if ui.button("Add Logs From Thread").clicked() {
-                        let logger = self.logger.clone();
-                        thread::spawn(move || {
-                            for i in 0..5 {
-                                logger.info(
-                                    format!("Background thread log #{i}"),
-                                    LogSender::button("Background Thread"),
-                                    LogType::Primary,
-                                );
-                                thread::sleep(Duration::from_millis(500));
-                            }
-                        });
-                    }
-                });
-
-                ui.separator();
-
-                // Display the logger
-                ui.heading("Event Log");
-                ui.separator();
-
-                // Create a scrollable area for the logger
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    self.logger.show(ui);
-                });
+            ui.horizontal(|ui| {
+                if ui.button("Add Standard Warning").clicked() {
+                    logger.log_warning("This is a standard warning message");
+                }
+                if ui.button("Add Standard Error").clicked() {
+                    logger.log_error("This is a standard error message");
+                }
+                if ui.button("Add Standard Debug").clicked() {
+                    logger.log_debug("This is a standard debug message");
+                }
             });
         });
     }
+}
+
+fn configure_custom_log_colors(colors: &mut Dynamic<LogColors>) {
+    let mut colors_value = colors.get();
+
+    colors_value.set_custom_color("network", egui::Color32::from_rgb(100, 149, 237));
+    colors_value.set_custom_color("database", egui::Color32::from_rgb(106, 90, 205));
+    colors_value.set_custom_color("security", egui::Color32::from_rgb(60, 179, 113));
+
+    colors_value.set_custom_colors(
+        "performance",
+        egui::Color32::from_rgb(255, 165, 0),
+        egui::Color32::from_rgb(255, 215, 140),
+    );
+
+    colors_value.set_custom_colors(
+        "analytics",
+        egui::Color32::from_rgb(218, 112, 214),
+        egui::Color32::from_rgb(230, 175, 228),
+    );
+
+    colors_value.set_custom_colors(
+        "http",
+        egui::Color32::from_rgb(70, 130, 180),
+        egui::Color32::from_rgb(150, 190, 220),
+    );
+
+    colors_value.set_custom_colors(
+        "websocket",
+        egui::Color32::from_rgb(0, 139, 139),
+        egui::Color32::from_rgb(100, 200, 200),
+    );
+
+    colors_value.set_custom_colors(
+        "auth",
+        egui::Color32::from_rgb(85, 107, 47),
+        egui::Color32::from_rgb(160, 200, 120),
+    );
+
+    colors.set(colors_value);
 }

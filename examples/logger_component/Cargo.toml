@@ -5,6 +5,10 @@ edition = "2024"
 publish = false
 
 [dependencies]
-egui_mobius_components = { path = "../../crates/egui_mobius_components" }
+egui_lens = { workspace = true }
+egui_mobius_reactive = { workspace = true }
 egui = { workspace = true }
 eframe = { workspace = true, features = ["default", "glow"] }
+chrono = { workspace = true }
+sysinfo = "0.34"
+local-ip-address = "0.6"
