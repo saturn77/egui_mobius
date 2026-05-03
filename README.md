@@ -90,7 +90,8 @@ without citizens, etc.) are catalogued in
 | `egui_mobius_reactive` | Thread-safe reactive primitives: `Dynamic<T>` for shared cells, `Derived<T>` for auto-recomputed values. The cross-panel coupling layer. |
 | `egui_mobius` | Signal/slot bus + `AsyncDispatcher` for cross-thread async backends. Needed at level 3. |
 | `egui_mobius_widgets` | Stateful widget toolkit for retained-mode-style composition. |
-| `egui_mobius_components` | Higher-level UI components (event logger, etc.). |
+| `egui_lens` | Reactive event logger component — terminal-style log panel with custom log types, per-type colors, filtering, and file export. The canonical logger across the framework; see `examples/logger_component`. |
+| `egui_mobius_components` | Predecessor logger built on the older signal/slot architecture. **Superseded by `egui_lens`.** Kept for backward compatibility; new code should use `egui_lens`. |
 
 ## See also
 
