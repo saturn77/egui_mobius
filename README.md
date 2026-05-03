@@ -4,8 +4,8 @@
 # egui_mobius
 *Because GUI software design is a two sided problem operating on a single surface.*
 
-[![egui](https://img.shields.io/badge/egui-0.33-blue)](https://github.com/emilk/egui)
-[![egui_dock](https://img.shields.io/badge/egui__dock-0.18-purple)](https://github.com/Adanos020/egui_dock)
+[![egui](https://img.shields.io/badge/egui-0.34-blue)](https://github.com/emilk/egui)
+[![egui_dock](https://img.shields.io/badge/egui__dock-0.19-purple)](https://github.com/Adanos020/egui_dock)
 [![Crates.io](https://img.shields.io/crates/v/egui_mobius.svg)](https://crates.io/crates/egui_mobius)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/saturn77/egui_mobius/actions/workflows/rust.yml)

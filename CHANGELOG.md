@@ -1,3 +1,32 @@
+## [0.4.0] - 2026-05-03
+
+### Added
+- **`egui_lens` is now part of the workspace** — imported from the standalone `saturn77/egui_lens` repo into `crates/egui_lens/`. Becomes the canonical reactive event logger for the egui_mobius family. Version aligned to 0.4.0 (jumped from standalone 0.1.0).
+- `examples/logger_component` rewritten as a faithful port of `egui_lens::basic_custom`: custom log types with named identifiers (network, database, security, performance, analytics, http, websocket, auth), per-type colors, system-info logging via `sysinfo` + `local-ip-address`, banner formatting.
+- `examples/filter_plotter` runs in the browser via `trunk` — first WASM-deployable example, reference for browser deployment.
+- Book chapter "Backgrounds: ValueExt and Derived<T>" added; introduction polished; tutorial WASM section added; `Inside Dynamic<T>` / `concepts/citizen.md` cross-references repaired after the Dynamic chapter moved into Background.
+- `develop/lens-migration-plan.md` and `develop/strategy_tactics.md` capture the architectural decisions behind this release and the 90-day cadence toward 1.0.
+
+### Changed
+- **Bumped to egui 0.34** (from 0.33) and corresponding ecosystem: `egui_plot 0.35`, `egui_taffy 0.12`, `egui_dock 0.19`, `tokio 1.52`. Workspace dep cleanup so consumer crates inherit `eframe` from `[workspace.dependencies]` consistently.
+- **Family-wide version bump to 0.4.0**, retiring the alpha.X versioning. All workspace crates inherit `version.workspace = true`.
+- `clock_reactive`'s logger panel virtualized via `ScrollArea::show_rows` — eliminates the resize jitter / fan-spin during interaction.
+
+### Fixed
+- 9 examples (`clock_reactive`, `clock_async`, `dashboard`, `dashboard_async`, `logger_component`, `reactive`, `reactive_slider`, `realtime_plot`, `ui_refresh_events`) failed at runtime on Linux after the egui 0.34 dep cleanup because they inherited the workspace's `default-features = false` `eframe` declaration with only `features = ["glow"]`, stripping winit's x11/wayland backend. Restored by adding `"default"` to each example's `eframe` features list.
+- Three crates (`egui_mobius`, `egui_mobius_reactive`, `egui_mobius_widgets`) had hardcoded version pins instead of workspace inheritance; switched to `version.workspace = true` so future bumps are workspace-wide.
+
+### Deprecated
+- **`egui_mobius_components`** is superseded by `egui_lens`. Crate-level `#[deprecated]` attribute applied; new code should depend on `egui_lens` directly. Components is frozen at 0.4.0 and will receive no further updates.
+
+### Workspace structure
+- `egui_mobius` — signal/slot bus + `AsyncDispatcher`
+- `egui_mobius_reactive` — `Dynamic<T>`, `Derived<T>`, reactive primitives
+- `egui_mobius_widgets` — stateful widget toolkit
+- `egui_lens` — *(NEW)* reactive event logger
+- `egui_mobius_components` — *(DEPRECATED)* predecessor logger; use `egui_lens`
+- `egui_citizen` — citizen pattern (workspace-only; not yet on crates.io pending name decision)
+
 ## [0.3.0-alpha.33] - 2026-03-17
 
 ### Changed
