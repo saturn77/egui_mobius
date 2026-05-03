@@ -1,0 +1,31 @@
+[package]
+name                   = "egui_lens"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "Modular and customizable reactive event logger component for egui applications"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "development-tools"]
+keywords               = ["egui", "logger", "reactive", "egui-mobius"]
+include                = ["**/*.rs", "Cargo.toml"]
+
+[dependencies]
+egui                  = { workspace = true }
+eframe                = { workspace = true, features = ["default"] }
+egui_extras           = { workspace = true }
+egui_dock             = { workspace = true }
+egui_plot             = { workspace = true }
+egui_mobius           = { workspace = true }
+egui_mobius_reactive  = { workspace = true }
+egui_mobius_widgets   = { workspace = true }
+chrono                = { workspace = true }
+tokio                 = { workspace = true }
+serde                 = { workspace = true }
+serde_json            = { workspace = true }
+log                   = { workspace = true }
+env_logger            = { workspace = true }
+dirs                  = { workspace = true }
+rfd                   = { workspace = true }

@@ -2,6 +2,7 @@
 members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "crates/egui_mobius_reactive", "crates/egui_mobius_components",
     "crates/egui_citizen",
+    "crates/egui_lens",
     "examples/clock_async",
     "examples/clock_reactive",
     "examples/dashboard",
@@ -38,6 +39,7 @@ egui_mobius_widgets = { version = "0.3.0-alpha.33", path = "crates/egui_mobius_w
 egui_mobius_reactive = { version = "0.3.0-alpha.33", path = "crates/egui_mobius_reactive" }
 egui_mobius_components = { version = "0.3.0-alpha.33", path = "crates/egui_mobius_components" }
 egui_citizen = { version = "0.3.0-alpha.33", path = "crates/egui_citizen" }
+egui_lens = { version = "0.3.0-alpha.33", path = "crates/egui_lens" }
 
 # egui and eframe
 egui_plot = "0.35.0"
@@ -67,6 +69,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ron = "0.8"
 dirs = "5.0"
+rfd = "0.14"
 
 # windowing
 winit = "0.30.11"
