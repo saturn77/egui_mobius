@@ -861,53 +861,73 @@ impl<'a> ReactiveEventLogger<'a> {
         });
         
         if show_save_dialog {
-            // Use a future to handle the async file dialog
+            // Clear the flag first to prevent duplicate dialogs
             ui.ctx().memory_mut(|mem| {
-                // Clear the flag first to prevent duplicate dialogs
                 mem.data.remove::<bool>(egui::Id::new("show_save_logs_dialog"));
-                
-                // Create a new thread to show the file dialog
-                // This avoids blocking the UI thread
-                let ctx = ui.ctx().clone();
-                let state_clone = self.state.clone();
-                std::thread::spawn(move || {
-                    // Show native file dialog
-                    if let Some(path) = rfd::FileDialog::new()
+            });
+
+            let ctx = ui.ctx().clone();
+            let state_clone = self.state.clone();
+
+            // Build the export content synchronously (we need the lock now,
+            // not inside an async block where the guard isn't Send on wasm).
+            let log_content = {
+                if let Some(state_arc) =
+                    ReactiveWidgetRef::from_dynamic(&state_clone).weak_ref.upgrade()
+                {
+                    if let Ok(state) = state_arc.lock() {
+                        let reactive_logger = ReactiveEventLogger::new(&state_clone);
+                        Some(reactive_logger.format_logs_for_export(&state))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            };
+
+            if let Some(log_content) = log_content {
+                // Single async path that works on both native and wasm.
+                // On native, rfd::AsyncFileDialog spawns the OS file dialog.
+                // On wasm, it uses the browser's download API and the file
+                // handle's `.write()` triggers a download.
+                let task = async move {
+                    let file = rfd::AsyncFileDialog::new()
                         .add_filter("Text files", &["txt"])
                         .add_filter("Log files", &["log"])
                         .add_filter("All files", &["*"])
                         .set_file_name("logs.txt")
                         .set_title("Save Log File")
-                        .save_file() {
-                        
-                        // Try to save the file
-                        if let Some(state_arc) = ReactiveWidgetRef::from_dynamic(&state_clone).weak_ref.upgrade() {
-                            if let Ok(state) = state_arc.lock() {
-                                let reactive_logger = ReactiveEventLogger::new(&state_clone);
-                                let log_content = reactive_logger.format_logs_for_export(&state);
-                                
-                                // Save the logs to the file
-                                if let Err(err) = std::fs::write(&path, log_content) {
-                                    // On error, set a flag to show an error message
-                                    ctx.memory_mut(|mem| {
-                                        mem.data.insert_temp(egui::Id::new("save_logs_error"), 
-                                            format!("Failed to save logs: {}", err));
-                                    });
-                                } else {
-                                    // On success, set a flag to show a success message
-                                    ctx.memory_mut(|mem| {
-                                        mem.data.insert_temp(egui::Id::new("save_logs_success"), 
-                                            format!("Logs saved to: {}", path.display()));
-                                    });
-                                }
+                        .save_file()
+                        .await;
+
+                    if let Some(file) = file {
+                        let result = file.write(log_content.as_bytes()).await;
+                        ctx.memory_mut(|mem| match result {
+                            Ok(()) => {
+                                mem.data.insert_temp(
+                                    egui::Id::new("save_logs_success"),
+                                    format!("Logs saved to: {}", file.file_name()),
+                                );
                             }
-                        }
+                            Err(err) => {
+                                mem.data.insert_temp(
+                                    egui::Id::new("save_logs_error"),
+                                    format!("Failed to save logs: {}", err),
+                                );
+                            }
+                        });
                     }
-                    
-                    // Request a repaint to show any success/error messages
+
                     ctx.request_repaint();
-                });
-            });
+                };
+
+                #[cfg(target_arch = "wasm32")]
+                wasm_bindgen_futures::spawn_local(task);
+
+                #[cfg(not(target_arch = "wasm32"))]
+                std::thread::spawn(move || pollster::block_on(task));
+            }
         }
         
         // Show success message if present

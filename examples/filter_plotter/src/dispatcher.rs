@@ -6,68 +6,70 @@
 //! evolve as the app grows.
 
 use egui_citizen::{CitizenMessage, Dispatcher};
+use egui_lens::{ReactiveEventLogger, ReactiveEventLoggerState};
 use egui_mobius_reactive::Dynamic;
 
 use crate::backend::BackendKind;
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
-/// Drain citizen lifecycle messages from the dispatcher and append them
-/// to the shared log. Call once per frame after `DockArea::show`.
-pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
+/// Drain citizen lifecycle messages from the dispatcher and route them
+/// into the shared lens-backed log. Call once per frame after
+/// `DockArea::show`.
+pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<ReactiveEventLoggerState>) {
+    let logger = ReactiveEventLogger::new(log);
     for msg in dispatcher.drain_messages() {
-        append_log(log, format_citizen(&msg));
+        logger.log_custom("citizen", &format_citizen(&msg));
     }
 }
 
 /// Route an app-level message. `Generate` runs the backend synchronously
 /// and stores the resulting traces in shared state; the others log.
-pub fn handle<B>(msg: AppMessage, state: &SharedState, backend: &mut B, log: &Dynamic<Vec<String>>)
-where
+pub fn handle<B>(
+    msg: AppMessage,
+    state: &SharedState,
+    backend: &mut B,
+    log: &Dynamic<ReactiveEventLoggerState>,
+) where
     B: BackendKind<Sample = f32>,
 {
+    let logger = ReactiveEventLogger::new(log);
     match msg {
         AppMessage::Generate => {
             let params = state.params.snapshot();
             let traces = backend.run(&params);
             let n = traces.input.len();
             state.traces.set(traces);
-            append_log(
-                log,
-                format!("[INFO] backend ({}) produced {} samples", backend.name(), n,),
-            );
+            logger.log_info(&format!(
+                "backend ({}) produced {} samples",
+                backend.name(),
+                n
+            ));
         }
     }
 }
 
-const MAX_LOG_LINES: usize = 500;
-
-/// Append a line to the log, capped at `MAX_LOG_LINES` so memory stays
-/// bounded over long sessions.
-pub fn append_log(log: &Dynamic<Vec<String>>, line: String) {
-    let mut buf = log.get();
-    buf.push(line);
-    if buf.len() > MAX_LOG_LINES {
-        let drop = buf.len() - MAX_LOG_LINES;
-        buf.drain(0..drop);
-    }
-    log.set(buf);
+/// Append a single info-level line to the log. Convenience wrapper for
+/// places that want a one-liner without constructing a logger.
+pub fn append_log(log: &Dynamic<ReactiveEventLoggerState>, line: String) {
+    let logger = ReactiveEventLogger::new(log);
+    logger.log_info(&line);
 }
 
 fn format_citizen(msg: &CitizenMessage) -> String {
     match msg {
-        CitizenMessage::Activated { id } => format!("[citizen] {} activated", id),
-        CitizenMessage::Deactivated { id } => format!("[citizen] {} deactivated", id),
-        CitizenMessage::Clicked { id } => format!("[citizen] {} clicked", id),
+        CitizenMessage::Activated { id } => format!("{} activated", id),
+        CitizenMessage::Deactivated { id } => format!("{} deactivated", id),
+        CitizenMessage::Clicked { id } => format!("{} clicked", id),
         CitizenMessage::Selected { id, selected } => {
-            format!("[citizen] {} selected={}", id, selected)
+            format!("{} selected={}", id, selected)
         }
         CitizenMessage::Moved { id, location } => format!(
-            "[citizen] {} moved to [{:.1}, {:.1}]",
+            "{} moved to [{:.1}, {:.1}]",
             id, location[0], location[1]
         ),
         CitizenMessage::VisibilityChanged { id, visible } => {
-            format!("[citizen] {} visible={}", id, visible)
+            format!("{} visible={}", id, visible)
         }
     }
 }

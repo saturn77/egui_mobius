@@ -18,14 +18,17 @@ eframe                = { workspace = true, features = ["default"] }
 egui_extras           = { workspace = true }
 egui_dock             = { workspace = true }
 egui_plot             = { workspace = true }
-egui_mobius           = { workspace = true }
 egui_mobius_reactive  = { workspace = true }
-egui_mobius_widgets   = { workspace = true }
 chrono                = { workspace = true }
-tokio                 = { workspace = true }
 serde                 = { workspace = true }
 serde_json            = { workspace = true }
 log                   = { workspace = true }
 env_logger            = { workspace = true }
 dirs                  = { workspace = true }
 rfd                   = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pollster = "0.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"

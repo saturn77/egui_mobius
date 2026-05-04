@@ -1,7 +1,9 @@
-//! Scrolling log panel. Reads from `SharedState::log`; populated by the
-//! drain loop in main.rs.
+//! Lens-backed log panel. Reads from `SharedState::log` (a
+//! `Dynamic<ReactiveEventLoggerState>`); the dispatcher writes via
+//! `dispatcher::append_log` and the citizen-message drain.
 
 use eframe::egui;
+use egui_lens::ReactiveEventLogger;
 
 use crate::state::SharedState;
 
@@ -13,21 +15,7 @@ impl LoggerPanel {
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
-        ui.heading("Log");
-        ui.add_space(4.0);
-
-        let log = state.log.get();
-        egui::ScrollArea::vertical()
-            .auto_shrink([false, false])
-            .stick_to_bottom(true)
-            .show(ui, |ui| {
-                if log.is_empty() {
-                    ui.weak("(no events yet)");
-                } else {
-                    for line in log.iter() {
-                        ui.monospace(line);
-                    }
-                }
-            });
+        let logger = ReactiveEventLogger::new(&state.log);
+        logger.show(ui);
     }
 }

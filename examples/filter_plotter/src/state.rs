@@ -1,6 +1,7 @@
 //! Shared application state passed by reference to every panel.
 
 use eframe::egui;
+use egui_lens::ReactiveEventLoggerState;
 use egui_mobius_reactive::Dynamic;
 
 use crate::backend::{FilterParams, Traces};
@@ -47,7 +48,7 @@ impl ParamsState {
 pub struct SharedState {
     pub params: ParamsState,
     pub traces: Dynamic<Traces<f32>>,
-    pub log: Dynamic<Vec<String>>,
+    pub log: Dynamic<ReactiveEventLoggerState>,
     /// Linked-axis group id — both Plot widgets pass this same Id to
     /// `Plot::link_axis(...)` so pan/zoom on either propagates to the
     /// other (matplotlib-style linked subplots).
@@ -63,7 +64,7 @@ impl SharedState {
         Self {
             params: ParamsState::defaults(),
             traces: Dynamic::new(Traces::<f32>::default()),
-            log: Dynamic::new(Vec::new()),
+            log: Dynamic::new(ReactiveEventLoggerState::new()),
             plot_link: egui::Id::new("filter_plotter::axis_link"),
             overlay_filtered: Dynamic::new(false),
         }
