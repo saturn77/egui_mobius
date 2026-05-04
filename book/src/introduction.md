@@ -10,7 +10,7 @@
 This book provides know-how for building solid, professional, and flexible graphical user
 interfaces. The language of choice is Rust employing the `egui` GUI library and the `egui_mobius` framework.
 
-`egui_mobius` is also the overall name of this mono-repo, and primarily consists of itself, `egui_mobius_reactive`, `egui_citizen`, and `egui_lens` (the canonical reactive event logger).
+`egui_mobius` is also the overall name of this mono-repo, and primarily consists of itself, `egui_mobius_reactive`, `egui_citizen`, `egui_lens` (the canonical reactive event logger), and `egui_quill` (the syntax-highlighted editor).
 
 Overall egui_citizen is the preferred general pattern of working with egui_mobius in the sense that most modern applications will typically have dockable panels to make the Ui ergonomic and modern. Coupled with background threading, these are the two primary focus areas of GUI design, well supported by the citizen pattern: 
 

@@ -18,6 +18,7 @@
 - [Coupling](concepts/coupling.md)
 - [Inside `Dynamic<T>`](concepts/inside-dynamic.md)
 - [`egui_lens` — the reactive event logger](concepts/lens.md)
+- [`egui_quill` — the syntax-highlighted editor](concepts/quill.md)
 
 # Tutorial
 
