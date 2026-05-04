@@ -1,16 +1,39 @@
 # `egui_lens` — the reactive event logger
 
+> **`egui_lens` is a citizen.** A docked, movable, resizable panel
+> with stable identity (`"logger"`) and a known set of atoms inside
+> — System Info, Filters, Logger Colors, Save Logs, Clear Logs,
+> the column-toggle checkboxes, the scrollable log area itself.
+> Like every other citizen panel, it observes shared reactive state
+> through `Dynamic<T>` and participates in dispatcher-coordinated
+> activation.
+
+If "citizen" doesn't ring a bell yet, read [What is a
+citizen?](../background/what_is_a_citizen.md) first — that chapter
+walks through the panel-level characteristics every citizen has,
+which `egui_lens` is the canonical example of.
+
+## What it does
+
 `egui_lens` is the canonical event logger for the `egui_mobius`
-ecosystem. It provides a terminal-style log panel that any citizen
-app can drop in, with custom log types, per-type colors, filtering,
-and file export — built on `Dynamic<T>` so logs flow reactively
-between writers (any panel, any backend thread) and the panel that
-displays them.
+ecosystem. It provides a terminal-style log panel — log levels,
+per-type colors, filtering, file export — built on `Dynamic<T>` so
+log entries flow reactively between writers (any panel, any
+backend thread) and the panel that displays them.
 
 As of v0.4.0, lens lives in `crates/egui_lens/` inside the
 egui_mobius workspace. It supersedes the older
 `egui_mobius_components::event_logger`, which was built on the
 signal/slot architecture and is now deprecated.
+
+> *Implementation note:* the lens crate currently ships as a
+> widget that consuming apps wrap in their own panel struct. The
+> wrapper is small (a few lines) but it's an extra step that
+> shouldn't be needed — lens *is* a citizen, and tracking issue
+> [#30](https://github.com/saturn77/egui_mobius/issues/30) makes
+> that intrinsic by adding a `LoggerCitizen` that `impl Citizen`
+> directly. Until that lands, the consuming-app pattern in this
+> chapter shows the wrapper.
 
 ## The shape
 

@@ -4,6 +4,7 @@
 
 # Background
 
+- [What is a citizen?](background/what_is_a_citizen.md)
 - [Key vocabulary](background/vocabulary.md)
 - [The `Dynamic<T>` primitive](background/dynamic_type.md)
 - [egui_dock](background/egui_dock.md)
