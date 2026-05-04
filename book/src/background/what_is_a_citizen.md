@@ -55,6 +55,88 @@ A citizen panel has all of the following:
   Other panels and backend threads observe these without holding
   references to the panel itself.
 
+## What this buys you that `egui_dock` alone doesn't
+
+`egui_dock` is a layout library. It tells you which panel is
+*visible* on screen and which sits in which split. It does not
+tell you which panel is currently the **active citizen of
+interest** — i.e., which panel the user clicked last, which one
+should be receiving keyboard focus, which one a backend thread
+should be feeding fresh data to.
+
+The citizen pattern fills that gap by giving every panel its
+**own reactive state** (`CitizenState`) and routing tab clicks
+through a central `Dispatcher`. The dispatcher's `activate(...)`
+call is an atomic set/reset: when "alpha" becomes active, every
+other citizen's `active` cell flips to `false` in the same
+operation, and lifecycle messages (`Activated { id: alpha }`,
+`Deactivated { id: beta }`) drop into the dispatcher's queue.
+
+This means:
+
+- A **backend thread** can poll the dispatcher (or observe each
+  citizen's `active` `Dynamic<bool>`) and discern *which citizen
+  is currently of interest* without holding a reference to any
+  panel. Background work — fetching data, running computations,
+  reading hardware — knows where to direct its results.
+- A **sibling panel** can react to another panel becoming active
+  without any per-frame polling: the reactive cell delivers the
+  change, the rendering panel re-reads on its next frame.
+- The pattern guarantees **one-hot activation** — exactly one
+  citizen active at a time per group — atomically. Two panels
+  can never both think they're active because of a frame-order
+  race. `egui_dock` makes no such guarantee; you'd have to wire
+  it manually.
+
+This separation — dock library handles geometry, citizen
+dispatcher handles *interest* — is the load-bearing distinction.
+Without it, every app reinvents some ad-hoc "which panel did the
+user mean?" logic. With it, that's framework infrastructure you
+inherit for free.
+
+## Citizens as plug-ins
+
+The other consequence of the citizen contract is that **citizens
+become plug-ins**. Once a panel implements the `Citizen` trait,
+exposes its reactive state, and integrates with the dispatcher,
+it doesn't need to know anything about the host app to drop in.
+The host app, conversely, just needs to:
+
+1. Add the citizen's crate as a dependency.
+2. Carry its `Dynamic<T>` state field on the shared state struct.
+3. Add a `TabKind` variant for it.
+4. Render it from the `TabViewer`.
+
+That's the whole integration. No glue code, no event-bus wiring,
+no manual subscription setup. The citizen pulls its weight as a
+self-contained unit.
+
+`egui_lens` (the reactive event logger) and `egui_quill` (the
+syntax-highlighted editor) are the canonical examples of this in
+action. Both ship as their own workspace crates with stable
+public APIs (`ReactiveEventLogger` + `ReactiveEventLoggerState`;
+`ReactiveEditor` + `ReactiveEditorState`). The host app's
+integration is small enough to fit on a sticky note:
+
+```rust,ignore
+// One field on shared state.
+pub log: Dynamic<ReactiveEventLoggerState>,
+
+// One render call per frame.
+let logger = ReactiveEventLogger::new(&state.log);
+logger.show(ui);
+```
+
+Same pattern for quill, same pattern for the canonical citizen
+panels coming next (Project / Settings / Terminal / Data Table —
+issue #33). Same pattern for any third-party citizen someone
+publishes on crates.io: `cargo add egui_their_panel`, declare
+the state field, render in a tab, done.
+
+This is what makes the framework genuinely composable rather than
+just architecturally tidy. Real apps grow by accumulating
+citizens, not by extending their core.
+
 ## What it is not
 
 A citizen is not:
