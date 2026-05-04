@@ -329,22 +329,27 @@ impl<'a> ReactiveEventLogger<'a> {
     
     /// Save colors to the consuming app's config directory.
     /// Directory name is derived from the running binary via `app_config_dir`.
+    ///
+    /// Native-only — wasm has no filesystem and no `std::thread::spawn`.
+    /// Color changes in browser builds are kept in memory for the
+    /// session; not persisted across reloads.
+    #[cfg(not(target_arch = "wasm32"))]
     fn save_colors_for_app(colors: &LogColors) {
         use std::fs;
 
         let colors = colors.clone();
         std::thread::spawn(move || {
             let config_dir = crate::logger_colors::app_config_dir();
-            
+
             // Create config directory if it doesn't exist
             if let Err(e) = fs::create_dir_all(&config_dir) {
                 eprintln!("Failed to create config directory: {}", e);
                 return;
             }
-            
+
             // Create config file path
             let config_path = config_dir.join("log_colors.json");
-            
+
             // Serialize colors to JSON
             match serde_json::to_string_pretty(&colors) {
                 Ok(json) => {
@@ -354,12 +359,17 @@ impl<'a> ReactiveEventLogger<'a> {
                     } else {
                         println!("Successfully saved colors to {}", config_path.display());
                     }
-                },
+                }
                 Err(e) => eprintln!("Failed to serialize colors: {}", e),
             }
         });
     }
-    
+
+    /// WASM stub — no-op since browser sandbox prevents disk persistence.
+    #[cfg(target_arch = "wasm32")]
+    fn save_colors_for_app(_colors: &LogColors) {}
+
+
     /// Show the filter modal dialog
     fn show_filter_modal(&self, ui: &mut egui::Ui) {
         // Check if filter modal should be shown
@@ -1476,133 +1486,142 @@ impl<'a> ReactiveEventLogger<'a> {
         
         // If we have custom colors, use rich text with the layout
         if let Some(colors_dynamic) = self.colors {
-            // Get a copy of the colors from the Dynamic
             let colors = colors_dynamic.get();
-            
-            // Create a scrollable area for log content
+
+            // Header row — pinned outside the scroll area so it stays
+            // visible while the log scrolls. Compatible with show_rows
+            // (which only knows about the rows inside the scroll area).
+            ui.horizontal(|ui| {
+                if show_timestamps {
+                    ui.add_sized(
+                        [TIMESTAMP_WIDTH, 20.0],
+                        egui::Label::new(
+                            egui::RichText::new("Timestamp").strong().size(14.0),
+                        ),
+                    );
+                }
+                if show_log_level {
+                    ui.add_sized(
+                        [LEVEL_WIDTH, 20.0],
+                        egui::Label::new(
+                            egui::RichText::new("Level").strong().size(14.0),
+                        ),
+                    );
+                }
+                if show_messages {
+                    ui.label(egui::RichText::new("Message").strong().size(14.0));
+                }
+            });
+            ui.separator();
+
+            // Filter once into an indexable collection. show_rows
+            // requires us to know up front how many rows we'll produce,
+            // which is the count after filter.
+            let filtered: Vec<&LoggerPayload> = state
+                .logs
+                .iter()
+                .filter(|log| state.filter.should_display(log))
+                .collect();
+            let num_rows = filtered.len();
+            let row_height =
+                ui.text_style_height(&egui::TextStyle::Monospace) + 4.0;
+
+            // Virtualized scroll: only the rows currently visible in
+            // the viewport get rendered. With a 1000-entry buffer and
+            // ~30 rows visible at a time, this is a ~30× reduction in
+            // per-frame widget allocation vs the previous Grid that
+            // rendered every entry every frame. Resize jitter (the
+            // primary symptom in issue #27) is eliminated.
+            //
+            // Trade-off: rows have a fixed height (single line). Long
+            // messages truncate with "…"; multi-line system info dumps
+            // get newlines collapsed to " | " for the visual while the
+            // underlying log data preserves the original newlines
+            // (Save Logs export keeps the full multi-line form).
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
-                .stick_to_bottom(true)
-                .show(ui, |ui| {
-                    // Create a table with headers
-                    egui::Grid::new("logger_grid")
-                        .num_columns(if show_timestamps { 1 } else { 0 } + 
-                                     if show_log_level { 1 } else { 0 } + 
-                                     if show_messages { 1 } else { 0 })
-                        .striped(true)
-                        .spacing([10.0, 4.0])
-                        .min_col_width(0.0) // Allow us to fully control column widths
-                        .show(ui, |ui| {
-                            // Header row
+                .show_rows(ui, row_height, num_rows, |ui, row_range| {
+                    for row in row_range {
+                        // Newest-first: render last filtered entry at row 0
+                        let idx = num_rows - 1 - row;
+                        let log = filtered[idx];
+
+                        ui.horizontal(|ui| {
                             if show_timestamps {
-                                ui.add_sized([TIMESTAMP_WIDTH, 20.0], 
-                                    egui::Label::new(egui::RichText::new("Timestamp").strong().size(14.0)));
-                            }
-                            
-                            if show_log_level {
-                                ui.add_sized([LEVEL_WIDTH, 20.0],
-                                    egui::Label::new(egui::RichText::new("Level").strong().size(14.0)));
-                            }
-                            
-                            if show_messages {
-                                // Calculate available width for the message column header
-                                let available_width = ui.available_width().max(300.0);
-                                
-                                // Make the header fill the available width
-                                ui.scope(|ui| {
-                                    ui.set_min_width(available_width);
-                                    ui.label(egui::RichText::new("Message").strong().size(14.0));
-                                });
-                            }
-                            
-                            ui.end_row();
-                            
-                            // Create a separator spanning all columns
-                            let col_count = (if show_timestamps { 1 } else { 0 }) + 
-                                           (if show_log_level { 1 } else { 0 }) + 
-                                           (if show_messages { 1 } else { 0 });
-                            
-                            for _ in 0..col_count {
-                                ui.label("―――――――――――――");
-                            }
-                            ui.end_row();
-                            
-                            // Process logs in reverse order (newest first)
-                            for log in state.logs.iter().rev() {
-                                // Apply filter - skip logs that don't match the filter criteria
-                                if !state.filter.should_display(log) {
-                                    continue;
-                                }
-                                
-                                if show_timestamps {
-                                    let timestamp_text = egui::RichText::new(&log.timestamp.value.value)
+                                let timestamp_text =
+                                    egui::RichText::new(&log.timestamp.value.value)
                                         .color(colors.timestamp)
                                         .monospace();
-                                    ui.add_sized([TIMESTAMP_WIDTH, 20.0], egui::Label::new(timestamp_text));
-                                }
-                                
-                                if show_log_level {
-                                    let (level_text, level_color) = get_log_level_text_and_color(log, &colors);
-                                    ui.add_sized([LEVEL_WIDTH, 20.0], 
-                                        egui::Label::new(
-                                            egui::RichText::new(level_text)
+                                ui.add_sized(
+                                    [TIMESTAMP_WIDTH, row_height],
+                                    egui::Label::new(timestamp_text),
+                                );
+                            }
+
+                            if show_log_level {
+                                let (level_text, level_color) =
+                                    get_log_level_text_and_color(log, &colors);
+                                ui.add_sized(
+                                    [LEVEL_WIDTH, row_height],
+                                    egui::Label::new(
+                                        egui::RichText::new(level_text)
                                             .color(level_color)
-                                            .monospace()));
-                                }
-                                
-                                if show_messages {
-                                    // Format system info with consistent alignment
-                                    let message_text = &log.log_message.content.value;
-                                    let formatted_message = if message_text.contains("SYSTEM DETAILS") {
+                                            .monospace(),
+                                    ),
+                                );
+                            }
+
+                            if show_messages {
+                                let message_text = &log.log_message.content.value;
+                                // Multi-line system info: flatten for
+                                // single-line display (data preserved
+                                // upstream). Other messages render as-is.
+                                let display_text = if message_text.contains('\n') {
+                                    if message_text.contains("SYSTEM DETAILS") {
                                         format_system_info(message_text)
+                                            .replace('\n', " | ")
                                     } else {
-                                        message_text.clone()
-                                    };
-                                    
-                                    // Determine color based on log level first, then message content
-                                    let message_color = if !log.log_level.info.value.is_empty() {
-                                        // Check if it's a custom type
-                                        if log.log_level.info.value.starts_with("CUSTOM:") {
-                                            let identifier = log.log_level.info.value.strip_prefix("CUSTOM:").unwrap_or("");
-                                            colors.get_custom_color_message(identifier)
-                                        } else {
-                                            colors.info_message
-                                        }
-                                    } else if !log.log_level.warning.value.is_empty() {
-                                        colors.warning_message
-                                    } else if !log.log_level.error.value.is_empty() {
-                                        colors.error_message
-                                    } else if !log.log_level.debug.value.is_empty() {
-                                        colors.debug_message
+                                        message_text.replace('\n', " | ")
+                                    }
+                                } else {
+                                    message_text.clone()
+                                };
+
+                                let message_color = if !log.log_level.info.value.is_empty() {
+                                    if log.log_level.info.value.starts_with("CUSTOM:") {
+                                        let identifier = log
+                                            .log_level
+                                            .info
+                                            .value
+                                            .strip_prefix("CUSTOM:")
+                                            .unwrap_or("");
+                                        colors.get_custom_color_message(identifier)
                                     } else {
-                                        // Fallback to content-based detection
-                                        get_message_color(&formatted_message, &colors)
-                                    };
-                                    
-                                    // Calculate available width to make the message column stretch
-                                    let available_width = ui.available_width().max(300.0);
-                                    
-                                    // Create a label that fills the available width
-                                    // and wraps long lines instead of running off
-                                    // the right edge of the panel.
-                                    ui.scope(|ui| {
-                                        ui.set_min_width(available_width);
-                                        ui.add(
-                                            egui::Label::new(
-                                                egui::RichText::new(formatted_message)
-                                                    .color(message_color)
-                                                    .monospace(),
-                                            )
-                                            .wrap(),
-                                        );
-                                    });
-                                }
-                                
-                                ui.end_row();
+                                        colors.info_message
+                                    }
+                                } else if !log.log_level.warning.value.is_empty() {
+                                    colors.warning_message
+                                } else if !log.log_level.error.value.is_empty() {
+                                    colors.error_message
+                                } else if !log.log_level.debug.value.is_empty() {
+                                    colors.debug_message
+                                } else {
+                                    get_message_color(&display_text, &colors)
+                                };
+
+                                ui.add(
+                                    egui::Label::new(
+                                        egui::RichText::new(display_text)
+                                            .color(message_color)
+                                            .monospace(),
+                                    )
+                                    .truncate(),
+                                );
                             }
                         });
+                    }
                 });
-            
+
             return;
         }
         

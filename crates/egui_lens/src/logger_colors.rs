@@ -254,21 +254,22 @@ impl LogColors {
     }
 
     #[allow(dead_code)]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save(&self) {
         let colors = self.clone();
         std::thread::spawn(move || {
             // Get config directory path
             let config_dir = app_config_dir();
-            
+
             // Create config directory if it doesn't exist
             if let Err(e) = fs::create_dir_all(&config_dir) {
                 eprintln!("Failed to create config directory: {}", e);
                 return;
             }
-            
+
             // Create config file path
             let config_path = config_dir.join("log_colors.json");
-            
+
             // Serialize colors to JSON
             match serde_json::to_string_pretty(&colors) {
                 Ok(json) => {
@@ -278,9 +279,14 @@ impl LogColors {
                     } else {
                         println!("Successfully saved colors to {}", config_path.display());
                     }
-                },
+                }
                 Err(e) => eprintln!("Failed to serialize colors: {}", e),
             }
         });
     }
+
+    /// WASM stub — no-op since browser sandbox prevents disk persistence.
+    #[allow(dead_code)]
+    #[cfg(target_arch = "wasm32")]
+    pub fn save(&self) {}
 }
