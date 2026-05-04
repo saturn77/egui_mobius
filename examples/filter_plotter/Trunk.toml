@@ -10,3 +10,10 @@ ignore = ["./dist"]
 address = "127.0.0.1"
 port = 8080
 open = true
+
+# wasm-opt is run automatically by trunk on --release builds; "z"
+# selects size-aggressive optimization (smallest bundle). Trade-off:
+# slightly slower runtime vs "s" or "4" — acceptable for a demo
+# where bundle download time dominates time-to-interactive.
+[tools]
+wasm_opt = "z"
