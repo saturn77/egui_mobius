@@ -127,6 +127,7 @@ frame.
 
 ```rust,ignore
 use eframe::egui;
+use egui_lens::{LogColors, ReactiveEventLoggerState};
 use egui_mobius_reactive::Dynamic;
 
 use crate::backend::{FilterParams, Traces};
@@ -142,17 +143,22 @@ pub struct ParamsState {
 pub struct SharedState {
     pub params: ParamsState,
     pub traces: Dynamic<Traces<f32>>,
-    pub log: Dynamic<Vec<String>>,
+    pub log: Dynamic<ReactiveEventLoggerState>,
+    pub log_colors: Dynamic<LogColors>,
     pub plot_link: egui::Id,
 }
 ```
 
-Three reactive fields (`Dynamic<T>`) for things multiple places
+Four reactive fields (`Dynamic<T>`) for things multiple places
 read or write: `params` (settings panel writes, backend reads on
 Generate), `traces` (drain loop writes, plot panel reads), `log`
-(drain loop writes, logger panel reads). One non-reactive field
-`plot_link` because both plot widgets only need the same `Id`; it
-never changes after construction.
+(drain loop writes, logger panel reads — backed by
+`egui_lens::ReactiveEventLoggerState`, see [the lens
+chapter](../concepts/lens.md)), and `log_colors` (configures
+per-type colors for custom log channels like `"citizen"` and
+`"backend"`). One non-reactive field `plot_link` because both plot
+widgets only need the same `Id`; it never changes after
+construction.
 
 The `f32` in `Dynamic<Traces<f32>>` is where this app commits to
 the in-process IIR backend's sample type — see
@@ -404,28 +410,70 @@ locally for the rest of the frame.
 
 ## The logger panel — `panels/logger.rs`
 
-The simplest panel. Reads `state.log`, prints each line in a
-scrolling area:
+The logger panel is itself a **citizen with named atoms** —
+`egui_lens::ReactiveEventLogger` provides the panel identity (the
+"logger" citizen) and the in-panel widgets (System Info, Filters,
+Logger Colors, Save Logs, Clear Logs, the column-toggle
+checkboxes, the scrollable log area) are its atoms. The panel
+struct in this app is a thin wrapper that hands lens its shared
+state and renders it:
 
 ```rust,ignore
-let log = state.log.get();
-egui::ScrollArea::vertical()
-    .auto_shrink([false, false])
-    .stick_to_bottom(true)
-    .show(ui, |ui| {
-        if log.is_empty() {
-            ui.weak("(no events yet)");
-        } else {
-            for line in log.iter() {
-                ui.monospace(line);
-            }
-        }
-    });
+use egui_lens::ReactiveEventLogger;
+use crate::state::SharedState;
+
+pub struct LoggerPanel {}
+
+impl LoggerPanel {
+    pub fn new() -> Self { Self {} }
+
+    pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
+        let logger = ReactiveEventLogger::with_colors(
+            &state.log,
+            &state.log_colors,
+        );
+        logger.show(ui);
+    }
+}
 ```
 
-The log is populated entirely from the drain loop in
-`dispatcher.rs::handle()`. The logger panel doesn't write to it
-— it just renders.
+The logger reads `state.log` (a `Dynamic<ReactiveEventLoggerState>`)
+and `state.log_colors` (a `Dynamic<LogColors>`); writes flow in
+through the dispatcher. The logger panel doesn't push entries
+itself — it just renders what the drain loop in `dispatcher.rs`
+puts there.
+
+> *Forward-looking note:* tracked in
+> [issue #30](https://github.com/saturn77/egui_mobius/issues/30),
+> lens will eventually `impl Citizen` directly and the
+> `LoggerPanel` wrapper here disappears entirely — the dock
+> layout will use the citizen `ReactiveEventLogger` (or its
+> sibling `LoggerCitizen`) without any custom panel type. For
+> now this thin wrapper is the boundary.
+
+### What the lens-backed logger gives you
+
+Compared to a hand-rolled `Vec<String>` log:
+
+- **Per-type colors** via `Dynamic<LogColors>` — the dispatcher
+  routes citizen lifecycle events through `log_custom("citizen",
+  ...)` and backend events through `log_custom("backend", ...)`,
+  each rendered in its own color (configured at app construction
+  in `state.rs`).
+- **Filters** — info / warning / error / debug / custom / system
+  toggles plus a text-search box, all stored on the shared state.
+- **Save Logs** — exports current contents via
+  `rfd::AsyncFileDialog`, which works on **both native and WASM**
+  (browser builds get a download; native opens an OS file
+  dialog).
+- **System Info button** — sets a memory flag the consuming app
+  drains. The "atom" pattern at work: lens publishes the click;
+  the app provides the actual implementation (see
+  `platform/details.rs` for native, `platform/details_wasm.rs`
+  for the browser variant).
+- **Cross-thread writes** — `Dynamic::clone()` is cheap; hand a
+  clone to any thread and call `ReactiveEventLogger::new(&clone)
+  .log_info(...)` from anywhere.
 
 ## The dispatcher module — `dispatcher.rs`
 
@@ -440,21 +488,21 @@ pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
     RegisteredCitizens { plot, settings, logger }
 }
 
-pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
+pub fn drain_citizen(dispatcher: &mut Dispatcher, state: &SharedState) {
+    let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
     for msg in dispatcher.drain_messages() {
-        append_log(log, format_citizen(&msg));
+        // "citizen" is a named custom log type — its color is
+        // configured in state.rs and renders distinctly from
+        // info/warning/error/debug.
+        logger.log_custom("citizen", &format_citizen(&msg));
     }
 }
 
-pub fn handle<B>(
-    msg: AppMessage,
-    state: &SharedState,
-    backend: &mut B,
-    log: &Dynamic<Vec<String>>,
-)
+pub fn handle<B>(msg: AppMessage, state: &SharedState, backend: &mut B)
 where
     B: BackendKind<Sample = f32>,
 {
+    let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
     match msg {
         AppMessage::Citizen(_) => {} // already drained directly
         AppMessage::Generate => {
@@ -462,15 +510,26 @@ where
             let traces = backend.run(&params);
             let n = traces.input.len();
             state.traces.set(traces);
-            append_log(log, format!("[INFO] backend ({}) produced {} samples",
-                                    backend.name(), n));
+            // "backend" is also a named custom log type — its
+            // color is configured alongside "citizen" so the two
+            // event streams are visually distinct.
+            logger.log_custom("backend",
+                &format!("{} produced {} samples", backend.name(), n));
         }
         AppMessage::GenerateCompleted { samples } => {
-            append_log(log, format!("[INFO] generate completed: {} samples", samples));
+            logger.log_info(&format!("generate completed: {} samples", samples));
         }
     }
 }
 ```
+
+Compared to the older shape that pushed pre-formatted strings into
+a `Vec<String>`, the lens-aware version routes each event through
+its appropriate level (`log_info`/`log_warning`/`log_error`/
+`log_debug`) or named custom type (`log_custom("citizen", ...)`,
+`log_custom("backend", ...)`). The logger panel renders each in
+its configured color automatically. Less manual formatting; more
+visual signal in the panel.
 
 `register_citizens` runs once at startup. `drain_citizen` and
 `handle` run once per frame. `handle` is generic over backend

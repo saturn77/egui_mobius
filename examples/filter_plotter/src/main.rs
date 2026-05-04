@@ -16,6 +16,8 @@ mod state;
 mod tabs;
 mod theme;
 
+mod platform;
+
 use eframe::egui;
 use egui_citizen::Dispatcher;
 use egui_dock::{DockArea, DockState, NodeIndex};
@@ -59,7 +61,7 @@ impl App {
                 .split_below(right, 0.55, vec![Tab::new(TabKind::Logger)]);
 
         let state = SharedState::new();
-        dispatcher::append_log(&state.log, "[INFO] filter_plotter started".into());
+        dispatcher::append_log(&state, "filter_plotter started".into());
 
         Self {
             dispatcher: dispatcher_handle,
@@ -75,6 +77,26 @@ impl App {
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // React to lens's "System Info" button — it sets a memory flag that
+        // consuming apps must drain. Native: gather system details and log
+        // them; wasm: log a one-line note since the underlying probes
+        // (sysinfo, local-ip-address) don't work in browser.
+        let show_system_info = ui.ctx().memory(|mem| {
+            mem.data
+                .get_temp::<bool>(egui::Id::new("show_system_info"))
+                .unwrap_or(false)
+        });
+        if show_system_info {
+            ui.ctx().memory_mut(|mem| {
+                mem.data
+                    .remove::<bool>(egui::Id::new("show_system_info"));
+            });
+
+            let mut details = platform::details::Details::new();
+            let text = details.format_os();
+            dispatcher::append_log(&self.state, text);
+        }
+
         DockArea::new(&mut self.dock_state).show_inside(
             ui,
             &mut TabViewer {
@@ -88,11 +110,11 @@ impl eframe::App for App {
 
         // Drain pass — once per frame, after the dock has rendered and
         // any on_tab_button or in-panel events have queued.
-        dispatcher::drain_citizen(&mut self.dispatcher, &self.state.log);
+        dispatcher::drain_citizen(&mut self.dispatcher, &self.state);
 
         let outbox = std::mem::take(&mut self.settings.outbox);
         for msg in outbox {
-            dispatcher::handle(msg, &self.state, &mut self.backend, &self.state.log);
+            dispatcher::handle(msg, &self.state, &mut self.backend);
         }
     }
 }

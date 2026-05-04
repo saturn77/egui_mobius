@@ -16,8 +16,11 @@ use crate::state::SharedState;
 /// Drain citizen lifecycle messages from the dispatcher and route them
 /// into the shared lens-backed log. Call once per frame after
 /// `DockArea::show`.
-pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<ReactiveEventLoggerState>) {
-    let logger = ReactiveEventLogger::new(log);
+pub fn drain_citizen(
+    dispatcher: &mut Dispatcher,
+    state: &SharedState,
+) {
+    let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
     for msg in dispatcher.drain_messages() {
         logger.log_custom("citizen", &format_citizen(&msg));
     }
@@ -29,30 +32,28 @@ pub fn handle<B>(
     msg: AppMessage,
     state: &SharedState,
     backend: &mut B,
-    log: &Dynamic<ReactiveEventLoggerState>,
 ) where
     B: BackendKind<Sample = f32>,
 {
-    let logger = ReactiveEventLogger::new(log);
+    let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
     match msg {
         AppMessage::Generate => {
             let params = state.params.snapshot();
             let traces = backend.run(&params);
             let n = traces.input.len();
             state.traces.set(traces);
-            logger.log_info(&format!(
-                "backend ({}) produced {} samples",
-                backend.name(),
-                n
-            ));
+            logger.log_custom(
+                "backend",
+                &format!("{} produced {} samples", backend.name(), n),
+            );
         }
     }
 }
 
 /// Append a single info-level line to the log. Convenience wrapper for
 /// places that want a one-liner without constructing a logger.
-pub fn append_log(log: &Dynamic<ReactiveEventLoggerState>, line: String) {
-    let logger = ReactiveEventLogger::new(log);
+pub fn append_log(state: &SharedState, line: String) {
+    let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
     logger.log_info(&line);
 }
 

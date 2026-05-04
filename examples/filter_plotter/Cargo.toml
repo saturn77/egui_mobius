@@ -16,9 +16,11 @@ eframe = { workspace = true, features = ["default"] }
 # Native dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = { workspace = true }
+sysinfo = "0.34"
+local-ip-address = "0.6"
 
 # Web dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
-web-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Navigator", "Screen"] }
 log = { workspace = true }

@@ -731,6 +731,13 @@ impl<'a> ReactiveEventLogger<'a> {
         };
         
         ui.vertical(|ui| {
+            // Force the logger panel to claim the full available size of
+            // its host Ui — without this, the outer vertical sizes to the
+            // sum of its children and leaves empty space below in tabs
+            // / dock panels that allocate more vertical room than the
+            // log entries currently occupy.
+            ui.set_min_size(ui.available_size());
+
             // Top row with buffer status and clear button
             ui.horizontal(|ui| {
                 // Show buffer status
@@ -1464,8 +1471,8 @@ impl<'a> ReactiveEventLogger<'a> {
         }
         
         // Fixed widths for timestamp and log level columns
-        const TIMESTAMP_WIDTH: f32 = 190.0;
-        const LEVEL_WIDTH: f32 = 100.0;
+        const TIMESTAMP_WIDTH: f32 = 130.0;
+        const LEVEL_WIDTH: f32 = 60.0;
         
         // If we have custom colors, use rich text with the layout
         if let Some(colors_dynamic) = self.colors {
@@ -1576,12 +1583,18 @@ impl<'a> ReactiveEventLogger<'a> {
                                     let available_width = ui.available_width().max(300.0);
                                     
                                     // Create a label that fills the available width
+                                    // and wraps long lines instead of running off
+                                    // the right edge of the panel.
                                     ui.scope(|ui| {
                                         ui.set_min_width(available_width);
-                                        ui.add(egui::Label::new(
-                                            egui::RichText::new(formatted_message)
-                                                .color(message_color)
-                                                .monospace()));
+                                        ui.add(
+                                            egui::Label::new(
+                                                egui::RichText::new(formatted_message)
+                                                    .color(message_color)
+                                                    .monospace(),
+                                            )
+                                            .wrap(),
+                                        );
                                     });
                                 }
                                 
