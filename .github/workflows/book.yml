@@ -1,10 +1,12 @@
-name: Deploy book
+name: Deploy book + filter_plotter wasm demo
 
 on:
   push:
     branches: [master]
     paths:
       - 'book/**'
+      - 'examples/filter_plotter/**'
+      - 'crates/**'
       - '.github/workflows/book.yml'
   workflow_dispatch:
 
@@ -26,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ---------- book ----------
       - name: Install mdBook
         uses: peaceiris/actions-mdbook@v2
         with:
@@ -34,6 +37,34 @@ jobs:
       - name: Build book
         run: mdbook build book
 
+      # ---------- filter_plotter wasm demo ----------
+      - name: Install Rust toolchain (with wasm32 target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: 'pages-build'
+
+      - name: Install trunk
+        uses: jetli/trunk-action@v0.5.0
+        with:
+          version: 'latest'
+
+      - name: Build filter_plotter (release wasm)
+        run: |
+          cd examples/filter_plotter
+          trunk build --release --public-url /egui_mobius/demo/filter_plotter/
+
+      # ---------- stage combined site ----------
+      - name: Stage combined site
+        run: |
+          mkdir -p book/book/demo/filter_plotter
+          cp -r examples/filter_plotter/dist/* book/book/demo/filter_plotter/
+
+      # ---------- deploy ----------
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
