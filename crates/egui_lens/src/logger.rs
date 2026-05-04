@@ -327,17 +327,14 @@ impl<'a> ReactiveEventLogger<'a> {
         }
     }
     
-    /// Save colors to gerber_viewer specific config directory
-    fn save_colors_for_gerber_viewer(colors: &LogColors) {
-        use std::path::PathBuf;
+    /// Save colors to the consuming app's config directory.
+    /// Directory name is derived from the running binary via `app_config_dir`.
+    fn save_colors_for_app(colors: &LogColors) {
         use std::fs;
-        
+
         let colors = colors.clone();
         std::thread::spawn(move || {
-            // Get config directory path for gerber_viewer
-            let config_dir = dirs::config_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("gerber_viewer");
+            let config_dir = crate::logger_colors::app_config_dir();
             
             // Create config directory if it doesn't exist
             if let Err(e) = fs::create_dir_all(&config_dir) {
@@ -1321,8 +1318,8 @@ impl<'a> ReactiveEventLogger<'a> {
                             // Update shared colors
                             colors_dynamic.set(colors.clone());
                             
-                            // Save colors to file with correct path for gerber_viewer
-                            Self::save_colors_for_gerber_viewer(&colors);
+                            // Save colors to file using the consuming app's config dir
+                            Self::save_colors_for_app(&colors);
                         }
                         
                         ui.add_space(8.0);
@@ -1422,8 +1419,8 @@ impl<'a> ReactiveEventLogger<'a> {
                                             // Update shared colors immediately
                                             colors_dynamic.set(colors.clone());
                                             
-                                            // Save colors to file with correct path for gerber_viewer
-                                            Self::save_colors_for_gerber_viewer(&colors);
+                                            // Save colors to file using the consuming app's config dir
+                                            Self::save_colors_for_app(&colors);
                                         }
                                     });
                                 });

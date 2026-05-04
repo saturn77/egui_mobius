@@ -4,6 +4,21 @@ use std::fs;
 
 use std::collections::HashMap;
 
+/// Returns the platform config dir for the consuming app, derived from the
+/// current executable's file name. Falls back to "egui_lens" if the binary
+/// name can't be determined (e.g., in unusual deploy contexts).
+pub(crate) fn app_config_dir() -> PathBuf {
+    let app_name = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.file_stem().map(|s| s.to_owned()))
+        .and_then(|s| s.into_string().ok())
+        .unwrap_or_else(|| "egui_lens".to_string());
+
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(app_name)
+}
+
 /// LogColors configures the colors for different log types
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct LogColors {
@@ -213,9 +228,7 @@ pub mod color32_serde {
 impl LogColors {
     #[allow(dead_code)]
     pub fn load() -> Self {
-        let config_dir = dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("egui_mobius_template");
+        let config_dir = app_config_dir();
         let config_path = config_dir.join("log_colors.json");
         
         println!("Loading colors from: {}", config_path.display());
@@ -245,9 +258,7 @@ impl LogColors {
         let colors = self.clone();
         std::thread::spawn(move || {
             // Get config directory path
-            let config_dir = dirs::config_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("egui_mobius_template");
+            let config_dir = app_config_dir();
             
             // Create config directory if it doesn't exist
             if let Err(e) = fs::create_dir_all(&config_dir) {
