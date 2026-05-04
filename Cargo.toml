@@ -77,6 +77,23 @@ winit = "0.30.11"
 # alternative to std::sync::mpsc
 crossbeam-channel = "0.5.14"
 
+# Release profile — tuned for size + runtime, primarily for the wasm
+# Pages deploy of filter_plotter but applies to native release builds
+# too (smaller binaries, marginally faster execution).
+#
+# opt-level = "s" — size-focused but not as aggressive as "z" (egui's
+# render path keeps its runtime perf with "s"; "z" measurably hurts
+# UI smoothness).
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+debug-assertions = false
+overflow-checks = false
+panic = "abort"
+incremental = false
+
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"
