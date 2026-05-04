@@ -1,0 +1,27 @@
+[package]
+name                   = "egui_quill"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "Reactive syntax-highlighted text editor citizen for egui_mobius applications"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "text-editors", "development-tools"]
+keywords               = ["egui", "editor", "syntax-highlighting", "reactive", "egui-mobius"]
+include                = ["**/*.rs", "Cargo.toml"]
+
+[dependencies]
+egui                  = { workspace = true }
+egui_mobius_reactive  = { workspace = true }
+
+# Syntax highlighting via syntect.
+# default-fancy is disabled because it pulls oniguruma C bindings,
+# which fail on wasm32. regex-fancy is the pure-Rust replacement.
+syntect = { version = "5", default-features = false, features = [
+    "default-syntaxes",
+    "default-themes",
+    "regex-fancy",
+    "parsing",
+] }

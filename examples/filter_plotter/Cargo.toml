@@ -10,6 +10,7 @@ egui_dock = { workspace = true }
 egui_plot = { workspace = true }
 egui_citizen = { workspace = true }
 egui_lens = { workspace = true }
+egui_quill = { workspace = true }
 egui_mobius_reactive = { workspace = true }
 eframe = { workspace = true, features = ["default"] }
 

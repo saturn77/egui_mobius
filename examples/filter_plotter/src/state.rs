@@ -3,6 +3,7 @@
 use eframe::egui;
 use egui_lens::{LogColors, ReactiveEventLoggerState};
 use egui_mobius_reactive::Dynamic;
+use egui_quill::ReactiveEditorState;
 
 use crate::backend::{FilterParams, Traces};
 
@@ -50,6 +51,10 @@ pub struct SharedState {
     pub traces: Dynamic<Traces<f32>>,
     pub log: Dynamic<ReactiveEventLoggerState>,
     pub log_colors: Dynamic<LogColors>,
+    /// Shared editor state — buffer + active language + theme.
+    /// Read by the Editor citizen panel; observable from anywhere
+    /// for cross-panel reactivity.
+    pub editor: Dynamic<ReactiveEditorState>,
     /// Linked-axis group id — both Plot widgets pass this same Id to
     /// `Plot::link_axis(...)` so pan/zoom on either propagates to the
     /// other (matplotlib-style linked subplots).
@@ -75,6 +80,11 @@ impl SharedState {
             },
             plot_link: egui::Id::new("filter_plotter::axis_link"),
             overlay_filtered: Dynamic::new(false),
+            editor: Dynamic::new(
+                ReactiveEditorState::new()
+                    .with_content(include_str!("backend/iir.rs"))
+                    .with_language("Rust"),
+            ),
         }
     }
 }

@@ -23,7 +23,9 @@ use egui_citizen::Dispatcher;
 use egui_dock::{DockArea, DockState, NodeIndex};
 
 use backend::iir::InProcessIir;
-use panels::{logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel};
+use panels::{
+    editor::EditorPanel, logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel,
+};
 use state::SharedState;
 use tabs::{Tab, TabKind, TabViewer};
 
@@ -34,6 +36,7 @@ struct App {
     plot: PlotPanel,
     settings: SettingsPanel,
     logger: LoggerPanel,
+    editor: EditorPanel,
     backend: InProcessIir,
 }
 
@@ -44,12 +47,18 @@ impl App {
         let dispatcher_handle = Dispatcher::new();
 
         // Dock layout:
-        //   ┌──────────────┬─────────────┐
-        //   │              │  Settings   │
-        //   │     Plot     ├─────────────┤
-        //   │              │  Logger     │
-        //   └──────────────┴─────────────┘
-        let mut dock_state = DockState::new(vec![Tab::new(TabKind::Plot)]);
+        //   ┌──────────────────┬─────────────┐
+        //   │   Plot / Editor  │  Settings   │
+        //   │   (tab group)    ├─────────────┤
+        //   │                  │   Logger    │
+        //   └──────────────────┴─────────────┘
+        // Editor is grouped with Plot as a sibling tab so users can
+        // toggle between viewing the filter result and editing
+        // accompanying parameters / scripts.
+        let mut dock_state = DockState::new(vec![
+            Tab::new(TabKind::Plot),
+            Tab::new(TabKind::Editor),
+        ]);
         let [_, right] = dock_state.main_surface_mut().split_right(
             NodeIndex::root(),
             0.65,
@@ -70,6 +79,7 @@ impl App {
             plot: PlotPanel::new(),
             settings: SettingsPanel::new(),
             logger: LoggerPanel::new(),
+            editor: EditorPanel::new(),
             backend: InProcessIir::new(),
         }
     }
@@ -105,6 +115,7 @@ impl eframe::App for App {
                 plot: &mut self.plot,
                 settings: &mut self.settings,
                 logger: &mut self.logger,
+                editor: &mut self.editor,
             },
         );
 
