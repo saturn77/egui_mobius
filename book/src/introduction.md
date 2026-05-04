@@ -1,6 +1,6 @@
 # Introduction
 
-> **Book version:** 0.4.0 &nbsp;·&nbsp; **Last updated:** 2026-05-03 &nbsp;·&nbsp; tracks `egui_mobius` v0.4.0
+> **Book version:** 0.4.0 &nbsp;·&nbsp; **Last updated:** 2026-05-04 &nbsp;·&nbsp; tracks `egui_mobius` v0.4.0
 >
 > The book is *live* — it evolves alongside the framework. Each
 > chapter footer notes the date of its last substantive revision.
