@@ -137,6 +137,13 @@ This is what makes the framework genuinely composable rather than
 just architecturally tidy. Real apps grow by accumulating
 citizens, not by extending their core.
 
+> *Caveat:* citizens are **compile-time** plug-ins — adding one
+> rebuilds the host app, not a runtime extension load. The Rust
+> toolchain doesn't ship a stable plug-in ABI; runtime loading
+> would require dynamic library tricks that aren't worth the
+> complexity. The four-line integration is small enough that it
+> feels plug-in-shaped in practice, and the rebuild is fast.
+
 ## What it is not
 
 A citizen is not:
