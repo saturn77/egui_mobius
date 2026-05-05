@@ -4,6 +4,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "crates/egui_citizen",
     "crates/egui_lens",
     "crates/egui_quill",
+    "crates/egui_3d_viewer",
     "examples/clock_async",
     "examples/clock_reactive",
     "examples/dashboard",
@@ -42,6 +43,7 @@ egui_mobius_components = { version = "0.4.0", path = "crates/egui_mobius_compone
 egui_citizen = { version = "0.4.0", path = "crates/egui_citizen" }
 egui_lens = { version = "0.4.0", path = "crates/egui_lens" }
 egui_quill = { version = "0.4.0", path = "crates/egui_quill" }
+egui_3d_viewer = { version = "0.4.0", path = "crates/egui_3d_viewer" }
 
 # egui and eframe
 egui_plot = "0.35.0"

@@ -1,0 +1,28 @@
+[package]
+name                   = "egui_3d_viewer"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "Reactive 3D viewer citizen for egui_mobius applications — glow-based, wasm-portable via WebGL2"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "graphics", "rendering"]
+keywords               = ["egui", "3d", "glow", "opengl", "egui-mobius"]
+include                = ["**/*.rs", "Cargo.toml"]
+
+[dependencies]
+egui                  = { workspace = true }
+egui_mobius_reactive  = { workspace = true }
+egui_citizen          = { workspace = true }
+
+# Hand-rolled OpenGL via egui_glow's PaintCallback. Glow gives portable
+# GL bindings (native + WebGL2 for wasm); egui_glow integrates a glow
+# context with egui's render loop.
+egui_glow             = { version = "0.34", default-features = false }
+glow                  = "0.16"
+
+# Math + buffer plumbing for the renderer.
+nalgebra              = "0.33"
+bytemuck              = { version = "1", features = ["derive"] }
