@@ -18,4 +18,9 @@ egui_3d_viewer = { workspace = true }
 # pull in stl/dxf/obj/ply/amf io, image, sdf, etc.; this demo only needs
 # basic primitives + boolean ops + triangulation, so default-features is
 # off. The `f64` feature picks the higher-precision math backend.
-csgrs = { version = "0.20", default-features = false, features = ["f64", "delaunay", "chull-io"] }
+#
+# Pinned to >= 0.20.1: csgrs 0.20.0 transitively depends on `core2 ^0.4`,
+# and `core2 0.4.0` got yanked upstream — fresh resolution on CI (which
+# doesn't commit Cargo.lock) picks 0.20.0 and then fails. 0.20.1 dropped
+# the core2 dep, so this constraint dodges the yanked-transitive trap.
+csgrs = { version = "0.20.1", default-features = false, features = ["f64", "delaunay", "chull-io"] }
