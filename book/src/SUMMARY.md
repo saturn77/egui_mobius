@@ -19,6 +19,7 @@
 - [Inside `Dynamic<T>`](concepts/inside-dynamic.md)
 - [`egui_lens` — the reactive event logger](concepts/lens.md)
 - [`egui_quill` — the syntax-highlighted editor](concepts/quill.md)
+- [`egui_3d_viewer` — the 3D viewer citizen](concepts/viewer.md)
 
 # Tutorial
 
