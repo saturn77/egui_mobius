@@ -44,11 +44,19 @@
 //! everything; the reactive `Dynamic<ReactiveViewerState>` cell is
 //! just for atom UI state that other panels want to observe.
 //!
-//! ## Status
+//! ## Scene injection
 //!
 //! Default scene is an XYZ axes gizmo + a 10×10 ground grid at Z=0.
-//! Scene injection — `set_scene_meshes` for consumer-supplied
-//! triangles + lines — is the next step.
+//! Consumer apps push their own meshes through:
+//!
+//! - `viewer.set_scene_triangles(verts)` — flat `xyz rgb` buffer,
+//!   six floats per vertex, drawn with the `TRIANGLES` primitive.
+//! - `viewer.set_scene_lines(verts)` — same stride, drawn as `LINES`.
+//!   Useful for wireframe overlays or vector-style content.
+//! - `viewer.clear_scene()` — drop both back to the empty default.
+//!
+//! Uploads are deferred to the next `show()` call — a glow context
+//! is only available there.
 //!
 //! # Credits
 //!

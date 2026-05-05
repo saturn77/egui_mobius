@@ -72,12 +72,29 @@ pub struct ViewerCitizen {
     /// Current axes gizmo length. Tracks the scene size; consumers
     /// can override with `set_axes_length`.
     axes_len: f32,
+    /// Pending scene-triangle upload. Stashed by `set_scene_triangles`
+    /// and drained inside `show()` once a glow context is available.
+    /// An empty vec clears the slot — the mesh stays allocated but
+    /// the ready flag goes false so it's skipped at draw time.
+    pending_scene_triangles: Option<Vec<f32>>,
+    /// Pending scene-line upload. Same lifecycle as the triangle
+    /// pending slot — set by `set_scene_lines`, drained in `show()`.
+    pending_scene_lines: Option<Vec<f32>>,
 }
 
 struct GpuResources {
     unlit: UnlitProgram,
     axes: ColoredMesh,
     grid: ColoredMesh,
+    /// User-supplied scene triangles. Pre-allocated empty so uploads
+    /// have a slot to land in without re-creating GpuResources.
+    scene_triangles: ColoredMesh,
+    scene_triangles_ready: bool,
+    /// User-supplied scene lines. Same shape as `scene_triangles`
+    /// but with the `LINES` primitive — useful for wireframe overlays
+    /// or vector-style scene content.
+    scene_lines: ColoredMesh,
+    scene_lines_ready: bool,
 }
 
 impl ViewerCitizen {
@@ -110,6 +127,8 @@ impl ViewerCitizen {
             measure_end: None,
             measure_dragging: false,
             axes_len: DEFAULT_AXES_LEN,
+            pending_scene_triangles: None,
+            pending_scene_lines: None,
         }
     }
 
@@ -142,6 +161,31 @@ impl ViewerCitizen {
     pub fn set_axes_length(&mut self, len: f32) {
         self.axes_len = len.max(0.1);
         self.gpu = None;
+    }
+
+    /// Replace the scene triangle mesh — `vertices` is a flat buffer
+    /// in `xyz rgb` stride (six floats per vertex). Pass an empty
+    /// vec to clear the slot. Upload is deferred until the next
+    /// `show()` call, since a glow context is only available there.
+    ///
+    /// Length must be a multiple of 6; non-multiple slices panic
+    /// at upload time inside `ColoredMesh::upload`.
+    pub fn set_scene_triangles(&mut self, vertices: Vec<f32>) {
+        self.pending_scene_triangles = Some(vertices);
+    }
+
+    /// Replace the scene line mesh — same `xyz rgb` stride as
+    /// `set_scene_triangles`, rendered with the `LINES` primitive.
+    /// Pass an empty vec to clear.
+    pub fn set_scene_lines(&mut self, vertices: Vec<f32>) {
+        self.pending_scene_lines = Some(vertices);
+    }
+
+    /// Clear both scene mesh slots — the next frame draws axes +
+    /// grid only.
+    pub fn clear_scene(&mut self) {
+        self.pending_scene_triangles = Some(Vec::new());
+        self.pending_scene_lines = Some(Vec::new());
     }
 
     /// Render one frame of the viewer. Allocates the canvas, handles
@@ -277,11 +321,41 @@ impl ViewerCitizen {
                         &grid_vertices(DEFAULT_GRID_EXTENT, DEFAULT_GRID_STEP, GRID_COLOR),
                     );
 
-                    GpuResources { unlit, axes, grid }
+                    let scene_triangles = ColoredMesh::new(gl, glow::TRIANGLES);
+                    let scene_lines = ColoredMesh::new(gl, glow::LINES);
+
+                    GpuResources {
+                        unlit,
+                        axes,
+                        grid,
+                        scene_triangles,
+                        scene_triangles_ready: false,
+                        scene_lines,
+                        scene_lines_ready: false,
+                    }
                 };
                 Arc::new(Mutex::new(resources))
             })
             .clone();
+
+        // ── Drain pending scene uploads ───────────────────────────
+        // gl is in scope here, so we can upload directly without
+        // waiting for the paint callback. Stays None on subsequent
+        // frames until the consumer calls set_scene_* again.
+        if let Some(verts) = self.pending_scene_triangles.take() {
+            if let Ok(mut g) = gpu.lock() {
+                let has_data = !verts.is_empty();
+                unsafe { g.scene_triangles.upload(gl, &verts); }
+                g.scene_triangles_ready = has_data;
+            }
+        }
+        if let Some(verts) = self.pending_scene_lines.take() {
+            if let Ok(mut g) = gpu.lock() {
+                let has_data = !verts.is_empty();
+                unsafe { g.scene_lines.upload(gl, &verts); }
+                g.scene_lines_ready = has_data;
+            }
+        }
 
         // ── Commit zoom-box on release ────────────────────────────
         if zoom_box_released {
@@ -327,9 +401,18 @@ impl ViewerCitizen {
                 gl.depth_mask(true);
                 gl.clear(glow::DEPTH_BUFFER_BIT);
                 g.unlit.bind(gl, &mvp);
+                // Scene triangles first — depth-write on so subsequent
+                // grid/axes lines occlude correctly behind them.
+                if g.scene_triangles_ready {
+                    g.scene_triangles.draw(gl);
+                }
                 if show_grid {
                     gl.line_width(1.0);
                     g.grid.draw(gl);
+                }
+                if g.scene_lines_ready {
+                    gl.line_width(1.5);
+                    g.scene_lines.draw(gl);
                 }
                 if show_axes {
                     gl.line_width(2.5);
