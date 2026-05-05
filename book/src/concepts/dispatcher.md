@@ -1,6 +1,15 @@
 # The Dispatcher
 
-The `Dispatcher` is opt-in infrastructure, not the entry point of an
+The `Dispatcher` is a **registry of citizens**. Each citizen registers
+a `CitizenState` handle with it, and the registry coordinates one-hot
+activation and message buffering across the registered set. If you've
+built backend systems, this is the same pattern you've seen before — a
+central table that knows what's plugged in and routes accordingly. The
+[citizens-as-plug-ins framing](../background/what_is_a_citizen.md#citizens-as-plug-ins)
+is the other side of this contract: plug-ins register, the registry
+coordinates, no party needs direct references to the others.
+
+It is also opt-in infrastructure, not the entry point of an
 `egui_citizen` app. Many apps that share state between panels through
 `Dynamic<T>` never reach for one. You reach for a dispatcher when the
 reactive primitives don't already give you what you need:

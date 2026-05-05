@@ -14,17 +14,40 @@
 
 </div>
 
-`egui_mobius` is a workspace of coordinated crates for building
-professional `egui` applications — multi-panel docked layouts,
-reactive shared state, and async backends — without each app
-inventing its own organizational scheme.
+`egui_mobius` is a framework for building flexible, robust, and 
+professional grade applications. It supports both native desktop
+and WASM. 
 
-The headline is the **`egui_citizen` pattern**: persistent panel
-identity, reactive lifecycle state, and a central dispatcher for
-panel priority and message routing. Underneath, `egui_mobius_reactive`
-provides `Dynamic<T>` and `Derived<T>` — the cross-panel coupling
-primitives. `egui_mobius` itself provides the signal-slot bus and an
-async dispatcher for cross-thread work.
+The hallmarks of a professional application are robust threading
+support and async handling, and sleek and modern UI with dockable
+panels that allow a user to have the most customizable and ergonomic
+layout. 
+
+`egui_mobius` addresses these aspects; it assembles dockable panels as citizens and coordinates their interaction with a substrate built upon `egui_mobius_reactive`. This leads to a cohesive and systematic way to assemble an application, which is the reason it's a framework. 
+
+## Build with Citizens
+
+A citizen is a panel. A docked, movable, resizable region of the application window with a stable identity and a known set of widgets inside it.
+
+Once a panel implements the `Citizen` trait it becomes a self-contained
+unit you drop into any host app: `cargo add` the crate, declare one
+`Dynamic<T>` field on shared state, add a `TabKind` variant, render
+it in your `TabViewer`. No event-bus wiring, no glue. Real apps grow
+by **accumulating citizens**, not by extending a core. The `Dispatcher`
+is the registry those citizens register with — the familiar
+backend-registry pattern, applied to UI panels.
+
+The shipped citizens — [`egui_lens`](crates/egui_lens) (reactive event
+logger) and [`egui_quill`](crates/egui_quill) (syntax-highlighted
+editor) — are the canonical examples. Same pattern applies to any
+third-party citizen published on crates.io. This is what lets you
+assemble professional-grade applications from parts rather than
+hand-building each one from scratch.
+
+> *Compile-time plug-ins:* adding a citizen rebuilds the host app —
+> Rust has no stable plug-in ABI, so this is not a runtime extension
+> load. The four-line integration is small enough that it feels
+> plug-in-shaped in practice.
 
 The [book](https://saturn77.github.io/egui_mobius/) covers the design
 and walks through the examples end-to-end.

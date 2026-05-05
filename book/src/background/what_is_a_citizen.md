@@ -109,7 +109,10 @@ The host app, conversely, just needs to:
 
 That's the whole integration. No glue code, no event-bus wiring,
 no manual subscription setup. The citizen pulls its weight as a
-self-contained unit.
+self-contained unit. And the
+[Dispatcher](../concepts/dispatcher.md) is the **registry** those
+plug-ins register with — the same registry pattern familiar from
+backend systems, applied here to UI panels.
 
 `egui_lens` (the reactive event logger) and `egui_quill` (the
 syntax-highlighted editor) are the canonical examples of this in
