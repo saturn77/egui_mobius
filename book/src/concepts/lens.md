@@ -28,12 +28,11 @@ signal/slot architecture and is now deprecated.
 
 > *Implementation note:* the lens crate currently ships as a
 > widget that consuming apps wrap in their own panel struct. The
-> wrapper is small (a few lines) but it's an extra step that
-> shouldn't be needed — lens *is* a citizen, and tracking issue
-> [#30](https://github.com/saturn77/egui_mobius/issues/30) makes
-> that intrinsic by adding a `LoggerCitizen` that `impl Citizen`
-> directly. Until that lands, the consuming-app pattern in this
-> chapter shows the wrapper.
+> wrapper is small — a few lines — but it's an extra step that
+> shouldn't be needed; lens *is* a citizen. A `LoggerCitizen`
+> that implements the trait directly is on the roadmap, at which
+> point the wrapper goes away. Until then, the consuming-app
+> pattern in this chapter shows the wrapper.
 
 ## The shape
 

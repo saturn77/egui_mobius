@@ -24,13 +24,13 @@ Solarized, etc.).
 
 Quill lives in `crates/egui_quill/` as a sibling of
 `egui_lens`. It launched in `egui_mobius` v0.4.0 alongside the
-broader canonical-citizen-panels initiative (issue #33).
+broader canonical-citizen-panels initiative.
 
 > *Implementation note:* like lens, quill currently ships as a
 > widget that consuming apps wrap in a thin panel struct. Once a
-> sibling `EditorCitizen` lands (parallel to lens's path through
-> issue #30), the wrapper goes away and the dock layout uses the
-> citizen view directly.
+> sibling `EditorCitizen` lands — parallel to lens's path — the
+> wrapper goes away and the dock layout uses the citizen view
+> directly.
 
 ## The shape
 
@@ -121,8 +121,7 @@ the saturn77 ecosystem (see `RustQt/venerate/svx_parser/` and
 Each parser crate exposes a `Highlighter` trait impl that quill
 consumes; `ReactiveEditorState` carries an
 `Option<Arc<dyn Highlighter>>` to enable language-specific
-highlighting beyond the defaults. Tracked in [issue #35](
-https://github.com/saturn77/egui_mobius/issues/35).
+highlighting beyond the defaults.
 
 ## Wiring quill into a citizen panel (current pattern)
 
@@ -158,9 +157,6 @@ editor tab.
 - [`egui_lens`](lens.md) — sibling citizen for logging. Same
   state/view shape; quill's API was designed to mirror lens for
   consistency.
-- Issue #34 — quill design + implementation discussion.
-- Issue #35 — hand-rolled HDL parser crates feeding quill via
-  `Highlighter`.
 
 ---
 

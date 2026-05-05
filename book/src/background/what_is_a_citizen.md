@@ -131,10 +131,10 @@ logger.show(ui);
 ```
 
 Same pattern for quill, same pattern for the canonical citizen
-panels coming next (Project / Settings / Terminal / Data Table —
-issue #33). Same pattern for any third-party citizen someone
-publishes on crates.io: `cargo add egui_their_panel`, declare
-the state field, render in a tab, done.
+panels coming next — Project, Settings, Terminal, Data Table.
+Same pattern for any third-party citizen someone publishes on
+crates.io: `cargo add egui_their_panel`, declare the state
+field, render in a tab, done.
 
 This is what makes the framework genuinely composable rather than
 just architecturally tidy. Real apps grow by accumulating

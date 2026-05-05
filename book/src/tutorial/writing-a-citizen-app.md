@@ -443,13 +443,12 @@ through the dispatcher. The logger panel doesn't push entries
 itself — it just renders what the drain loop in `dispatcher.rs`
 puts there.
 
-> *Forward-looking note:* tracked in
-> [issue #30](https://github.com/saturn77/egui_mobius/issues/30),
-> lens will eventually `impl Citizen` directly and the
-> `LoggerPanel` wrapper here disappears entirely — the dock
-> layout will use the citizen `ReactiveEventLogger` (or its
-> sibling `LoggerCitizen`) without any custom panel type. For
-> now this thin wrapper is the boundary.
+> *Forward-looking note:* lens will eventually implement
+> `Citizen` directly and the `LoggerPanel` wrapper here
+> disappears entirely — the dock layout will use the citizen
+> `ReactiveEventLogger`, or its sibling `LoggerCitizen`, without
+> any custom panel type. For now this thin wrapper is the
+> boundary.
 
 ### What the lens-backed logger gives you
 
