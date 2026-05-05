@@ -20,8 +20,12 @@ egui_citizen          = { workspace = true }
 # Hand-rolled OpenGL via egui_glow's PaintCallback. Glow gives portable
 # GL bindings (native + WebGL2 for wasm); egui_glow integrates a glow
 # context with egui's render loop.
+# Pin glow to the same version egui_glow 0.34 uses, otherwise the
+# `glow::Context` exposed by `painter.gl()` inside the egui paint
+# callback resolves to a different `HasContext` trait than the one
+# our renderer code imports — every gl method call fails to resolve.
 egui_glow             = { version = "0.34", default-features = false }
-glow                  = "0.16"
+glow                  = "0.17"
 
 # Math + buffer plumbing for the renderer.
 nalgebra              = "0.33"
