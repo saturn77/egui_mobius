@@ -14,6 +14,15 @@ pub struct ColoredMesh {
 }
 
 impl ColoredMesh {
+    /// Allocate the VAO + VBO pair and configure attribute pointers
+    /// for the `xyz rgb` stride. The mesh starts empty; call
+    /// `upload()` to fill it.
+    ///
+    /// # Safety
+    ///
+    /// `gl` must be the current OpenGL context on the calling thread.
+    /// `primitive` must be one of `glow::LINES`, `glow::TRIANGLES`,
+    /// or any primitive constant accepted by `gl.draw_arrays`.
     pub unsafe fn new(gl: &Context, primitive: u32) -> Self {
         unsafe {
             let vao = gl.create_vertex_array().expect("create_vertex_array");
@@ -30,6 +39,13 @@ impl ColoredMesh {
         }
     }
 
+    /// Upload `verts` to the VBO with `STATIC_DRAW`. The slice
+    /// length must be a multiple of 6 — each vertex is `xyz rgb`.
+    ///
+    /// # Safety
+    ///
+    /// `gl` must be the current OpenGL context on the calling thread.
+    /// Panics if the slice length is not a multiple of 6.
     pub unsafe fn upload(&mut self, gl: &Context, verts: &[f32]) {
         assert_eq!(verts.len() % 6, 0, "ColoredMesh verts must be in 6-float (xyz rgb) stride");
         unsafe {
@@ -43,6 +59,14 @@ impl ColoredMesh {
         self.vertex_count = (verts.len() / 6) as i32;
     }
 
+    /// Issue the draw call for this mesh's vertex buffer using its
+    /// configured primitive. No-op if the mesh is empty.
+    ///
+    /// # Safety
+    ///
+    /// `gl` must be the current OpenGL context on the calling thread,
+    /// and a compatible shader program — `UnlitProgram` — must be
+    /// bound first.
     pub unsafe fn draw(&self, gl: &Context) {
         if self.vertex_count == 0 {
             return;

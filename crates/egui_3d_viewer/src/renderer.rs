@@ -28,6 +28,15 @@ pub struct UnlitProgram {
 }
 
 impl UnlitProgram {
+    /// Compile and link the unlit shader program against the given
+    /// glow context.
+    ///
+    /// # Safety
+    ///
+    /// `gl` must be the current OpenGL context on the calling thread,
+    /// and the context must support GLSL 330 / OpenGL 3.3 core, or
+    /// WebGL2 for wasm targets. Panics on shader compile or link
+    /// failure.
     pub unsafe fn new(gl: &Context) -> Self {
         unsafe {
             let prog = compile(gl, VS_UNLIT, FS_UNLIT);
@@ -41,6 +50,12 @@ impl UnlitProgram {
         }
     }
 
+    /// Bind this program for subsequent draws, uploading the MVP
+    /// matrix and resetting alpha to fully opaque.
+    ///
+    /// # Safety
+    ///
+    /// `gl` must be the current OpenGL context on the calling thread.
     pub unsafe fn bind(&self, gl: &Context, mvp: &Matrix4<f32>) {
         unsafe {
             gl.use_program(Some(self.prog));
@@ -51,9 +66,14 @@ impl UnlitProgram {
         }
     }
 
-    /// Override the per-fragment alpha until the next `bind()` (or another
-    /// `set_alpha()` call). Used by the mask layer to render as a tinted
-    /// translucent sheet over copper without occluding it.
+    /// Override the per-fragment alpha until the next `bind()` or
+    /// `set_alpha()` call. Used by the mask layer to render as a
+    /// tinted translucent sheet over copper without occluding it.
+    ///
+    /// # Safety
+    ///
+    /// `gl` must be the current OpenGL context on the calling thread,
+    /// and this program must be bound — call `bind()` first.
     pub unsafe fn set_alpha(&self, gl: &Context, alpha: f32) {
         unsafe {
             gl.uniform_1_f32(Some(&self.u_alpha), alpha);
