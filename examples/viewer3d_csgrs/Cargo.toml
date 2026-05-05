@@ -1,0 +1,21 @@
+[package]
+name    = "viewer3d_csgrs"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+# eframe's default features include wgpu, not glow — explicitly add
+# glow so frame.gl() resolves and Renderer::Glow is available. Both
+# backends end up compiled in; we pick glow at runtime via
+# NativeOptions::renderer below.
+eframe        = { workspace = true, features = ["default", "glow"] }
+egui          = { workspace = true }
+egui_citizen  = { workspace = true }
+egui_3d_viewer = { workspace = true }
+
+# Constructive solid geometry — Tim Schmidt's csgrs. Default features
+# pull in stl/dxf/obj/ply/amf io, image, sdf, etc.; this demo only needs
+# basic primitives + boolean ops + triangulation, so default-features is
+# off. The `f64` feature picks the higher-precision math backend.
+csgrs = { version = "0.20", default-features = false, features = ["f64", "delaunay", "chull-io"] }

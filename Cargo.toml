@@ -19,6 +19,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/filter_plotter",
     "examples/getting_started",
     "examples/citizen_signal_async",
+    "examples/viewer3d_csgrs",
     "examples"
 ]
 # exclude = [
