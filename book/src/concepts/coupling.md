@@ -174,6 +174,58 @@ call.
 Shared state (Path A) and dispatcher messages (Path B) **compose** —
 they don't **chain** automatically.
 
+## Citizens as a propagation graph
+
+Step back from the mechanism for a moment. What shape does an
+`egui_mobius` application actually have at runtime?
+
+It's a **graph**. Citizens are the nodes; `Dynamic<T>` cells are
+the edges; the dispatcher is a registry that knows about every
+node but does not itself carry data between them.
+
+![Citizens as a propagation graph — three citizen nodes linked by Dynamic cells, with Derived auto-recomputing forward, the Dispatcher as a registry, and a backend thread connected through Path B.](../images/Propagation_Graph.drawio.png)
+
+Three propagation modes ride this graph:
+
+- **Adjacent.** A citizen writes `Dynamic<T>`, an adjacent citizen
+  reads it on the next frame. Sync, in-frame, no queue. This is
+  Path A from the previous section. Two panels sharing a slider
+  value, a selection set, a cursor position — that's adjacent
+  propagation. Topology is whatever clones share the same
+  `Arc`-backed cell; siblings, cousins, however far apart in the
+  panel tree, all see the same value.
+
+- **Forward.** A `Derived<T>` cell wraps a `Dynamic<T>` and
+  recomputes automatically when the input changes. The new value
+  flows downstream to whoever holds a clone of the `Derived`. This
+  is the chain in the graph: input cell → derived cell → readers.
+  Useful when one citizen owns the source-of-truth state and other
+  citizens want a transformation of it without each computing the
+  same transform locally.
+
+- **Outbound.** A citizen calls `dispatcher.send()`; a backend
+  thread reads the queue. Async, queued, next-drain. This is Path
+  B. The graph extends past the UI thread out to whatever does the
+  heavy lifting — IO, compute, network — and the backend's
+  responses come back through the same queue.
+
+The combination matters. Most reactive frameworks bind state to a
+component lifetime: state lives inside the widget tree, and
+sharing across siblings means lifting up or threading context. The
+`egui_mobius` model inverts that. `Dynamic<T>` cells are
+free-standing reactive nodes anyone can hold a clone of —
+including backend threads that don't have an egui context at all.
+The widget tree borrows the cells; it doesn't own them. That's
+why the same primitive that wires Settings to Plotter also wires
+Plotter to a Tokio task.
+
+The neural-network analogy is approximate but useful. A citizen
+graph propagates values to adjacent neighbours through cells and
+forward through derived chains. The dispatcher is more like a
+directory than a layer; it doesn't compute, it doesn't transform,
+it just knows who's plugged in and routes lifecycle and outbound
+events. The actual data movement happens through the cells.
+
 ## Summary
 
 - Two coupling paths. **Path A** for UI-to-UI state sharing (shared
