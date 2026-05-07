@@ -18,12 +18,13 @@
 professional grade applications. It supports both native desktop
 and WASM. 
 
-The hallmarks of a professional application are robust threading
-support and async handling, and sleek and modern UI with dockable
-panels that allow a user to have the most customizable and ergonomic
-layout. 
+Professional applications share two things. Solid threading and async
+on the backend, and a modern UI that users can rearrange and customize
+on the frontend.
 
-`egui_mobius` addresses these aspects; it assembles dockable panels as citizens and coordinates their interaction with a substrate built upon `egui_mobius_reactive`. This leads to a cohesive and systematic way to assemble an application, which is the reason it's a framework. 
+`egui_mobius` gives you both. Panels become citizens, a dispatcher
+coordinates them, and `egui_mobius_reactive` is the shared substrate
+that wires them together. That assembly is what makes it a framework.
 
 ## Build with Citizens
 
