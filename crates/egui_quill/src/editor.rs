@@ -96,14 +96,27 @@ impl<'a> ReactiveEditor<'a> {
                 ui.ctx().fonts_mut(|f| f.layout_job(job))
             };
 
+        // Capture the available size BEFORE entering the ScrollArea so
+        // the TextEdit can claim the full remaining panel rect via
+        // add_sized. Without this, TextEdit only takes its desired_rows
+        // height and the surrounding ScrollArea background shows through
+        // below short content — the editor reads as a box inside a panel
+        // instead of filling the panel.
+        let avail = ui.available_size_before_wrap();
+
         let response = egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                ui.add(
+                ui.add_sized(
+                    avail,
                     egui::TextEdit::multiline(&mut buffer)
                         .font(egui::TextStyle::Monospace)
                         .code_editor()
-                        .desired_rows(20)
+                        // Empty Frame drops the inset code-editor frame
+                        // so the TextEdit's background inherits panel_fill
+                        // from the surrounding visuals — no visible seam
+                        // between editor and panel chrome.
+                        .frame(egui::Frame::NONE)
                         .desired_width(f32::INFINITY)
                         .layouter(&mut layouter),
                 )
