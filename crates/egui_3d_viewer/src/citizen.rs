@@ -80,6 +80,60 @@ pub struct ViewerCitizen {
     /// Pending scene-line upload. Same lifecycle as the triangle
     /// pending slot — set by `set_scene_lines`, drained in `show()`.
     pending_scene_lines: Option<Vec<f32>>,
+    /// Bounding box of the most recent scene set via
+    /// `set_scene_triangles` or `set_scene_lines`. Computed at set
+    /// time from the xyz columns of the buffer; powers the
+    /// `fit_view_to_scene` action that double-click and the
+    /// `reset_view_requested` flag invoke.
+    scene_bbox: Option<SceneBbox>,
+}
+
+#[derive(Clone, Copy)]
+struct SceneBbox {
+    min: Vector3<f32>,
+    max: Vector3<f32>,
+}
+
+impl SceneBbox {
+    fn from_xyz_rgb(verts: &[f32]) -> Option<Self> {
+        if verts.is_empty() {
+            return None;
+        }
+        let mut min = Vector3::new(f32::INFINITY, f32::INFINITY, f32::INFINITY);
+        let mut max = Vector3::new(f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY);
+        for chunk in verts.chunks_exact(6) {
+            min.x = min.x.min(chunk[0]);
+            min.y = min.y.min(chunk[1]);
+            min.z = min.z.min(chunk[2]);
+            max.x = max.x.max(chunk[0]);
+            max.y = max.y.max(chunk[1]);
+            max.z = max.z.max(chunk[2]);
+        }
+        Some(Self { min, max })
+    }
+
+    fn merge(self, other: Self) -> Self {
+        Self {
+            min: Vector3::new(
+                self.min.x.min(other.min.x),
+                self.min.y.min(other.min.y),
+                self.min.z.min(other.min.z),
+            ),
+            max: Vector3::new(
+                self.max.x.max(other.max.x),
+                self.max.y.max(other.max.y),
+                self.max.z.max(other.max.z),
+            ),
+        }
+    }
+
+    fn size(self) -> Vector3<f32> {
+        self.max - self.min
+    }
+
+    fn center(self) -> Vector3<f32> {
+        (self.min + self.max) * 0.5
+    }
 }
 
 struct GpuResources {
@@ -129,6 +183,7 @@ impl ViewerCitizen {
             axes_len: DEFAULT_AXES_LEN,
             pending_scene_triangles: None,
             pending_scene_lines: None,
+            scene_bbox: None,
         }
     }
 
@@ -170,22 +225,60 @@ impl ViewerCitizen {
     ///
     /// Length must be a multiple of 6; non-multiple slices panic
     /// at upload time inside `ColoredMesh::upload`.
+    ///
+    /// The scene bounding box is recomputed at set time so
+    /// `fit_view_to_scene` and double-click reset can frame the
+    /// new geometry without the consumer doing it manually.
     pub fn set_scene_triangles(&mut self, vertices: Vec<f32>) {
+        let new_bbox = SceneBbox::from_xyz_rgb(&vertices);
+        self.scene_bbox = match (self.scene_bbox, new_bbox) {
+            (Some(_existing_lines_only), Some(tris)) => {
+                // If lines have already populated the bbox we conservatively
+                // overwrite — triangles are typically the dominant scene.
+                Some(tris)
+            }
+            (None, Some(tris)) => Some(tris),
+            (existing, None) => existing,
+        };
         self.pending_scene_triangles = Some(vertices);
     }
 
     /// Replace the scene line mesh — same `xyz rgb` stride as
     /// `set_scene_triangles`, rendered with the `LINES` primitive.
-    /// Pass an empty vec to clear.
+    /// Pass an empty vec to clear. Bbox handling mirrors
+    /// `set_scene_triangles`: if a triangle bbox already exists the
+    /// line bbox is merged into it.
     pub fn set_scene_lines(&mut self, vertices: Vec<f32>) {
+        if let Some(lines_bbox) = SceneBbox::from_xyz_rgb(&vertices) {
+            self.scene_bbox = Some(match self.scene_bbox {
+                Some(existing) => existing.merge(lines_bbox),
+                None => lines_bbox,
+            });
+        }
         self.pending_scene_lines = Some(vertices);
     }
 
-    /// Clear both scene mesh slots — the next frame draws axes +
-    /// grid only.
+    /// Clear both scene mesh slots and forget the cached bbox — the
+    /// next frame draws axes + grid only.
     pub fn clear_scene(&mut self) {
         self.pending_scene_triangles = Some(Vec::new());
         self.pending_scene_lines = Some(Vec::new());
+        self.scene_bbox = None;
+    }
+
+    /// Reset the camera to a tilted top-down orientation centred on
+    /// the current scene's bounding box and zoom-fit so the entire
+    /// scene fills the viewport. No-op on the rotation/target/zoom
+    /// pieces that depend on the bbox if no scene has been set —
+    /// falls back to `Camera::reset_top_down`.
+    pub fn fit_view_to_scene(&mut self) {
+        self.camera.reset_top_down();
+        if let Some(bbox) = self.scene_bbox {
+            let size = bbox.size();
+            let centre = bbox.center();
+            self.camera.target = Vector3::new(centre.x, centre.y, 0.0);
+            self.camera.fit_to_bbox(size.x.abs().max(0.1), size.y.abs().max(0.1));
+        }
     }
 
     /// Render one frame of the viewer. Allocates the canvas, handles
@@ -210,9 +303,10 @@ impl ViewerCitizen {
         let mvp = self.camera.mvp(rect);
         let mvp_inv = mvp.try_inverse();
 
-        // Consume the reset_view command flag.
+        // Consume the reset_view command flag — reset orientation
+        // AND zoom-fit to the scene bbox if there is one.
         if self.state.get().reset_view_requested {
-            self.camera.reset_top_down();
+            self.fit_view_to_scene();
             self.state.get().reset_view_requested = false;
         }
 
@@ -245,9 +339,11 @@ impl ViewerCitizen {
             self.camera.orbit(response.drag_delta());
         }
 
-        // Double-click → reset view (from anywhere in the canvas).
+        // Double-click → reset orientation AND zoom-fit to the scene
+        // bbox (so the whole object frames in the viewport, not just
+        // the rotation axis going through its centre).
         if response.double_clicked_by(egui::PointerButton::Primary) {
-            self.camera.reset_top_down();
+            self.fit_view_to_scene();
         }
 
         // Right-mouse-drag → zoom-to-region. Anchor on start, track
