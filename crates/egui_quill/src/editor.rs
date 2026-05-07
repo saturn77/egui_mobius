@@ -35,11 +35,24 @@ thread_local! {
 /// inside `ui` each frame, the way `ReactiveEventLogger::new` is used.
 pub struct ReactiveEditor<'a> {
     state: &'a Dynamic<ReactiveEditorState>,
+    show_pickers: bool,
 }
 
 impl<'a> ReactiveEditor<'a> {
     pub fn new(state: &'a Dynamic<ReactiveEditorState>) -> Self {
-        Self { state }
+        Self {
+            state,
+            show_pickers: true,
+        }
+    }
+
+    /// Toggle the in-panel language + theme pickers. Defaults to on.
+    /// Consumer apps that surface those controls in their own menus
+    /// or ribbons can call `.with_pickers(false)` so the editor body
+    /// fills the entire panel without an internal toolbar.
+    pub fn with_pickers(mut self, show: bool) -> Self {
+        self.show_pickers = show;
+        self
     }
 
     pub fn show(&self, ui: &mut egui::Ui) {
@@ -47,28 +60,30 @@ impl<'a> ReactiveEditor<'a> {
 
         let mut snap = self.state.get();
 
-        // Atoms — language + theme pickers.
-        ui.horizontal(|ui| {
-            ui.label("Language:");
-            egui::ComboBox::from_id_salt("egui_quill_language")
-                .selected_text(&snap.language)
-                .show_ui(ui, |ui| {
-                    for option in EDITOR_LANGUAGES {
-                        ui.selectable_value(&mut snap.language, option.to_string(), *option);
-                    }
-                });
+        // Atoms — language + theme pickers (optional).
+        if self.show_pickers {
+            ui.horizontal(|ui| {
+                ui.label("Language:");
+                egui::ComboBox::from_id_salt("egui_quill_language")
+                    .selected_text(&snap.language)
+                    .show_ui(ui, |ui| {
+                        for option in EDITOR_LANGUAGES {
+                            ui.selectable_value(&mut snap.language, option.to_string(), *option);
+                        }
+                    });
 
-            ui.add_space(12.0);
-            ui.label("Theme:");
-            egui::ComboBox::from_id_salt("egui_quill_theme")
-                .selected_text(&snap.theme)
-                .show_ui(ui, |ui| {
-                    for option in EDITOR_THEMES {
-                        ui.selectable_value(&mut snap.theme, option.to_string(), *option);
-                    }
-                });
-        });
-        ui.separator();
+                ui.add_space(12.0);
+                ui.label("Theme:");
+                egui::ComboBox::from_id_salt("egui_quill_theme")
+                    .selected_text(&snap.theme)
+                    .show_ui(ui, |ui| {
+                        for option in EDITOR_THEMES {
+                            ui.selectable_value(&mut snap.theme, option.to_string(), *option);
+                        }
+                    });
+            });
+            ui.separator();
+        }
 
         // Atom — the editable buffer.
         let language = snap.language.clone();

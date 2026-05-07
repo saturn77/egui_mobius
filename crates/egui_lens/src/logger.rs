@@ -1522,70 +1522,81 @@ impl<'a> ReactiveEventLogger<'a> {
                 .iter()
                 .filter(|log| state.filter.should_display(log))
                 .collect();
-            let num_rows = filtered.len();
             let row_height =
                 ui.text_style_height(&egui::TextStyle::Monospace) + 4.0;
 
-            // Virtualized scroll: only the rows currently visible in
-            // the viewport get rendered. With a 1000-entry buffer and
-            // ~30 rows visible at a time, this is a ~30× reduction in
-            // per-frame widget allocation vs the previous Grid that
-            // rendered every entry every frame. Resize jitter (the
-            // primary symptom in issue #27) is eliminated.
+            // Build a (filtered_entry_idx, line_idx_within_entry) lookup
+            // so multi-line log messages span multiple visual rows but
+            // still belong to one logical entry. Newest-first: the
+            // newest entry's lines come first in the lookup; within each
+            // entry, line_idx 0 is the first line so it carries the
+            // timestamp + level columns. Subsequent lines render empty
+            // in those columns.
             //
-            // Trade-off: rows have a fixed height (single line). Long
-            // messages truncate with "…"; multi-line system info dumps
-            // get newlines collapsed to " | " for the visual while the
-            // underlying log data preserves the original newlines
-            // (Save Logs export keeps the full multi-line form).
+            // Virtualization (show_rows) still kicks in row-by-row —
+            // perf is the same as before for single-line entries and a
+            // few extra rows per multi-line entry.
+            let mut row_index: Vec<(usize, usize)> = Vec::new();
+            for (i, log) in filtered.iter().enumerate().rev() {
+                let line_count = 1 + log
+                    .log_message
+                    .content
+                    .value
+                    .matches('\n')
+                    .count();
+                for line_idx in 0..line_count {
+                    row_index.push((i, line_idx));
+                }
+            }
+            let num_rows = row_index.len();
+
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show_rows(ui, row_height, num_rows, |ui, row_range| {
-                    for row in row_range {
-                        // Newest-first: render last filtered entry at row 0
-                        let idx = num_rows - 1 - row;
-                        let log = filtered[idx];
+                    for visual_row in row_range {
+                        let (filtered_idx, line_idx) = row_index[visual_row];
+                        let log = filtered[filtered_idx];
+                        let is_first_line = line_idx == 0;
 
                         ui.horizontal(|ui| {
                             if show_timestamps {
-                                let timestamp_text =
+                                let text = if is_first_line {
                                     egui::RichText::new(&log.timestamp.value.value)
                                         .color(colors.timestamp)
-                                        .monospace();
+                                        .monospace()
+                                } else {
+                                    egui::RichText::new("").monospace()
+                                };
                                 ui.add_sized(
                                     [TIMESTAMP_WIDTH, row_height],
-                                    egui::Label::new(timestamp_text),
+                                    egui::Label::new(text),
                                 );
                             }
 
                             if show_log_level {
-                                let (level_text, level_color) =
-                                    get_log_level_text_and_color(log, &colors);
+                                let text = if is_first_line {
+                                    let (level_text, level_color) =
+                                        get_log_level_text_and_color(log, &colors);
+                                    egui::RichText::new(level_text)
+                                        .color(level_color)
+                                        .monospace()
+                                } else {
+                                    egui::RichText::new("").monospace()
+                                };
                                 ui.add_sized(
                                     [LEVEL_WIDTH, row_height],
-                                    egui::Label::new(
-                                        egui::RichText::new(level_text)
-                                            .color(level_color)
-                                            .monospace(),
-                                    ),
+                                    egui::Label::new(text),
                                 );
                             }
 
                             if show_messages {
-                                let message_text = &log.log_message.content.value;
-                                // Multi-line system info: flatten for
-                                // single-line display (data preserved
-                                // upstream). Other messages render as-is.
-                                let display_text = if message_text.contains('\n') {
-                                    if message_text.contains("SYSTEM DETAILS") {
-                                        format_system_info(message_text)
-                                            .replace('\n', " | ")
-                                    } else {
-                                        message_text.replace('\n', " | ")
-                                    }
-                                } else {
-                                    message_text.clone()
-                                };
+                                let line_text: &str = log
+                                    .log_message
+                                    .content
+                                    .value
+                                    .split('\n')
+                                    .nth(line_idx)
+                                    .unwrap_or("");
 
                                 let message_color = if !log.log_level.info.value.is_empty() {
                                     if log.log_level.info.value.starts_with("CUSTOM:") {
@@ -1606,12 +1617,12 @@ impl<'a> ReactiveEventLogger<'a> {
                                 } else if !log.log_level.debug.value.is_empty() {
                                     colors.debug_message
                                 } else {
-                                    get_message_color(&display_text, &colors)
+                                    get_message_color(line_text, &colors)
                                 };
 
                                 ui.add(
                                     egui::Label::new(
-                                        egui::RichText::new(display_text)
+                                        egui::RichText::new(line_text)
                                             .color(message_color)
                                             .monospace(),
                                     )
@@ -1742,6 +1753,7 @@ pub fn get_message_color(message_text: &str, colors: &LogColors) -> egui::Color3
 }
 
 // Helper function to format system info
+#[allow(dead_code)] // External crates may format SYSTEM DETAILS sections themselves.
 pub fn format_system_info(message: &str) -> String {
     // Split the message into lines and align key-value pairs
     message
