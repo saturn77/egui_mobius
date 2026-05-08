@@ -35,10 +35,10 @@ impl ReactiveEditorState {
     }
 }
 
-/// Languages exposed in the picker. These names must match
-/// syntect's `default-syntaxes` set. Verilog/VHDL/TOML are deferred
-/// to a follow-up that bundles community Sublime grammars as
-/// `.sublime-syntax` assets in this crate.
+/// Languages exposed in the picker. Most names match syntect's
+/// `default-syntaxes` set; OpenSCAD is bundled as a vendored
+/// `.sublime-syntax` under this crate's `syntaxes/` directory and
+/// merged into the SyntaxSet at first use.
 pub const EDITOR_LANGUAGES: &[&str] = &[
     "Rust",
     "JSON",
@@ -46,6 +46,7 @@ pub const EDITOR_LANGUAGES: &[&str] = &[
     "Python",
     "JavaScript",
     "Markdown",
+    "OpenSCAD",
     "Plain Text",
 ];
 

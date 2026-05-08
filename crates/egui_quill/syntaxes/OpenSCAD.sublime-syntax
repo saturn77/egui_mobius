@@ -1,0 +1,85 @@
+%YAML 1.2
+---
+# Minimal Sublime-syntax grammar for OpenSCAD-flavour scripts.
+#
+# Vendored into egui_quill so the syntect-backed highlighter can
+# colour `.scad` files. The grammar covers the subset that zicad's
+# Phase 2B/C parser-evaluator handles plus a handful of OpenSCAD
+# builtins beyond it (rotate_extrude, linear_extrude, hull, etc.) so
+# real-world hand-written scripts read sensibly even before zicad
+# implements every modifier.
+#
+# Scope names follow the standard TextMate convention so any
+# syntect theme — base16, Solarized, the future Tokyo Night
+# vendoring — colours these consistently.
+
+name: OpenSCAD
+file_extensions:
+  - scad
+scope: source.openscad
+
+contexts:
+  main:
+    # ── Comments ────────────────────────────────────────────────
+    - match: '//.*$'
+      scope: comment.line.double-slash.openscad
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.openscad
+      push: block_comment
+
+    # ── Strings ─────────────────────────────────────────────────
+    - match: '"'
+      scope: punctuation.definition.string.begin.openscad
+      push: double_string
+
+    # ── Numbers ─────────────────────────────────────────────────
+    - match: '\b\d+\.\d+([eE][+-]?\d+)?\b'
+      scope: constant.numeric.float.openscad
+    - match: '\b\d+([eE][+-]?\d+)?\b'
+      scope: constant.numeric.integer.openscad
+
+    # ── Language keywords ──────────────────────────────────────
+    - match: '\b(module|function|if|else|for|let|each|return|include|use)\b'
+      scope: keyword.control.openscad
+    - match: '\b(true|false|undef)\b'
+      scope: constant.language.openscad
+
+    # ── Built-in geometry modules ──────────────────────────────
+    - match: '\b(cube|sphere|cylinder|polyhedron|polygon|square|circle|text|surface|import)\b'
+      scope: support.function.builtin.primitive.openscad
+    - match: '\b(union|difference|intersection|hull|minkowski|render)\b'
+      scope: support.function.builtin.boolean.openscad
+    - match: '\b(translate|rotate|scale|mirror|multmatrix|color|offset|projection|linear_extrude|rotate_extrude|resize)\b'
+      scope: support.function.builtin.transform.openscad
+
+    # ── Built-in math + utility functions ──────────────────────
+    - match: '\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|abs|sign|min|max|floor|ceil|round|exp|ln|log|pow|norm|cross|rands|len|concat|lookup|str|chr|ord|search|version|version_num|assert|echo)\b'
+      scope: support.function.builtin.math.openscad
+
+    # ── Special variables ($fn, $fs, $fa, $t, $vpr, $vpt, …) ──
+    - match: '\$[a-zA-Z_]\w*'
+      scope: variable.language.special.openscad
+
+    # ── Identifiers ────────────────────────────────────────────
+    - match: '[a-zA-Z_]\w*'
+      scope: variable.other.openscad
+
+    # ── Operators + punctuation ────────────────────────────────
+    - match: '==|!=|<=|>=|&&|\|\||[+\-*/%=<>!?]'
+      scope: keyword.operator.openscad
+    - match: '[\(\)\[\]\{\},;:]'
+      scope: punctuation.openscad
+
+  block_comment:
+    - meta_scope: comment.block.openscad
+    - match: '\*/'
+      scope: punctuation.definition.comment.end.openscad
+      pop: true
+
+  double_string:
+    - meta_scope: string.quoted.double.openscad
+    - match: '\\.'
+      scope: constant.character.escape.openscad
+    - match: '"'
+      scope: punctuation.definition.string.end.openscad
+      pop: true

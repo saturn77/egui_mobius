@@ -10,7 +10,7 @@ homepage               = "https://github.com/saturn77/egui_mobius"
 repository             = "https://github.com/saturn77/egui_mobius"
 categories             = ["gui", "text-editors", "development-tools"]
 keywords               = ["egui", "editor", "syntax-highlighting", "reactive", "egui-mobius"]
-include                = ["**/*.rs", "Cargo.toml"]
+include                = ["**/*.rs", "Cargo.toml", "syntaxes/*.sublime-syntax"]
 
 [dependencies]
 egui                  = { workspace = true }
@@ -24,4 +24,8 @@ syntect = { version = "5", default-features = false, features = [
     "default-themes",
     "regex-fancy",
     "parsing",
+    # `yaml-load` exposes `SyntaxDefinition::load_from_str`, which we
+    # use to merge the bundled OpenSCAD `.sublime-syntax` into the
+    # default SyntaxSet at first use.
+    "yaml-load",
 ] }

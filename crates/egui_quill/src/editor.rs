@@ -8,7 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{FontStyle, Style as SynStyle, ThemeSet};
-use syntect::parsing::SyntaxSet;
+use syntect::parsing::{SyntaxDefinition, SyntaxSet};
 use syntect::util::LinesWithEndings;
 
 use crate::state::{ReactiveEditorState, EDITOR_LANGUAGES, EDITOR_THEMES};
@@ -23,12 +23,33 @@ struct CacheKey {
 
 thread_local! {
     /// Process-wide syntect tables. Loading defaults is non-trivial
-    /// (~50ms cold) so we share a single set across all editor instances.
-    static SYNTAX_SET: SyntaxSet = SyntaxSet::load_defaults_newlines();
+    /// (~50ms cold) so we share a single set across all editor
+    /// instances. The default set is extended with OpenSCAD —
+    /// vendored as a `.sublime-syntax` under `syntaxes/` — so any
+    /// consumer can use `language = "OpenSCAD"` on
+    /// `ReactiveEditorState` and get matching syntect colour.
+    static SYNTAX_SET: SyntaxSet = build_syntax_set();
     static THEME_SET: ThemeSet = ThemeSet::load_defaults();
     /// Per-thread layout cache. Avoids re-highlighting on every frame
     /// when content/language/theme haven't changed.
     static LAYOUT_CACHE: Mutex<Option<(CacheKey, egui::text::LayoutJob)>> = const { Mutex::new(None) };
+}
+
+/// Construct the syntect `SyntaxSet`: defaults + the bundled
+/// OpenSCAD grammar. Called once per thread on first SYNTAX_SET
+/// access. Failure to parse the bundled grammar is a programming
+/// bug, but if it ever does we fall back to the defaults so the
+/// rest of the editor keeps working.
+fn build_syntax_set() -> SyntaxSet {
+    let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+    let openscad_yaml = include_str!("../syntaxes/OpenSCAD.sublime-syntax");
+    match SyntaxDefinition::load_from_str(openscad_yaml, true, Some("OpenSCAD")) {
+        Ok(def) => builder.add(def),
+        Err(e) => {
+            eprintln!("egui_quill: bundled OpenSCAD.sublime-syntax failed to parse: {e}");
+        }
+    }
+    builder.build()
 }
 
 /// Per-frame view onto a `Dynamic<ReactiveEditorState>`. Construct
