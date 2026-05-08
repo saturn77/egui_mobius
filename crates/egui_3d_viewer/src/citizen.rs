@@ -72,6 +72,15 @@ pub struct ViewerCitizen {
     /// Current axes gizmo length. Tracks the scene size; consumers
     /// can override with `set_axes_length`.
     axes_len: f32,
+    /// Z-coordinate the axes gizmo sits at. Default keeps it just
+    /// above the grid plane (avoiding Z-fighting); when a scene is
+    /// set this snaps to the scene's `max.z` so the gizmo rests
+    /// flush on the top surface of the rendered geometry rather than
+    /// hidden under it.
+    axes_z_base: f32,
+    /// Set whenever `axes_len` or `axes_z_base` changes; the next
+    /// `show()` re-uploads the axes mesh and clears the flag.
+    axes_dirty: bool,
     /// Pending scene-triangle upload. Stashed by `set_scene_triangles`
     /// and drained inside `show()` once a glow context is available.
     /// An empty vec clears the slot — the mesh stays allocated but
@@ -181,6 +190,8 @@ impl ViewerCitizen {
             measure_end: None,
             measure_dragging: false,
             axes_len: DEFAULT_AXES_LEN,
+            axes_z_base: 0.001,
+            axes_dirty: false,
             pending_scene_triangles: None,
             pending_scene_lines: None,
             scene_bbox: None,
@@ -215,7 +226,7 @@ impl ViewerCitizen {
     /// two small line meshes.
     pub fn set_axes_length(&mut self, len: f32) {
         self.axes_len = len.max(0.1);
-        self.gpu = None;
+        self.axes_dirty = true;
     }
 
     /// Replace the scene triangle mesh — `vertices` is a flat buffer
@@ -240,6 +251,17 @@ impl ViewerCitizen {
             (None, Some(tris)) => Some(tris),
             (existing, None) => existing,
         };
+        // Snap the axes gizmo to the top of the scene so it rests on
+        // the top surface of the rendered geometry instead of being
+        // hidden inside it. Falls back to the default tiny offset
+        // when no scene is loaded.
+        if let Some(bbox) = &self.scene_bbox {
+            let new_base = bbox.max.z.max(0.001);
+            if (new_base - self.axes_z_base).abs() > 1e-4 {
+                self.axes_z_base = new_base;
+                self.axes_dirty = true;
+            }
+        }
         self.pending_scene_triangles = Some(vertices);
     }
 
@@ -402,6 +424,7 @@ impl ViewerCitizen {
 
         // ── Lazy GPU init ─────────────────────────────────────────
         let axes_len = self.axes_len;
+        let axes_z_base = self.axes_z_base;
         let gpu = self
             .gpu
             .get_or_insert_with(|| {
@@ -409,12 +432,20 @@ impl ViewerCitizen {
                     let unlit = UnlitProgram::new(gl);
 
                     let mut axes = ColoredMesh::new(gl, glow::LINES);
-                    axes.upload(gl, &axes_vertices(axes_len, 0.001));
+                    axes.upload(gl, &axes_vertices(axes_len, axes_z_base));
 
                     let mut grid = ColoredMesh::new(gl, glow::LINES);
                     grid.upload(
                         gl,
-                        &grid_vertices(DEFAULT_GRID_EXTENT, DEFAULT_GRID_STEP, GRID_COLOR),
+                        &grid_vertices(
+                            DEFAULT_GRID_EXTENT,
+                            DEFAULT_GRID_STEP,
+                            GRID_COLOR,
+                            // Drop the grid 0.001 below the axes so the
+                            // axis lines sit cleanly above the grid's
+                            // centre lines without Z-fighting.
+                            axes_z_base - 0.001,
+                        ),
                     );
 
                     let scene_triangles = ColoredMesh::new(gl, glow::TRIANGLES);
@@ -451,6 +482,29 @@ impl ViewerCitizen {
                 unsafe { g.scene_lines.upload(gl, &verts); }
                 g.scene_lines_ready = has_data;
             }
+        }
+
+        // ── Re-upload axes + grid when length or z-base changed ───
+        // Triggered by set_axes_length and by the axes_z_base
+        // auto-snap that fires inside set_scene_triangles when a
+        // new scene's bbox has a different top. Grid sits 0.001 below
+        // the axes so the axes' centre lines win the depth test.
+        if self.axes_dirty {
+            if let Ok(mut g) = gpu.lock() {
+                unsafe {
+                    g.axes.upload(gl, &axes_vertices(self.axes_len, self.axes_z_base));
+                    g.grid.upload(
+                        gl,
+                        &grid_vertices(
+                            DEFAULT_GRID_EXTENT,
+                            DEFAULT_GRID_STEP,
+                            GRID_COLOR,
+                            self.axes_z_base - 0.001,
+                        ),
+                    );
+                }
+            }
+            self.axes_dirty = false;
         }
 
         // ── Commit zoom-box on release ────────────────────────────

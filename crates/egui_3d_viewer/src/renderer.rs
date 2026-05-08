@@ -6,6 +6,12 @@
 use glow::{Context, HasContext as _};
 use nalgebra::Matrix4;
 
+// Native uses desktop OpenGL 3.3 (GLSL 330). Wasm uses WebGL2 which
+// runs GLSL ES 3.00 — different version directive plus mandatory
+// precision qualifiers on float values. Same shader logic in both
+// cases; only the prologue differs.
+
+#[cfg(not(target_arch = "wasm32"))]
 const VS_UNLIT: &str = r#"#version 330
 uniform mat4 u_mvp;
 layout(location=0) in vec3 a_pos;
@@ -14,7 +20,27 @@ out vec3 v_col;
 void main() { v_col = a_col; gl_Position = u_mvp * vec4(a_pos, 1.0); }
 "#;
 
+#[cfg(not(target_arch = "wasm32"))]
 const FS_UNLIT: &str = r#"#version 330
+uniform float u_alpha;
+in vec3 v_col;
+out vec4 o_col;
+void main() { o_col = vec4(v_col, u_alpha); }
+"#;
+
+#[cfg(target_arch = "wasm32")]
+const VS_UNLIT: &str = r#"#version 300 es
+precision highp float;
+uniform mat4 u_mvp;
+layout(location=0) in vec3 a_pos;
+layout(location=1) in vec3 a_col;
+out vec3 v_col;
+void main() { v_col = a_col; gl_Position = u_mvp * vec4(a_pos, 1.0); }
+"#;
+
+#[cfg(target_arch = "wasm32")]
+const FS_UNLIT: &str = r#"#version 300 es
+precision mediump float;
 uniform float u_alpha;
 in vec3 v_col;
 out vec4 o_col;
