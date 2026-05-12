@@ -72,11 +72,11 @@ pub struct ViewerCitizen {
     /// Current axes gizmo length. Tracks the scene size; consumers
     /// can override with `set_axes_length`.
     axes_len: f32,
-    /// Z-coordinate the axes gizmo sits at. Default keeps it just
-    /// above the grid plane (avoiding Z-fighting); when a scene is
-    /// set this snaps to the scene's `max.z` so the gizmo rests
-    /// flush on the top surface of the rendered geometry rather than
-    /// hidden under it.
+    /// Z-coordinate the axes gizmo sits at. Stays anchored just
+    /// above the grid plane (0.001 to dodge Z-fighting) so the
+    /// origin marker reads as the world origin in CAD convention.
+    /// `set_axes_length` can update it explicitly if a consumer
+    /// wants the gizmo to track a different height.
     axes_z_base: f32,
     /// Set whenever `axes_len` or `axes_z_base` changes; the next
     /// `show()` re-uploads the axes mesh and clears the flag.
@@ -251,17 +251,14 @@ impl ViewerCitizen {
             (None, Some(tris)) => Some(tris),
             (existing, None) => existing,
         };
-        // Snap the axes gizmo to the top of the scene so it rests on
-        // the top surface of the rendered geometry instead of being
-        // hidden inside it. Falls back to the default tiny offset
-        // when no scene is loaded.
-        if let Some(bbox) = &self.scene_bbox {
-            let new_base = bbox.max.z.max(0.001);
-            if (new_base - self.axes_z_base).abs() > 1e-4 {
-                self.axes_z_base = new_base;
-                self.axes_dirty = true;
-            }
-        }
+        // Axes gizmo stays anchored at the world origin (just above
+        // the grid plane at z = 0.001 to dodge z-fighting). CAD
+        // convention is origin-anchored axes; an earlier version
+        // snapped to bbox.max.z to avoid the gizmo being occluded by
+        // opaque geometry, but that made the X/Y arrows visually
+        // sit on top of the scene — which read as "the origin is up
+        // there, offset by the object's height." If geometry hides
+        // the gizmo, the user orbits to see it.
         self.pending_scene_triangles = Some(vertices);
     }
 
@@ -485,10 +482,8 @@ impl ViewerCitizen {
         }
 
         // ── Re-upload axes + grid when length or z-base changed ───
-        // Triggered by set_axes_length and by the axes_z_base
-        // auto-snap that fires inside set_scene_triangles when a
-        // new scene's bbox has a different top. Grid sits 0.001 below
-        // the axes so the axes' centre lines win the depth test.
+        // Triggered by set_axes_length. Grid sits 0.001 below the
+        // axes so the axes' centre lines win the depth test.
         if self.axes_dirty {
             if let Ok(mut g) = gpu.lock() {
                 unsafe {
