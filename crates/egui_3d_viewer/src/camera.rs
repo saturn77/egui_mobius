@@ -70,7 +70,16 @@ impl Camera {
     /// zoom alone so the caller can follow up with `fit_to_bbox` to also
     /// re-frame the board if they want.
     pub fn reset_top_down(&mut self) {
-        let tilt = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), -55f32.to_radians());
+        // True top-down — look straight down the world +Z axis. The
+        // viewer's screen-space convention is +Y up (OpenGL); csgrs
+        // produces meshes with +Z up (OpenSCAD / CAD convention). So
+        // identity rotation lays csgrs's +Z down horizontally on
+        // screen — wrong. A -90° rotation about world X maps world
+        // +Z → screen +Y and world +Y → screen -Z (into the page),
+        // which is the actual "plan view": XY ground plane face-on,
+        // Z extruding toward the camera. Circles in the XY plane
+        // render as true circles, standoffs as overhead disks.
+        let tilt = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), -90f32.to_radians());
         self.rotation = tilt;
         self.target = Vector3::zeros();
     }
