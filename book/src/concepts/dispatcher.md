@@ -35,10 +35,48 @@ Whichever of those you need, the dispatcher does three jobs:
 3. **Buffers outbound messages.** Lifecycle changes and explicit
    `send()` calls accumulate in a queue that you drain once per frame.
 
-The dispatcher does *not* know about dock layout, does *not* fire UI
-events on its own, and does *not* observe arbitrary `Dynamic<T>`
-writes (see
-[the coupling chapter](coupling.md#the-dispatcher-is-not-a-reactive-bus)).
+## Why the dispatcher, not just shared state?
+
+If panels can share state through `Dynamic<T>` clones already, what
+does the dispatcher add?
+
+Three things that don't fall out of shared `Dynamic<T>` alone:
+
+- **Atomic one-hot activation.** `activate(&id)` flips one citizen's
+  `active` to `true` and clears every other registered citizen's flag
+  in a single call. Doing this with shared state alone means wiring
+  each panel to clear every other panel's flag — N² coordination and
+  a new wire every time a panel is added.
+- **Lookup by stable id.** Panels and backend threads address each
+  other by `CitizenId`, not by holding pointers to one another's
+  structs. The dispatcher is the directory; backend threads in
+  particular have no other way to find the right reactive cell to
+  write to.
+- **Frame-aligned event buffering.** `activate()` and `send()` push
+  lifecycle events into a queue that `drain_messages()` consumes once
+  per frame. This is the seam between event-time (a tab was clicked
+  just now) and frame-time (work reacts to it next tick) — backend
+  threads see batched updates rather than per-mutation callbacks.
+
+And three things it does *not* do, each a common confusion:
+
+- **It is not a runtime gateway.** Buffering events is not the same as
+  performing the work those events trigger. The dispatcher does not
+  spawn threads, schedule async tasks, or own `JoinHandle`s. Its queue
+  is the *interface* to the runtime boundary; the boundary itself is
+  the backend thread your app starts and feeds from
+  [`drain_messages()`](#drain_messages---veccitizenmessage).
+- **It is not a reactive bus.** The registry tracks `CitizenState`
+  (six lifecycle fields) and nothing else. Your slider's
+  `Dynamic<f32>` is invisible to the dispatcher until you explicitly
+  call [`send()`](#sendmessage). See
+  [the coupling chapter](coupling.md#the-dispatcher-is-not-a-reactive-bus)
+  for why that asymmetry is deliberate.
+- **It does not observe dock layout or fire UI events on its own.** A
+  tab click triggers `activate(...)` because *your* `on_tab_button`
+  calls it; the dispatcher never spies on the dock and fires
+  activations for you. Give it an event, it routes; don't give it an
+  event, it sits idle.
 
 ![Six panels (Project, Settings, Plotter 1, Plotter 2, Logger, Terminal/Shell) in a 2×2 dock layout. Each panel contains a labelled state cloud — ProjectState, SettingsState, Plotter1State, Plotter2State, LoggerState, TerminalState. Arrows from every state cloud converge on a single DISPATCHER block on the right.](../images/Basic_App_State.drawio.png)
 

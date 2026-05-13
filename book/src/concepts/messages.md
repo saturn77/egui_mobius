@@ -212,6 +212,76 @@ outcome (`LayersReloaded`, fired by a file-watcher) because there is
 no UI-side intent. Use the pair when there is asynchronous work
 between the two and consumers care about both endpoints.
 
+### Cancellation rides on the lifecycle queue
+
+Long-running async work raises a third question alongside intent and
+outcome: **what cancels in-flight work when the user moves on?** The
+answer is already in the queue — it's the `Deactivated { id }` message
+that [`Dispatcher::activate()`](dispatcher.md#activateid) produces
+automatically whenever the previously-active panel loses its slot.
+
+The pattern, drawn from the same forwarding loop above:
+
+```rust,ignore
+// Backend thread, consuming the channel:
+for msg in rx {
+    match msg {
+        CitizenMessage::Activated   { id } if id.0 == "fetch" => start_fetch(),
+        CitizenMessage::Deactivated { id } if id.0 == "fetch" => cancel_in_flight(),
+        _ => {}
+    }
+}
+```
+
+The dispatcher does not return a work handle from `send()`. It cannot —
+it doesn't own any work. The backend thread that *does* own the work
+also owns its own in-flight state (a `JoinHandle`, a `CancellationToken`,
+an `AbortHandle`, whatever the runtime provides) and reacts to the
+deactivation message by aborting that work itself.
+
+For synchronous, panel-local cleanup that runs on the UI thread,
+override [`Citizen::on_deactivate`](citizen.md#when-to-override-the-hooks)
+alongside the flag flip:
+
+```rust,ignore
+fn on_deactivate(&mut self) {
+    self.citizen_state_mut().active.set(false);
+    self.flush_local_buffers();   // synchronous, on the UI thread
+}
+```
+
+For *asynchronous* cancellation — anything that involves stopping a
+thread, aborting a task, or interrupting IO — route it through the
+message queue, never through the override. The override runs on the UI
+thread and must not block.
+
+### The long-running work pattern, end to end
+
+Putting intent, outcome, and cancellation together yields a predictable
+shape for any unit of async work in a citizen app:
+
+1. **Intent message** — a user-initiated event lands in the dispatcher
+   queue (`DrcRunRequested`, `ProjectOpenRequested`) and gets drained
+   into the backend channel.
+2. **Backend dispatch** — the backend thread spawns the work and
+   remembers its in-flight handle (`JoinHandle`, `AbortHandle`, etc.)
+   keyed by the originating panel's `CitizenId`.
+3. **Cancellation lifecycle** — if the user activates a different panel,
+   `Deactivated { id }` arrives on the same channel; the backend thread
+   aborts the remembered handle for that id.
+4. **Outcome message** — when work completes (or is cancelled), the
+   backend pushes an outcome message back to the UI thread through a
+   return channel, drained into the next frame's `update()`.
+
+Every step is a message. Every message flows through the same queue (or
+a paired return channel). The UI thread holds no futures, no join
+handles, no cancellation tokens — only `Dynamic<T>` cells that observe
+the results when outcome messages land.
+
+This is the Elm discipline applied to a Rust GUI: a temporal sequence of
+events, fully inspectable, never a tangled call graph. The app can be
+paused, logged, and replayed by recording the message stream alone.
+
 ### Sub-domain nesting
 
 `HotkeyPressed(Hotkey)` is a single top-level variant that wraps a

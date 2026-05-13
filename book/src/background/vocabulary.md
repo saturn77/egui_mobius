@@ -18,5 +18,24 @@ every chapter that follows leans on these:
   often hold their own reactive state that other panels or backend
   threads read. See the
   [coupling chapter](concepts/coupling.md) for how an atom can wire
-  into panel-to-panel state sharing, panel-to-backend messaging, or
-  both at once.
+  into panel-to-panel state sharing ([Path A](#coupling-paths)),
+  panel-to-backend messaging ([Path B](#coupling-paths)), or both at
+  once.
+
+## Coupling paths
+
+Two named mechanisms for moving information between citizen-panels.
+Encountered throughout the concepts chapters and fully treated in
+[coupling](concepts/coupling.md); listed here so the names land
+before the first chapter that uses them.
+
+- **Path A** — shared `Dynamic<T>`. Two panels hold clones of the
+  same cell; one writes, the other reads on the next frame. Instant,
+  in-frame, no queue. Carries *state*, not events. The default for
+  panel-to-panel coordination.
+- **Path B** — dispatcher messages. A panel calls
+  [`dispatcher.send(...)`](concepts/dispatcher.md#sendmessage); the
+  app's update loop drains the queue once per frame and forwards each
+  message onward to a backend thread or logger. Queued, lands next
+  drain. Carries *events*, not state. Use when the change needs to
+  leave the UI thread.
