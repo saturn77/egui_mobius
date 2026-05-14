@@ -1663,6 +1663,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui_grafica"
+version = "0.4.0"
+dependencies = [
+ "egui",
+ "egui_mobius_reactive",
+ "serde",
+]
+
+[[package]]
 name = "egui_lens"
 version = "0.4.0"
 dependencies = [
@@ -3321,6 +3330,12 @@ name = "linebender_resource_handle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4a5ff6bcca6c4867b1c4fd4ef63e4db7436ef363e0ad7531d1558856bae64f4"
+
+[[package]]
+name = "linked-hash-map"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
 
 [[package]]
 name = "linux-raw-sys"
@@ -5631,6 +5646,7 @@ dependencies = [
  "serde_derive",
  "thiserror 2.0.18",
  "walkdir",
+ "yaml-rust",
 ]
 
 [[package]]
@@ -7321,6 +7337,15 @@ name = "y4m"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5a4b21e1a62b67a2970e6831bc091d7b87e119e7f9791aef9702e3bef04448"
+
+[[package]]
+name = "yaml-rust"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
+dependencies = [
+ "linked-hash-map",
+]
 
 [[package]]
 name = "yoke"

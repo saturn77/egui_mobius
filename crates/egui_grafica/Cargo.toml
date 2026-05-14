@@ -1,0 +1,18 @@
+[package]
+name                   = "egui_grafica"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "Programmable graphics canvas citizen for egui_mobius — system block diagrams and node graphs, authored in a declarative DSL"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "graphics", "visualization"]
+keywords               = ["egui", "canvas", "diagram", "node-graph", "egui-mobius"]
+include                = ["**/*.rs", "Cargo.toml", "README.md"]
+
+[dependencies]
+egui                 = { workspace = true }
+egui_mobius_reactive = { workspace = true }
+serde                = { workspace = true }
