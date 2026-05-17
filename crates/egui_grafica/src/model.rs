@@ -31,7 +31,7 @@ pub struct EdgeId(pub String);
 // =============================================================================
 
 /// Root of a canvas document.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Scene {
     pub name: String,
     pub settings: CanvasSettings,
@@ -41,7 +41,7 @@ pub struct Scene {
 }
 
 /// Canvas-level settings: grid, snap, paper size, routing default, units.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CanvasSettings {
     /// Grid step in world units (the value displayed in the ribbon labelled
     /// with `grid_units`).
@@ -122,7 +122,7 @@ impl GridUnits {
 // =============================================================================
 
 /// A placed shape on the canvas with ports and styling.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
     pub kind: NodeKind,
@@ -132,7 +132,7 @@ pub struct Node {
 }
 
 /// The primitive shape backing a node.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum NodeKind {
     Rect,
     Circle,
@@ -143,7 +143,7 @@ pub enum NodeKind {
     Group(NodeId),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PathSegment {
     MoveTo(f32, f32),
     LineTo(f32, f32),
@@ -156,7 +156,7 @@ pub enum PathSegment {
 }
 
 /// Position, size, rotation (degrees).
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Transform {
     pub position: (f32, f32),
     pub size: (f32, f32),
@@ -178,7 +178,7 @@ impl Default for Transform {
 // =============================================================================
 
 /// A connection point on the periphery of a node.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Port {
     pub id: PortId,
     pub name: String,
@@ -202,7 +202,7 @@ pub enum PortKind {
 /// `North(0.5)` is top-center, `East(0.0)` is top-right-corner, `East(1.0)`
 /// is bottom-right-corner. The `spread` keyword in the DSL is sugar for
 /// evenly-distributed `t` values.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum PortAnchor {
     North(f32),
     South(f32),
@@ -217,7 +217,7 @@ pub enum PortAnchor {
 // =============================================================================
 
 /// A connection between two ports.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Edge {
     pub id: EdgeId,
     pub from: (NodeId, PortId),
@@ -244,7 +244,7 @@ pub enum RouteSegment {
 }
 
 /// Visual style for an edge.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EdgeOverlay {
     pub color: String,
     pub width: f32,
@@ -272,14 +272,14 @@ impl Default for EdgeOverlay {
 // =============================================================================
 
 /// Visual style for a node — border, fill, optional text.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Overlay {
     pub border: Border,
     pub fill: Fill,
     pub text: Option<TextLabel>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Border {
     pub color: String,
     pub width: f32,
@@ -296,7 +296,7 @@ impl Default for Border {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Fill {
     pub color: String,
     /// 0.0 = transparent, 1.0 = opaque.
@@ -328,7 +328,7 @@ pub enum ArrowHead {
     Circle,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextLabel {
     pub value: String,
     pub anchor: TextAnchor,
@@ -357,7 +357,7 @@ pub enum TextAnchor {
 // =============================================================================
 
 /// A named collection of nodes that move and select together.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Group {
     pub id: NodeId,
     pub label: Option<String>,
