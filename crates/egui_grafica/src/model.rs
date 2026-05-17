@@ -40,12 +40,22 @@ pub struct Scene {
     pub groups: Vec<Group>,
 }
 
-/// Canvas-level settings: grid, snap, paper size.
+/// Canvas-level settings: grid, snap, paper size, routing default, units.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CanvasSettings {
+    /// Grid step in world units (the value displayed in the ribbon labelled
+    /// with `grid_units`).
     pub grid_spacing: f32,
     pub snap_to_grid: bool,
     pub show_grid: bool,
+    pub grid_style: GridStyle,
+    /// Diameter of dot markers when `grid_style == Dots`, in world units.
+    pub dot_size: f32,
+    /// Display unit for ribbon labels. Purely cosmetic — the underlying math
+    /// always uses world units. A user who picks `Millimeters` is declaring
+    /// "I want to read these numbers as mm"; whether 1 world unit equals
+    /// 1 mm depends on the user's mental model.
+    pub grid_units: GridUnits,
     pub paper_size: Option<String>,
     pub paper_orientation: Option<String>,
     pub default_routing: Routing,
@@ -57,9 +67,52 @@ impl Default for CanvasSettings {
             grid_spacing: 10.0,
             snap_to_grid: true,
             show_grid: true,
+            grid_style: GridStyle::Lines,
+            dot_size: 2.0,
+            grid_units: GridUnits::Pixels,
             paper_size: None,
             paper_orientation: None,
             default_routing: Routing::Orthogonal,
+        }
+    }
+}
+
+/// How the grid is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GridStyle {
+    /// Faint horizontal + vertical lines.
+    Lines,
+    /// A dot at every grid intersection. Cleaner for dense diagrams.
+    Dots,
+}
+
+/// Display unit for grid values in the ribbon. Affects labels only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GridUnits {
+    Pixels,
+    Mils,
+    Millimeters,
+    Inches,
+}
+
+impl GridUnits {
+    /// Short suffix string for sliders / readouts (" px", " mm", " mil", " in").
+    pub fn suffix(self) -> &'static str {
+        match self {
+            GridUnits::Pixels => " px",
+            GridUnits::Mils => " mil",
+            GridUnits::Millimeters => " mm",
+            GridUnits::Inches => " in",
+        }
+    }
+
+    /// Human-readable name for picker UIs.
+    pub fn label(self) -> &'static str {
+        match self {
+            GridUnits::Pixels => "Pixels",
+            GridUnits::Mils => "Mils",
+            GridUnits::Millimeters => "Millimeters",
+            GridUnits::Inches => "Inches",
         }
     }
 }
@@ -174,7 +227,7 @@ pub struct Edge {
 }
 
 /// How an edge is routed between its endpoints.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub enum Routing {
     #[default]
     Orthogonal,
@@ -184,7 +237,7 @@ pub enum Routing {
     Manual(Vec<RouteSegment>),
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum RouteSegment {
     H(f32),
     V(f32),

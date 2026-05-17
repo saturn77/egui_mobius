@@ -1557,6 +1557,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui-phosphor"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb4e4b18e368ff336c8dd2102992e2631b118f29a2164b0d2be9d8889dcd367e"
+dependencies = [
+ "egui",
+]
+
+[[package]]
 name = "egui-wgpu"
 version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1667,6 +1676,7 @@ name = "egui_grafica"
 version = "0.4.0"
 dependencies = [
  "egui",
+ "egui-phosphor",
  "egui_mobius_reactive",
  "serde",
 ]
@@ -2538,6 +2548,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fdf242682df893b86f33a73828fb09ca4b2d3bb6cc95249707fc684d27484b91"
 dependencies = [
  "bitflags 2.11.0",
+]
+
+[[package]]
+name = "grafica_quad_cluster"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "egui_grafica",
 ]
 
 [[package]]

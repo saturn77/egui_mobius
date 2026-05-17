@@ -26,9 +26,29 @@ pub mod lang;
 pub mod render;
 pub mod interact;
 pub mod citizen;
+pub mod registry;
 
 pub use model::{
     Edge, EdgeId, EdgeOverlay, Fill, Border, Group, Node, NodeId, NodeKind,
     Overlay, Port, PortAnchor, PortId, PortKind, Routing, Scene,
-    CanvasSettings, TextLabel, Transform,
+    CanvasSettings, GridStyle, GridUnits, TextLabel, Transform,
 };
+pub use registry::Registry;
+pub use citizen::CanvasCitizen;
+pub use render::Viewport;
+
+/// Install the Phosphor icon font into an egui context. Call once at app
+/// startup — typically from `eframe::CreationContext` — so ribbon icons
+/// render rather than appearing as tofu boxes.
+///
+/// ```ignore
+/// Box::new(|cc| {
+///     egui_grafica::install_fonts(&cc.egui_ctx);
+///     Ok(Box::new(MyApp::new(cc)))
+/// });
+/// ```
+pub fn install_fonts(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
+    ctx.set_fonts(fonts);
+}

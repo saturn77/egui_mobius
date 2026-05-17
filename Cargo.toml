@@ -20,6 +20,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/filter_plotter",
     "examples/getting_started",
     "examples/citizen_signal_async",
+    "examples/grafica_quad_cluster",
     "examples/viewer3d_csgrs",
     "examples"
 ]
@@ -51,6 +52,7 @@ egui_3d_viewer = { version = "0.4.0", path = "crates/egui_3d_viewer" }
 # egui and eframe
 egui_plot = "0.35.0"
 egui = "0.34"
+egui-phosphor = "0.12"
 eframe = { version = "0.34", default-features = false }
 egui-winit = { version = "0.34", features = ["accesskit"] }
 egui_extras = "0.34.0"
