@@ -15,6 +15,7 @@
 - [Reactive lifecycle: CitizenState](concepts/state.md)
 - [The Dispatcher](concepts/dispatcher.md)
 - [CitizenMessage — the backend bridge](concepts/messages.md)
+- [What citizen is (and is not)](concepts/what-citizen-is.md)
 - [Coupling](concepts/coupling.md)
 - [Inside `Dynamic<T>`](concepts/inside-dynamic.md)
 - [`egui_lens` — the reactive event logger](concepts/lens.md)
