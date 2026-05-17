@@ -36,6 +36,7 @@ pub use model::{
 pub use registry::Registry;
 pub use citizen::CanvasCitizen;
 pub use render::Viewport;
+pub use interact::{hit_test_node, snap_to_grid, Selection};
 
 /// Install the Phosphor icon font into an egui context. Call once at app
 /// startup — typically from `eframe::CreationContext` — so ribbon icons

@@ -33,9 +33,10 @@
 use egui::{Color32, Key, Sense};
 use egui_phosphor::regular as ico;
 
+use crate::interact::{hit_test_node, snap_to_grid, DragState, Selection};
 use crate::model::{GridStyle, GridUnits, Routing, Scene};
 use crate::registry::Registry;
-use crate::render::{paint_scene, scene_bounds, viewport_fit_to, Viewport};
+use crate::render::{paint_scene, paint_selection, scene_bounds, viewport_fit_to, Viewport};
 
 /// Which side of the citizen the ribbon docks to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +54,10 @@ pub struct CanvasCitizen {
     pub fit_padding: f32,
     pub routing_picker_applies_to_all: bool,
     pub ribbon_side: RibbonSide,
+    /// Currently-selected nodes.
+    pub selection: Selection,
+    /// In-progress pointer gesture (pan vs node-drag).
+    drag: DragState,
     /// Set by the Fit button; consumed in the canvas pass where the real
     /// canvas rect is available.
     pending_fit: bool,
@@ -70,6 +75,8 @@ impl CanvasCitizen {
             fit_padding: 40.0,
             routing_picker_applies_to_all: true,
             ribbon_side: RibbonSide::Top,
+            selection: Selection::default(),
+            drag: DragState::Idle,
             pending_fit: false,
         }
     }
@@ -262,10 +269,96 @@ impl CanvasCitizen {
             self.pending_fit = false;
         }
 
+        let shift = ui.input(|i| i.modifiers.shift);
+
+        // Press: hit-test to decide pan vs node-drag, and prime the selection
+        // so the user sees what they're about to move.
+        if response.drag_started()
+            && let Some(screen) = response.interact_pointer_pos()
+        {
+            let world = self.viewport.screen_to_world(screen);
+            match self.registry.with_scene(|s| hit_test_node(s, world)) {
+                Some(id) => {
+                    if !self.selection.contains(&id) {
+                        if shift {
+                            self.selection.toggle(id.clone());
+                        } else {
+                            self.selection.select_only(id.clone());
+                        }
+                    }
+                    let origins = self.registry.with_scene(|s| {
+                        self.selection
+                            .nodes
+                            .iter()
+                            .filter_map(|nid| {
+                                s.nodes
+                                    .iter()
+                                    .find(|n| &n.id == nid)
+                                    .map(|n| (nid.clone(), n.transform.position))
+                            })
+                            .collect()
+                    });
+                    self.drag = DragState::Nodes { grab_world: world, origins };
+                }
+                None => self.drag = DragState::Pan,
+            }
+        }
+
+        // Drag continue.
         if response.dragged() {
-            let delta = response.drag_delta();
-            self.viewport.origin.x += delta.x;
-            self.viewport.origin.y += delta.y;
+            match &self.drag {
+                DragState::Pan => {
+                    let delta = response.drag_delta();
+                    self.viewport.origin.x += delta.x;
+                    self.viewport.origin.y += delta.y;
+                }
+                DragState::Nodes { grab_world, origins } => {
+                    if let Some(screen) = response.interact_pointer_pos() {
+                        let now = self.viewport.screen_to_world(screen);
+                        let (dx, dy) = (now.0 - grab_world.0, now.1 - grab_world.1);
+                        let (snap, spacing) = self
+                            .registry
+                            .with_scene(|s| (s.settings.snap_to_grid, s.settings.grid_spacing));
+                        let moves: Vec<_> = origins
+                            .iter()
+                            .map(|(id, origin)| {
+                                let mut pos = (origin.0 + dx, origin.1 + dy);
+                                if snap {
+                                    pos = snap_to_grid(pos, spacing);
+                                }
+                                (id.clone(), pos)
+                            })
+                            .collect();
+                        self.registry.move_nodes(&moves);
+                    }
+                }
+                DragState::Idle => {}
+            }
+        }
+
+        if response.drag_stopped() {
+            self.drag = DragState::Idle;
+        }
+
+        // Click (press + release, no movement): update selection.
+        if response.clicked()
+            && let Some(screen) = response.interact_pointer_pos()
+        {
+            let world = self.viewport.screen_to_world(screen);
+            match self.registry.with_scene(|s| hit_test_node(s, world)) {
+                Some(id) => {
+                    if shift {
+                        self.selection.toggle(id);
+                    } else {
+                        self.selection.select_only(id);
+                    }
+                }
+                None => {
+                    if !shift {
+                        self.selection.clear();
+                    }
+                }
+            }
         }
 
         if response.hovered() {
@@ -313,6 +406,7 @@ impl CanvasCitizen {
 
         self.registry.with_scene(|scene| {
             paint_scene(&painter, scene, &self.viewport, rect);
+            paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
         });
     }
 

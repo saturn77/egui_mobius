@@ -99,6 +99,18 @@ impl Registry {
         });
     }
 
+    /// Move several nodes in one mutation — a single change notification
+    /// rather than one per node. This is the path a multi-node drag uses.
+    pub fn move_nodes(&self, moves: &[(NodeId, (f32, f32))]) {
+        self.mutate(|scene| {
+            for (id, position) in moves {
+                if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {
+                    node.transform.position = *position;
+                }
+            }
+        });
+    }
+
     pub fn resize_node(&self, id: &NodeId, size: (f32, f32)) {
         self.mutate(|scene| {
             if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {

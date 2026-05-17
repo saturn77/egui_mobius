@@ -176,6 +176,23 @@ pub fn viewport_fit_to(world_bounds: Rect, screen_rect: Rect, padding_world: f32
     Viewport { origin, zoom }
 }
 
+/// Draw a highlight outline around each selected node. Painted after
+/// [`paint_scene`] so the highlight sits on top of node fills and edges.
+pub fn paint_selection(painter: &Painter, scene: &Scene, selected: &[NodeId], viewport: &Viewport) {
+    let accent = Color32::from_rgb(0x25, 0x63, 0xEB);
+    let stroke = Stroke::new(2.0, accent);
+    for id in selected {
+        if let Some(node) = scene.nodes.iter().find(|n| &n.id == id) {
+            let (x, y) = node.transform.position;
+            let (w, h) = node.transform.size;
+            let tl = viewport.world_to_screen((x, y));
+            let br = viewport.world_to_screen((x + w, y + h));
+            let rect = Rect::from_min_max(tl, br).expand(3.0);
+            painter.rect_stroke(rect, CornerRadius::ZERO, stroke, StrokeKind::Outside);
+        }
+    }
+}
+
 /// Look up a port's world-space position given its node+port ids.
 ///
 /// Returns `None` if either id is unknown — useful for skipping orphaned edges
