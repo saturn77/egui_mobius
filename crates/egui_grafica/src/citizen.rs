@@ -417,10 +417,14 @@ impl CanvasCitizen {
 
         // ── Press: classify what was hit and drive the FSM ──
         //
+        // Gated to the PRIMARY button — `Sense::click_and_drag()` reports
+        // drags from any button, so without this the right button also
+        // panned and right/left events interleaved into the FSM.
+        //
         // Hit-test at the true press origin, not `interact_pointer_pos` —
         // egui only reports a drag once the pointer has moved a few pixels,
         // and testing that drifted point misses thin wires and small ports.
-        if response.drag_started()
+        if response.drag_started_by(egui::PointerButton::Primary)
             && let Some(screen) = ui.input(|i| i.pointer.press_origin())
         {
             let world = self.viewport.screen_to_world(screen);
@@ -527,8 +531,8 @@ impl CanvasCitizen {
             }
         }
 
-        // ── Drag: act on the FSM's current state ──
-        if response.dragged() {
+        // ── Drag: act on the FSM's current state (primary button only) ──
+        if response.dragged_by(egui::PointerButton::Primary) {
             match self.fsm.state {
                 CanvasState::Panning => {
                     let delta = response.drag_delta();
@@ -648,7 +652,7 @@ impl CanvasCitizen {
         }
 
         // ── Release: finalise the gesture, return the FSM to Idle ──
-        if response.drag_stopped() {
+        if response.drag_stopped_by(egui::PointerButton::Primary) {
             // Only a latched (left-the-node) gesture creates an edge; an
             // unlatched one was a port reposition, already committed live.
             if self.fsm.state == CanvasState::Connecting
