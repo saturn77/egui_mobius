@@ -35,17 +35,19 @@ use std::path::{Path, PathBuf};
 use egui::{Color32, Key, Sense};
 use egui_phosphor::regular as ico;
 
-use crate::interact::{hit_test_node, hit_test_port, snap_to_grid, DragState, Selection};
+use crate::interact::{hit_test_edge, hit_test_node, hit_test_port, snap_to_grid, DragState, Selection};
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing, Scene};
 use crate::registry::Registry;
 use crate::render::{
-    paint_connection_preview, paint_scene, paint_selection, port_world_position, scene_bounds,
-    viewport_fit_to, Viewport,
+    paint_connection_preview, paint_scene, paint_selected_edges, paint_selection,
+    port_world_position, scene_bounds, viewport_fit_to, Viewport,
 };
 
 /// Pointer-to-port grab tolerance, in screen pixels.
 const PORT_GRAB_PX: f32 = 8.0;
+/// Pointer-to-wire grab tolerance, in screen pixels.
+const EDGE_GRAB_PX: f32 = 6.0;
 
 /// What the ribbon's File menu requested this frame.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -397,6 +399,7 @@ impl CanvasCitizen {
         {
             let world = self.viewport.screen_to_world(screen);
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+            let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
             let port_hit = self.registry.with_scene(|s| hit_test_port(s, world, port_radius));
             if let Some(from) = port_hit {
                 self.drag = DragState::Connecting { from, cursor_world: world };
@@ -421,6 +424,16 @@ impl CanvasCitizen {
                         .collect()
                 });
                 self.drag = DragState::Nodes { grab_world: world, origins };
+            } else if let Some(eid) =
+                self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh))
+            {
+                // Pressing a wire selects it — and does NOT start a pan.
+                if shift {
+                    self.selection.toggle_edge(eid);
+                } else {
+                    self.selection.select_only_edge(eid);
+                }
+                self.drag = DragState::Idle;
             } else {
                 self.drag = DragState::Pan;
             }
@@ -472,24 +485,28 @@ impl CanvasCitizen {
             self.drag = DragState::Idle;
         }
 
-        // Click (press + release, no movement): update selection.
+        // Click (press + release, no movement): select node, else wire, else clear.
         if response.clicked()
             && let Some(screen) = response.interact_pointer_pos()
         {
             let world = self.viewport.screen_to_world(screen);
-            match self.registry.with_scene(|s| hit_test_node(s, world)) {
-                Some(id) => {
-                    if shift {
-                        self.selection.toggle(id);
-                    } else {
-                        self.selection.select_only(id);
-                    }
+            let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
+            if let Some(id) = self.registry.with_scene(|s| hit_test_node(s, world)) {
+                if shift {
+                    self.selection.toggle(id);
+                } else {
+                    self.selection.select_only(id);
                 }
-                None => {
-                    if !shift {
-                        self.selection.clear();
-                    }
+            } else if let Some(eid) =
+                self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh))
+            {
+                if shift {
+                    self.selection.toggle_edge(eid);
+                } else {
+                    self.selection.select_only_edge(eid);
                 }
+            } else if !shift {
+                self.selection.clear();
             }
         }
 
@@ -528,6 +545,10 @@ impl CanvasCitizen {
             if r {
                 self.registry.rotate_scene_90_cw();
             }
+
+            if ui.input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
+                self.delete_selection();
+            }
         }
 
         if response.double_clicked() {
@@ -538,6 +559,7 @@ impl CanvasCitizen {
 
         self.registry.with_scene(|scene| {
             paint_scene(&painter, scene, &self.viewport, rect);
+            paint_selected_edges(&painter, scene, &self.selection.edges, &self.viewport);
             paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
         });
 
@@ -582,6 +604,20 @@ impl CanvasCitizen {
         }
     }
 
+    /// Remove every selected edge and node through the registry. Removing a
+    /// node also drops its attached edges (registry handles the cascade).
+    fn delete_selection(&mut self) {
+        let edges: Vec<EdgeId> = self.selection.edges.clone();
+        let nodes: Vec<NodeId> = self.selection.nodes.clone();
+        for id in &edges {
+            self.registry.remove_edge(id);
+        }
+        for id in &nodes {
+            self.registry.remove_node(id);
+        }
+        self.selection.clear();
+    }
+
     fn apply_routing_to_all(&self, routing: Routing) {
         let ids: Vec<_> = self.registry.with_scene(|s| s.edges.iter().map(|e| e.id.clone()).collect());
         for id in ids {
@@ -595,6 +631,7 @@ const HOTKEY_TABLE: &[(&str, &str)] = &[
     ("X", "Mirror about X axis"),
     ("Y", "Mirror about Y axis"),
     ("R", "Rotate 90° clockwise"),
+    ("Del", "Delete selection"),
 ];
 
 /// A `edge{n}` id not already used by any edge in the scene.

@@ -18,8 +18,8 @@
 use egui::{Align2, Color32, CornerRadius, FontFamily, FontId, Painter, Pos2, Rect, Stroke, StrokeKind, Vec2};
 
 use crate::model::{
-    ArrowHead, Border, Edge, EdgeOverlay, Fill, GridStyle, LineStyle, Node, NodeId, NodeKind,
-    Port, PortAnchor, PortId, Routing, Scene, TextAnchor, TextLabel,
+    ArrowHead, Border, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, LineStyle, Node, NodeId,
+    NodeKind, Port, PortAnchor, PortId, Routing, Scene, TextAnchor, TextLabel,
 };
 
 // =============================================================================
@@ -109,6 +109,56 @@ pub fn paint_connection_preview(
     let accent = Color32::from_rgb(0x25, 0x63, 0xEB);
     paint_dashed_line(painter, a, b, Stroke::new(2.0, accent), 6.0, 4.0);
     painter.circle_filled(b, 4.0, accent);
+}
+
+/// The routed path of an edge as a world-space polyline — the same shape the
+/// renderer draws. Used by the interaction layer to hit-test edges. Returns
+/// `None` if either endpoint port is missing.
+pub fn edge_world_polyline(scene: &Scene, edge: &Edge) -> Option<Vec<(f32, f32)>> {
+    let from = port_world_position(scene, &edge.from.0, &edge.from.1)?;
+    let to = port_world_position(scene, &edge.to.0, &edge.to.1)?;
+    Some(match &edge.routing {
+        Routing::Straight => vec![from, to],
+        // Manual routing currently renders as orthogonal — match that here.
+        Routing::Orthogonal | Routing::Manual(_) => {
+            let mid_x = (from.0 + to.0) * 0.5;
+            vec![from, (mid_x, from.1), (mid_x, to.1), to]
+        }
+        Routing::Bezier => {
+            let handle = (to.0 - from.0).abs().max(40.0) * 0.5;
+            let p1 = (from.0 + handle, from.1);
+            let p2 = (to.0 - handle, to.1);
+            (0..=32)
+                .map(|i| cubic_world(from, p1, p2, to, i as f32 / 32.0))
+                .collect()
+        }
+    })
+}
+
+fn cubic_world(p0: (f32, f32), p1: (f32, f32), p2: (f32, f32), p3: (f32, f32), t: f32) -> (f32, f32) {
+    let u = 1.0 - t;
+    let (b0, b1, b2, b3) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
+    (
+        b0 * p0.0 + b1 * p1.0 + b2 * p2.0 + b3 * p3.0,
+        b0 * p0.1 + b1 * p1.1 + b2 * p2.1 + b3 * p3.1,
+    )
+}
+
+/// Draw a highlight halo over each selected edge.
+pub fn paint_selected_edges(painter: &Painter, scene: &Scene, selected: &[EdgeId], viewport: &Viewport) {
+    let halo = Color32::from_rgba_unmultiplied(0x25, 0x63, 0xEB, 110);
+    for id in selected {
+        let Some(edge) = scene.edges.iter().find(|e| &e.id == id) else {
+            continue;
+        };
+        let Some(poly) = edge_world_polyline(scene, edge) else {
+            continue;
+        };
+        let pts: Vec<Pos2> = poly.iter().map(|w| viewport.world_to_screen(*w)).collect();
+        for seg in pts.windows(2) {
+            painter.line_segment([seg[0], seg[1]], Stroke::new(6.0, halo));
+        }
+    }
 }
 
 fn port_fill(kind: crate::model::PortKind) -> Color32 {

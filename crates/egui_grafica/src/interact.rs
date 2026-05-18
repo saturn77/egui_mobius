@@ -8,38 +8,48 @@
 //!
 //! [`Registry`]: crate::registry::Registry
 
-use crate::model::{Node, NodeId, PortId, Scene};
-use crate::render::port_position_on_node;
+use crate::model::{EdgeId, Node, NodeId, PortId, Scene};
+use crate::render::{edge_world_polyline, port_position_on_node};
 
 // =============================================================================
 // Selection
 // =============================================================================
 
-/// The set of currently-selected scene elements.
-///
-/// Node-only for now; edge selection lands when edge editing does.
+/// The set of currently-selected scene elements — nodes and/or edges.
 #[derive(Debug, Default, Clone)]
 pub struct Selection {
     pub nodes: Vec<NodeId>,
+    pub edges: Vec<EdgeId>,
 }
 
 impl Selection {
     pub fn is_empty(&self) -> bool {
-        self.nodes.is_empty()
+        self.nodes.is_empty() && self.edges.is_empty()
     }
 
     pub fn contains(&self, id: &NodeId) -> bool {
         self.nodes.iter().any(|n| n == id)
     }
 
-    pub fn clear(&mut self) {
-        self.nodes.clear();
+    pub fn contains_edge(&self, id: &EdgeId) -> bool {
+        self.edges.iter().any(|e| e == id)
     }
 
-    /// Replace the selection with exactly one node.
-    pub fn select_only(&mut self, id: NodeId) {
+    pub fn clear(&mut self) {
         self.nodes.clear();
+        self.edges.clear();
+    }
+
+    /// Replace the whole selection with exactly one node.
+    pub fn select_only(&mut self, id: NodeId) {
+        self.clear();
         self.nodes.push(id);
+    }
+
+    /// Replace the whole selection with exactly one edge.
+    pub fn select_only_edge(&mut self, id: EdgeId) {
+        self.clear();
+        self.edges.push(id);
     }
 
     /// Add the node if absent, remove it if present — shift-click behavior.
@@ -48,6 +58,15 @@ impl Selection {
             self.nodes.remove(pos);
         } else {
             self.nodes.push(id);
+        }
+    }
+
+    /// Add the edge if absent, remove it if present — shift-click behavior.
+    pub fn toggle_edge(&mut self, id: EdgeId) {
+        if let Some(pos) = self.edges.iter().position(|e| e == &id) {
+            self.edges.remove(pos);
+        } else {
+            self.edges.push(id);
         }
     }
 }
@@ -129,6 +148,42 @@ pub fn hit_test_port(scene: &Scene, world: (f32, f32), radius: f32) -> Option<(N
 // Snapping
 // =============================================================================
 
+/// The edge whose routed path passes nearest `world`, if one is within
+/// `threshold` world units. Tests distance to the edge's polyline.
+pub fn hit_test_edge(scene: &Scene, world: (f32, f32), threshold: f32) -> Option<EdgeId> {
+    let mut best: Option<(f32, EdgeId)> = None;
+    for edge in &scene.edges {
+        let Some(poly) = edge_world_polyline(scene, edge) else {
+            continue;
+        };
+        let d = polyline_distance(&poly, world);
+        if d <= threshold && best.as_ref().is_none_or(|(bd, _)| d < *bd) {
+            best = Some((d, edge.id.clone()));
+        }
+    }
+    best.map(|(_, id)| id)
+}
+
+/// Shortest distance from `p` to a polyline (min over its segments).
+fn polyline_distance(poly: &[(f32, f32)], p: (f32, f32)) -> f32 {
+    poly.windows(2)
+        .map(|seg| point_segment_distance(p, seg[0], seg[1]))
+        .fold(f32::INFINITY, f32::min)
+}
+
+/// Distance from point `p` to the line segment `a`–`b`.
+fn point_segment_distance(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
+    let (abx, aby) = (b.0 - a.0, b.1 - a.1);
+    let len2 = abx * abx + aby * aby;
+    let t = if len2 <= f32::EPSILON {
+        0.0
+    } else {
+        (((p.0 - a.0) * abx + (p.1 - a.1) * aby) / len2).clamp(0.0, 1.0)
+    };
+    let (cx, cy) = (a.0 + t * abx, a.1 + t * aby);
+    ((p.0 - cx).powi(2) + (p.1 - cy).powi(2)).sqrt()
+}
+
 /// Snap a world coordinate to the nearest grid multiple. Returns `pos`
 /// unchanged when `spacing` is non-positive.
 pub fn snap_to_grid(pos: (f32, f32), spacing: f32) -> (f32, f32) {
@@ -193,6 +248,42 @@ mod tests {
             Some((NodeId("n".into()), PortId("p".into()))),
         );
         assert_eq!(hit_test_port(&scene, (130.0, 50.0), 5.0), None);
+    }
+
+    #[test]
+    fn hit_test_edge_finds_a_wire_near_the_pointer() {
+        use crate::model::{
+            Edge, EdgeId, EdgeOverlay, Port, PortAnchor, PortId, PortKind, Routing,
+        };
+        let mut a = rect_node("a", (0.0, 0.0), (100.0, 100.0));
+        a.ports.push(Port {
+            id: PortId("pa".into()),
+            name: "pa".into(),
+            kind: PortKind::Out,
+            anchor: PortAnchor::East(0.5), // world (100, 50)
+            data_type: None,
+        });
+        let mut b = rect_node("b", (200.0, 0.0), (100.0, 100.0));
+        b.ports.push(Port {
+            id: PortId("pb".into()),
+            name: "pb".into(),
+            kind: PortKind::In,
+            anchor: PortAnchor::West(0.5), // world (200, 50)
+            data_type: None,
+        });
+        let mut scene = Scene::default();
+        scene.nodes.push(a);
+        scene.nodes.push(b);
+        scene.edges.push(Edge {
+            id: EdgeId("e".into()),
+            from: (NodeId("a".into()), PortId("pa".into())),
+            to: (NodeId("b".into()), PortId("pb".into())),
+            routing: Routing::Straight,
+            overlay: EdgeOverlay::default(),
+        });
+
+        assert_eq!(hit_test_edge(&scene, (150.0, 52.0), 5.0), Some(EdgeId("e".into())));
+        assert_eq!(hit_test_edge(&scene, (150.0, 100.0), 5.0), None);
     }
 
     #[test]
