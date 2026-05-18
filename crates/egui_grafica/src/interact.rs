@@ -314,17 +314,18 @@ fn project_onto_segment(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> (f32, f3
 // Hit testing
 // =============================================================================
 
-/// Topmost (last-drawn) node whose axis-aligned bounds contain `world`.
+/// Topmost (last-drawn) node whose exact shape contour contains `world`.
 ///
-/// Bounding-box test for all node kinds — exact circle/ellipse hit testing is
-/// a refinement that can come later; the bounding box is predictable and good
-/// enough for selection and drag.
+/// A cheap bounding-box test rejects obvious misses; survivors are confirmed
+/// against the node's hypercurve [`Contour2`](hypercurve::Contour2), so a
+/// click in the empty corner of a circle's or ellipse's bounding box does
+/// not register as a hit.
 pub fn hit_test_node(scene: &Scene, world: (f32, f32)) -> Option<NodeId> {
     scene
         .nodes
         .iter()
         .rev()
-        .find(|n| node_bounds_contains(n, world))
+        .find(|n| node_bounds_contains(n, world) && crate::geometry::contour_contains(n, world))
         .map(|n| n.id.clone())
 }
 
@@ -434,6 +435,19 @@ mod tests {
         assert_eq!(hit_test_node(&scene, (90.0, 90.0)), Some(NodeId("under".into())));
         // Point outside both.
         assert_eq!(hit_test_node(&scene, (500.0, 500.0)), None);
+    }
+
+    #[test]
+    fn hit_test_node_respects_circle_contour_not_just_bounding_box() {
+        let mut scene = Scene::default();
+        let mut circle = rect_node("c", (0.0, 0.0), (100.0, 100.0));
+        circle.kind = NodeKind::Circle;
+        scene.nodes.push(circle);
+
+        // Centre of the circle — inside.
+        assert_eq!(hit_test_node(&scene, (50.0, 50.0)), Some(NodeId("c".into())));
+        // A bounding-box corner — inside the AABB but outside the circle.
+        assert_eq!(hit_test_node(&scene, (3.0, 3.0)), None);
     }
 
     #[test]

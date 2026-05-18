@@ -13,7 +13,9 @@
 //! and reasoned about as `Real`-backed hypercurve geometry; this module
 //! projects to `f32` only at the rendering / interaction edge.
 
-use hypercurve::{LineSeg2, Point2, Rational, Real};
+use hypercurve::{BulgeVertex2, Contour2, LineSeg2, Point2, Rational, Real, Segment2};
+
+use crate::model::{Node, NodeKind};
 
 /// Exact `f32` → `Real`. An `f32` is a dyadic rational, so this is lossless.
 /// Non-finite inputs (`NaN`, `±∞`) map to zero.
@@ -44,6 +46,78 @@ pub fn point_xy(p: &Point2) -> (f32, f32) {
 /// hypercurve rejects zero-length segments.
 pub fn line_seg(a: (f32, f32), b: (f32, f32)) -> Option<LineSeg2> {
     LineSeg2::try_new(point(a), point(b)).ok()
+}
+
+/// Number of line segments used to approximate an ellipse contour —
+/// hypercurve contours hold lines and circular arcs, not ellipse arcs.
+const ELLIPSE_SEGMENTS: usize = 64;
+
+/// A node's outline as a hypercurve [`Contour2`] — the exact shape geometry
+/// the kernel reasons about (containment, intersection, area).
+///
+/// `Rect` is four line segments; `Circle` is two semicircular arcs (exact,
+/// via bulge vertices); `Ellipse` is a polygon approximation since a
+/// hypercurve contour has no ellipse-arc segment. `Path`/`Group` fall back
+/// to the bounding rectangle, matching how the renderer draws them.
+pub fn node_contour(node: &Node) -> Option<Contour2> {
+    let (x, y) = node.transform.position;
+    let (w, h) = node.transform.size;
+    match node.kind {
+        NodeKind::Circle => circle_contour(x, y, w, h),
+        NodeKind::Ellipse => ellipse_contour(x, y, w, h),
+        NodeKind::Rect | NodeKind::Path(_) | NodeKind::Group(_) => rect_contour(x, y, w, h),
+    }
+}
+
+fn rect_contour(x: f32, y: f32, w: f32, h: f32) -> Option<Contour2> {
+    let corners = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)];
+    let mut segments = Vec::with_capacity(4);
+    for i in 0..4 {
+        segments.push(Segment2::Line(line_seg(corners[i], corners[(i + 1) % 4])?));
+    }
+    Contour2::try_new(segments).ok()
+}
+
+fn circle_contour(x: f32, y: f32, w: f32, h: f32) -> Option<Contour2> {
+    let r = w.min(h) * 0.5;
+    let (cx, cy) = (x + w * 0.5, y + h * 0.5);
+    // Two bulge vertices, each with bulge 1.0 (a semicircular arc): the pair
+    // closes into an exact circle.
+    let verts = [
+        BulgeVertex2::new(point((cx - r, cy)), real(1.0)),
+        BulgeVertex2::new(point((cx + r, cy)), real(1.0)),
+    ];
+    Contour2::from_bulge_vertices(&verts).ok()
+}
+
+fn ellipse_contour(x: f32, y: f32, w: f32, h: f32) -> Option<Contour2> {
+    let (cx, cy) = (x + w * 0.5, y + h * 0.5);
+    let (rx, ry) = (w * 0.5, h * 0.5);
+    let pts: Vec<(f32, f32)> = (0..ELLIPSE_SEGMENTS)
+        .map(|i| {
+            let t = i as f32 / ELLIPSE_SEGMENTS as f32 * std::f32::consts::TAU;
+            (cx + t.cos() * rx, cy + t.sin() * ry)
+        })
+        .collect();
+    let mut segments = Vec::with_capacity(ELLIPSE_SEGMENTS);
+    for i in 0..ELLIPSE_SEGMENTS {
+        segments.push(Segment2::Line(line_seg(pts[i], pts[(i + 1) % ELLIPSE_SEGMENTS])?));
+    }
+    Contour2::try_new(segments).ok()
+}
+
+/// True if `world` lies inside (or on the boundary of) the node's exact
+/// contour. Falls back to `true` only if a contour cannot be built — the
+/// caller is expected to have already done a cheap bounding-box pre-filter.
+pub fn contour_contains(node: &Node, world: (f32, f32)) -> bool {
+    use hypercurve::{Classification, ContourPointLocation, CurvePolicy};
+    match node_contour(node) {
+        Some(contour) => matches!(
+            contour.classify_point(&point(world), &CurvePolicy::default()),
+            Classification::Decided(ContourPointLocation::Inside | ContourPointLocation::Boundary)
+        ),
+        None => true,
+    }
 }
 
 #[cfg(test)]
