@@ -19,8 +19,9 @@ use egui::{Align2, Color32, CornerRadius, FontFamily, FontId, Painter, Pos2, Rec
 
 use crate::model::{
     ArrowHead, Border, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, LineStyle, Node, NodeId,
-    NodeKind, Port, PortAnchor, PortId, Routing, Scene, TextAnchor, TextLabel,
+    NodeKind, Scene, TextAnchor, TextLabel,
 };
+use crate::router::{edge_polyline, port_position_on_node};
 
 // =============================================================================
 // Viewport
@@ -111,39 +112,6 @@ pub fn paint_connection_preview(
     painter.circle_filled(b, 4.0, accent);
 }
 
-/// The routed path of an edge as a world-space polyline — the same shape the
-/// renderer draws. Used by the interaction layer to hit-test edges. Returns
-/// `None` if either endpoint port is missing.
-pub fn edge_world_polyline(scene: &Scene, edge: &Edge) -> Option<Vec<(f32, f32)>> {
-    let from = port_world_position(scene, &edge.from.0, &edge.from.1)?;
-    let to = port_world_position(scene, &edge.to.0, &edge.to.1)?;
-    Some(match &edge.routing {
-        Routing::Straight => vec![from, to],
-        // Manual routing currently renders as orthogonal — match that here.
-        Routing::Orthogonal | Routing::Manual(_) => {
-            let mid_x = (from.0 + to.0) * 0.5;
-            vec![from, (mid_x, from.1), (mid_x, to.1), to]
-        }
-        Routing::Bezier => {
-            let handle = (to.0 - from.0).abs().max(40.0) * 0.5;
-            let p1 = (from.0 + handle, from.1);
-            let p2 = (to.0 - handle, to.1);
-            (0..=32)
-                .map(|i| cubic_world(from, p1, p2, to, i as f32 / 32.0))
-                .collect()
-        }
-    })
-}
-
-fn cubic_world(p0: (f32, f32), p1: (f32, f32), p2: (f32, f32), p3: (f32, f32), t: f32) -> (f32, f32) {
-    let u = 1.0 - t;
-    let (b0, b1, b2, b3) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
-    (
-        b0 * p0.0 + b1 * p1.0 + b2 * p2.0 + b3 * p3.0,
-        b0 * p0.1 + b1 * p1.1 + b2 * p2.1 + b3 * p3.1,
-    )
-}
-
 /// Draw a highlight halo over each selected edge.
 pub fn paint_selected_edges(painter: &Painter, scene: &Scene, selected: &[EdgeId], viewport: &Viewport) {
     let halo = Color32::from_rgba_unmultiplied(0x25, 0x63, 0xEB, 110);
@@ -151,7 +119,7 @@ pub fn paint_selected_edges(painter: &Painter, scene: &Scene, selected: &[EdgeId
         let Some(edge) = scene.edges.iter().find(|e| &e.id == id) else {
             continue;
         };
-        let Some(poly) = edge_world_polyline(scene, edge) else {
+        let Some(poly) = edge_polyline(scene, edge) else {
             continue;
         };
         let pts: Vec<Pos2> = poly.iter().map(|w| viewport.world_to_screen(*w)).collect();
@@ -282,16 +250,6 @@ pub fn paint_selection(painter: &Painter, scene: &Scene, selected: &[NodeId], vi
     }
 }
 
-/// Look up a port's world-space position given its node+port ids.
-///
-/// Returns `None` if either id is unknown — useful for skipping orphaned edges
-/// during in-progress edits.
-pub fn port_world_position(scene: &Scene, node_id: &NodeId, port_id: &PortId) -> Option<(f32, f32)> {
-    let node = scene.nodes.iter().find(|n| &n.id == node_id)?;
-    let port = node.ports.iter().find(|p| &p.id == port_id)?;
-    Some(port_position_on_node(node, port))
-}
-
 // =============================================================================
 // Color parsing
 // =============================================================================
@@ -415,101 +373,20 @@ fn paint_node_text(painter: &Painter, text: &TextLabel, screen_rect: Rect, viewp
 // =============================================================================
 
 fn paint_edge(painter: &Painter, edge: &Edge, scene: &Scene, viewport: &Viewport) {
-    let from_world = match port_world_position(scene, &edge.from.0, &edge.from.1) {
-        Some(p) => p,
-        None => return,
+    // The router owns the path; the renderer only maps it to screen and draws.
+    let Some(world) = edge_polyline(scene, edge) else {
+        return;
     };
-    let to_world = match port_world_position(scene, &edge.to.0, &edge.to.1) {
-        Some(p) => p,
-        None => return,
-    };
-
-    let stroke = stroke_for_edge(&edge.overlay, viewport);
-    let style = edge.overlay.line_style;
-
-    let last_segment_end = match &edge.routing {
-        Routing::Straight => {
-            let p0 = viewport.world_to_screen(from_world);
-            let p1 = viewport.world_to_screen(to_world);
-            paint_line(painter, p0, p1, stroke, style);
-            (p0, p1)
-        }
-        Routing::Orthogonal => paint_orthogonal(painter, from_world, to_world, viewport, stroke, style),
-        Routing::Bezier => paint_bezier(painter, from_world, to_world, viewport, stroke, style),
-        Routing::Manual(_) => {
-            // Manual segment routing not yet implemented; fall back to orthogonal
-            // so the edge at least respects right angles.
-            paint_orthogonal(painter, from_world, to_world, viewport, stroke, style)
-        }
-    };
-
-    paint_arrowhead(painter, edge, viewport, last_segment_end);
-}
-
-/// Three-segment H-V-H orthogonal route through the midpoint.
-fn paint_orthogonal(
-    painter: &Painter,
-    from_world: (f32, f32),
-    to_world: (f32, f32),
-    viewport: &Viewport,
-    stroke: Stroke,
-    style: LineStyle,
-) -> (Pos2, Pos2) {
-    let p0 = viewport.world_to_screen(from_world);
-    let p1 = viewport.world_to_screen(to_world);
-    let mid_x = (p0.x + p1.x) * 0.5;
-    let pa = Pos2::new(mid_x, p0.y);
-    let pb = Pos2::new(mid_x, p1.y);
-    paint_line(painter, p0, pa, stroke, style);
-    paint_line(painter, pa, pb, stroke, style);
-    paint_line(painter, pb, p1, stroke, style);
-    (pb, p1)
-}
-
-/// Horizontal-out, horizontal-in cubic bezier — the natural shape for two
-/// rectangular nodes connected east-to-west. Control-point offset scales with
-/// horizontal distance so short edges curve gently and long edges flow.
-fn paint_bezier(
-    painter: &Painter,
-    from_world: (f32, f32),
-    to_world: (f32, f32),
-    viewport: &Viewport,
-    stroke: Stroke,
-    style: LineStyle,
-) -> (Pos2, Pos2) {
-    let p0 = viewport.world_to_screen(from_world);
-    let p3 = viewport.world_to_screen(to_world);
-    let dx = (p3.x - p0.x).abs().max(40.0 * viewport.zoom);
-    let handle = dx * 0.5;
-    let p1 = Pos2::new(p0.x + handle, p0.y);
-    let p2 = Pos2::new(p3.x - handle, p3.y);
-
-    // De Casteljau evaluation into a polyline so we get dashed-style support for free.
-    const SEGMENTS: usize = 32;
-    let mut prev = p0;
-    for i in 1..=SEGMENTS {
-        let t = (i as f32) / (SEGMENTS as f32);
-        let pt = cubic_bezier(p0, p1, p2, p3, t);
-        paint_line(painter, prev, pt, stroke, style);
-        prev = pt;
+    if world.len() < 2 {
+        return;
     }
-
-    // Return the tangent direction at t=1 so the arrowhead points correctly.
-    // Derivative of a cubic bezier at t=1: 3 * (P3 - P2).
-    let tangent_start = Pos2::new(p3.x - 3.0 * (p3.x - p2.x), p3.y - 3.0 * (p3.y - p2.y));
-    (tangent_start, p3)
-}
-
-fn cubic_bezier(p0: Pos2, p1: Pos2, p2: Pos2, p3: Pos2, t: f32) -> Pos2 {
-    let u = 1.0 - t;
-    let b0 = u * u * u;
-    let b1 = 3.0 * u * u * t;
-    let b2 = 3.0 * u * t * t;
-    let b3 = t * t * t;
-    Pos2::new(
-        b0 * p0.x + b1 * p1.x + b2 * p2.x + b3 * p3.x,
-        b0 * p0.y + b1 * p1.y + b2 * p2.y + b3 * p3.y,
-    )
+    let screen: Vec<Pos2> = world.iter().map(|w| viewport.world_to_screen(*w)).collect();
+    let stroke = stroke_for_edge(&edge.overlay, viewport);
+    for seg in screen.windows(2) {
+        paint_line(painter, seg[0], seg[1], stroke, edge.overlay.line_style);
+    }
+    let n = screen.len();
+    paint_arrowhead(painter, edge, viewport, (screen[n - 2], screen[n - 1]));
 }
 
 fn paint_line(painter: &Painter, a: Pos2, b: Pos2, stroke: Stroke, style: LineStyle) {
@@ -578,24 +455,6 @@ fn paint_arrowhead(painter: &Painter, edge: &Edge, viewport: &Viewport, last_seg
             ));
         }
         ArrowHead::None => {}
-    }
-}
-
-// =============================================================================
-// Port position resolution
-// =============================================================================
-
-/// World-space position of a port, from its node's transform and the port's
-/// parametric anchor. Public so the interaction layer can hit-test ports.
-pub fn port_position_on_node(node: &Node, port: &Port) -> (f32, f32) {
-    let (x, y) = node.transform.position;
-    let (w, h) = node.transform.size;
-    match port.anchor {
-        PortAnchor::North(t) => (x + w * t, y),
-        PortAnchor::South(t) => (x + w * t, y + h),
-        PortAnchor::East(t) => (x + w, y + h * t),
-        PortAnchor::West(t) => (x, y + h * t),
-        PortAnchor::Free(fx, fy) => (x + w * fx, y + h * fy),
     }
 }
 

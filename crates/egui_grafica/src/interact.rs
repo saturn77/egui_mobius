@@ -9,7 +9,7 @@
 //! [`Registry`]: crate::registry::Registry
 
 use crate::model::{EdgeId, Node, NodeId, PortId, Scene};
-use crate::render::{edge_world_polyline, port_position_on_node};
+use crate::router::{edge_polyline, port_position_on_node};
 
 // =============================================================================
 // Selection
@@ -153,7 +153,7 @@ pub fn hit_test_port(scene: &Scene, world: (f32, f32), radius: f32) -> Option<(N
 pub fn hit_test_edge(scene: &Scene, world: (f32, f32), threshold: f32) -> Option<EdgeId> {
     let mut best: Option<(f32, EdgeId)> = None;
     for edge in &scene.edges {
-        let Some(poly) = edge_world_polyline(scene, edge) else {
+        let Some(poly) = edge_polyline(scene, edge) else {
             continue;
         };
         let d = polyline_distance(&poly, world);

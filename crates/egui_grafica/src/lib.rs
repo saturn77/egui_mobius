@@ -23,6 +23,7 @@
 
 pub mod model;
 pub mod lang;
+pub mod router;
 pub mod render;
 pub mod interact;
 pub mod citizen;

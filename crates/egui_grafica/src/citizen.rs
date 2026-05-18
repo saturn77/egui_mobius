@@ -40,9 +40,10 @@ use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing, Scene};
 use crate::registry::Registry;
 use crate::render::{
-    paint_connection_preview, paint_scene, paint_selected_edges, paint_selection,
-    port_world_position, scene_bounds, viewport_fit_to, Viewport,
+    paint_connection_preview, paint_scene, paint_selected_edges, paint_selection, scene_bounds,
+    viewport_fit_to, Viewport,
 };
+use crate::router::port_world_position;
 
 /// Pointer-to-port grab tolerance, in screen pixels.
 const PORT_GRAB_PX: f32 = 8.0;
