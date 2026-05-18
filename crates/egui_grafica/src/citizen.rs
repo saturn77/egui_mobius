@@ -30,13 +30,24 @@
 //! All edits to scene state flow through [`Registry`] — the widget never
 //! touches `Scene` fields directly.
 
+use std::path::{Path, PathBuf};
+
 use egui::{Color32, Key, Sense};
 use egui_phosphor::regular as ico;
 
 use crate::interact::{hit_test_node, snap_to_grid, DragState, Selection};
+use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{GridStyle, GridUnits, Routing, Scene};
 use crate::registry::Registry;
 use crate::render::{paint_scene, paint_selection, scene_bounds, viewport_fit_to, Viewport};
+
+/// What the ribbon's File menu requested this frame.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FileAction {
+    Open,
+    Save,
+    SaveAs,
+}
 
 /// Which side of the citizen the ribbon docks to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,6 +72,12 @@ pub struct CanvasCitizen {
     /// Set by the Fit button; consumed in the canvas pass where the real
     /// canvas rect is available.
     pending_fit: bool,
+    /// Path of the currently-open `.canvas` file, if any.
+    current_path: Option<PathBuf>,
+    /// Comments from the loaded document — carried so a save preserves them.
+    loaded_comments: Vec<CommentBlock>,
+    /// Last load/save outcome, shown in the ribbon.
+    status: String,
 }
 
 impl CanvasCitizen {
@@ -78,6 +95,9 @@ impl CanvasCitizen {
             selection: Selection::default(),
             drag: DragState::Idle,
             pending_fit: false,
+            current_path: None,
+            loaded_comments: Vec::new(),
+            status: String::new(),
         }
     }
 
@@ -108,9 +128,26 @@ impl CanvasCitizen {
         let mut routing_changed_to: Option<Routing> = None;
         let mut dock_to: Option<RibbonSide> = None;
         let mut reset_clicked = false;
+        let mut file_action: Option<FileAction> = None;
 
         lay(ui, &mut |ui| {
             ui.label(egui::RichText::new(format!("{} Grafica", ico::PALETTE)).strong());
+            sep(ui, vertical);
+
+            ui.menu_button(format!("{} File", ico::FOLDER_OPEN), |ui| {
+                if ui.button(format!("{} Open…", ico::FOLDER_OPEN)).clicked() {
+                    file_action = Some(FileAction::Open);
+                    ui.close();
+                }
+                if ui.button(format!("{} Save", ico::FLOPPY_DISK)).clicked() {
+                    file_action = Some(FileAction::Save);
+                    ui.close();
+                }
+                if ui.button(format!("{} Save As…", ico::FLOPPY_DISK)).clicked() {
+                    file_action = Some(FileAction::SaveAs);
+                    ui.close();
+                }
+            });
             sep(ui, vertical);
 
             if ui
@@ -242,6 +279,15 @@ impl CanvasCitizen {
                     ui.close();
                 }
             });
+
+            if !self.status.is_empty() {
+                sep(ui, vertical);
+                ui.label(
+                    egui::RichText::new(&self.status)
+                        .small()
+                        .color(Color32::from_gray(120)),
+                );
+            }
         });
 
         if settings_changed {
@@ -257,6 +303,73 @@ impl CanvasCitizen {
         }
         if let Some(side) = dock_to {
             self.ribbon_side = side;
+        }
+        if let Some(action) = file_action {
+            self.handle_file_action(action);
+        }
+    }
+
+    // ── File I/O ─────────────────────────────────────────────────────────
+
+    fn handle_file_action(&mut self, action: FileAction) {
+        match action {
+            FileAction::Open => self.open_file(),
+            FileAction::Save => {
+                if self.current_path.is_some() {
+                    self.save_to_current();
+                } else {
+                    self.save_as();
+                }
+            }
+            FileAction::SaveAs => self.save_as(),
+        }
+    }
+
+    fn open_file(&mut self) {
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("canvas DSL", &["canvas"])
+            .pick_file()
+        else {
+            return;
+        };
+        match std::fs::read_to_string(&path) {
+            Ok(text) => match lang::parse_document(&text) {
+                Ok(doc) => {
+                    self.registry.set_scene(doc.scene);
+                    self.loaded_comments = doc.comments;
+                    self.selection.clear();
+                    self.status = format!("Opened {}", file_name(&path));
+                    self.current_path = Some(path);
+                }
+                Err(e) => self.status = format!("Parse error — {e}"),
+            },
+            Err(e) => self.status = format!("Read error — {e}"),
+        }
+    }
+
+    fn save_as(&mut self) {
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("canvas DSL", &["canvas"])
+            .set_file_name("scene.canvas")
+            .save_file()
+        else {
+            return;
+        };
+        self.current_path = Some(path);
+        self.save_to_current();
+    }
+
+    fn save_to_current(&mut self) {
+        let Some(path) = self.current_path.clone() else {
+            return;
+        };
+        let doc = ParsedDocument {
+            scene: self.registry.scene(),
+            comments: self.loaded_comments.clone(),
+        };
+        match std::fs::write(&path, lang::pretty_document(&doc)) {
+            Ok(()) => self.status = format!("Saved {}", file_name(&path)),
+            Err(e) => self.status = format!("Write error — {e}"),
         }
     }
 
@@ -431,6 +544,13 @@ const HOTKEY_TABLE: &[(&str, &str)] = &[
     ("Y", "Mirror about Y axis"),
     ("R", "Rotate 90° clockwise"),
 ];
+
+fn file_name(p: &Path) -> String {
+    p.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("?")
+        .to_string()
+}
 
 fn sep(ui: &mut egui::Ui, vertical: bool) {
     if vertical {

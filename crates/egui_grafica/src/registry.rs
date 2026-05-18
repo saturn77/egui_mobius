@@ -69,6 +69,11 @@ impl Registry {
         self.scene.get()
     }
 
+    /// Replace the entire scene — e.g. after loading a `.canvas` file.
+    pub fn set_scene(&self, scene: Scene) {
+        self.scene.set(scene);
+    }
+
     // ─── Mutations ────────────────────────────────────────────────────────
 
     /// Insert a node. If a node with this id already exists, it is replaced.
