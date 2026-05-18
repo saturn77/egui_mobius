@@ -8,10 +8,15 @@
 //! Working in world space (not screen space) keeps routing independent of
 //! zoom/pan and lets the same polyline serve both rendering and hit-testing.
 
+use crate::geometry;
 use crate::model::{Edge, Node, NodeId, Port, PortAnchor, PortId, Routing, Scene};
 
-/// Number of straight segments a bezier route is sampled into. Enough to look
-/// smooth and to give per-segment dash/dotted styling something to chew on.
+/// Certified maximum distance, in world units, between a flattened bezier
+/// polyline and the true curve. hypercurve guarantees the emitted polyline
+/// stays within this bound.
+const BEZIER_FLATNESS: f32 = 0.5;
+/// Segment count for the fixed-step bezier fallback (used only if certified
+/// flattening is somehow uncertain — it should not be, for a plain cubic).
 const BEZIER_SEGMENTS: usize = 32;
 
 // =============================================================================
@@ -74,15 +79,57 @@ fn orthogonal(from: (f32, f32), to: (f32, f32)) -> Vec<(f32, f32)> {
     vec![from, (mid_x, from.1), (mid_x, to.1), to]
 }
 
-/// Horizontal-out, horizontal-in cubic bezier, sampled to a polyline. The
-/// control-handle length scales with horizontal distance so short edges
-/// curve gently and long edges flow.
+/// Horizontal-out, horizontal-in cubic bezier between the endpoints,
+/// flattened to a polyline. The control-handle length scales with horizontal
+/// distance so short edges curve gently and long edges flow.
+///
+/// Flattening goes through hypercurve's certified flattener: the polyline is
+/// provably within [`BEZIER_FLATNESS`] world units of the true curve, rather
+/// than sampled at an arbitrary fixed step. The fixed-step [`sampled_cubic`]
+/// is a fallback for the (not expected) case where the kernel reports the
+/// flattening uncertain.
 fn bezier(from: (f32, f32), to: (f32, f32)) -> Vec<(f32, f32)> {
     let handle = (to.0 - from.0).abs().max(40.0) * 0.5;
-    let p1 = (from.0 + handle, from.1);
-    let p2 = (to.0 - handle, to.1);
+    let c1 = (from.0 + handle, from.1);
+    let c2 = (to.0 - handle, to.1);
+    flatten_cubic(from, c1, c2, to).unwrap_or_else(|| sampled_cubic(from, c1, c2, to))
+}
+
+/// Flatten a cubic bezier through hypercurve, with a certified flatness
+/// bound. `None` if the kernel cannot certify the result.
+fn flatten_cubic(
+    p0: (f32, f32),
+    c1: (f32, f32),
+    c2: (f32, f32),
+    p3: (f32, f32),
+) -> Option<Vec<(f32, f32)>> {
+    use hypercurve::{BezierFlatteningOptions, Classification, CubicBezier2, CurvePolicy};
+    let policy = CurvePolicy::default();
+    let options = BezierFlatteningOptions::try_new(geometry::real(BEZIER_FLATNESS), 16, &policy).ok()?;
+    let curve = CubicBezier2::new(
+        geometry::point(p0),
+        geometry::point(c1),
+        geometry::point(c2),
+        geometry::point(p3),
+    );
+    match curve.flatten_certified(&options, &policy) {
+        Classification::Decided(poly) => {
+            Some(poly.points().iter().map(geometry::point_xy).collect())
+        }
+        Classification::Uncertain(_) => None,
+    }
+}
+
+/// Fixed-step cubic bezier sampling — the fallback when certified flattening
+/// reports uncertainty.
+fn sampled_cubic(
+    p0: (f32, f32),
+    c1: (f32, f32),
+    c2: (f32, f32),
+    p3: (f32, f32),
+) -> Vec<(f32, f32)> {
     (0..=BEZIER_SEGMENTS)
-        .map(|i| cubic(from, p1, p2, to, i as f32 / BEZIER_SEGMENTS as f32))
+        .map(|i| cubic(p0, c1, c2, p3, i as f32 / BEZIER_SEGMENTS as f32))
         .collect()
 }
 
@@ -126,9 +173,11 @@ mod tests {
 
     #[test]
     fn bezier_route_starts_and_ends_on_the_endpoints() {
+        // Certified flattening keeps the curve endpoints exactly; the point
+        // count depends on the subdivision the flatness bound requires.
         let p = route((0.0, 0.0), (100.0, 40.0), &Routing::Bezier);
         assert_eq!(p.first(), Some(&(0.0, 0.0)));
         assert_eq!(p.last(), Some(&(100.0, 40.0)));
-        assert_eq!(p.len(), BEZIER_SEGMENTS + 1);
+        assert!(p.len() >= 2);
     }
 }
