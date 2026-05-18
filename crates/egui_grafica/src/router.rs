@@ -56,16 +56,17 @@ pub fn edge_polyline(scene: &Scene, edge: &Edge) -> Option<Vec<(f32, f32)>> {
 pub fn route(from: (f32, f32), to: (f32, f32), routing: &Routing) -> Vec<(f32, f32)> {
     match routing {
         Routing::Straight => vec![from, to],
-        // Manual routing is not yet a distinct path — it routes orthogonally
-        // until draggable bend points land.
-        Routing::Orthogonal | Routing::Manual(_) => orthogonal(from, to),
+        Routing::Orthogonal => orthogonal(from, to, 0.0),
+        Routing::Manual { mid_offset } => orthogonal(from, to, *mid_offset),
         Routing::Bezier => bezier(from, to),
     }
 }
 
-/// Three-segment H-V-H orthogonal route through the horizontal midpoint.
-fn orthogonal(from: (f32, f32), to: (f32, f32)) -> Vec<(f32, f32)> {
-    let mid_x = (from.0 + to.0) * 0.5;
+/// Three-segment H-V-H orthogonal route. The vertical segment sits at the
+/// horizontal midpoint plus `mid_offset` — zero for an automatic route, a
+/// dragged value for a hand-routed one.
+fn orthogonal(from: (f32, f32), to: (f32, f32), mid_offset: f32) -> Vec<(f32, f32)> {
+    let mid_x = (from.0 + to.0) * 0.5 + mid_offset;
     vec![from, (mid_x, from.1), (mid_x, to.1), to]
 }
 
@@ -107,6 +108,13 @@ mod tests {
     fn orthogonal_route_turns_at_the_midpoint() {
         let p = route((0.0, 0.0), (100.0, 40.0), &Routing::Orthogonal);
         assert_eq!(p, vec![(0.0, 0.0), (50.0, 0.0), (50.0, 40.0), (100.0, 40.0)]);
+    }
+
+    #[test]
+    fn manual_route_shifts_the_vertical_segment_by_the_offset() {
+        let p = route((0.0, 0.0), (100.0, 40.0), &Routing::Manual { mid_offset: 30.0 });
+        // Natural midpoint is x=50; offset 30 puts the vertical at x=80.
+        assert_eq!(p, vec![(0.0, 0.0), (80.0, 0.0), (80.0, 40.0), (100.0, 40.0)]);
     }
 
     #[test]

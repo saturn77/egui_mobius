@@ -502,8 +502,26 @@ impl CanvasCitizen {
                     }
                 }
                 CanvasState::DraggingSegment => {
-                    // Segment re-routing mechanics land next; the wire is
-                    // already selected from the press.
+                    // Re-route: the wire's vertical segment follows the
+                    // cursor's X. The offset is stored relative to the live
+                    // endpoints' midpoint, so the route survives node moves.
+                    if let Some(eid) = self.fsm.drag_edge.clone()
+                        && let Some(screen) = response.interact_pointer_pos()
+                    {
+                        let cursor = self.viewport.screen_to_world(screen);
+                        let endpoints = self.registry.with_scene(|s| {
+                            s.edges.iter().find(|e| e.id == eid).and_then(|e| {
+                                let f = port_world_position(s, &e.from.0, &e.from.1)?;
+                                let t = port_world_position(s, &e.to.0, &e.to.1)?;
+                                Some((f, t))
+                            })
+                        });
+                        if let Some((f, t)) = endpoints {
+                            let mid_offset = cursor.0 - (f.0 + t.0) * 0.5;
+                            self.registry
+                                .update_edge_routing(&eid, Routing::Manual { mid_offset });
+                        }
+                    }
                 }
                 CanvasState::Idle => {}
             }
@@ -701,7 +719,7 @@ fn routing_label(r: &Routing) -> &'static str {
         Routing::Orthogonal => "Orthogonal",
         Routing::Bezier => "Bezier",
         Routing::Straight => "Straight",
-        Routing::Manual(_) => "Manual",
+        Routing::Manual { .. } => "Manual",
     }
 }
 

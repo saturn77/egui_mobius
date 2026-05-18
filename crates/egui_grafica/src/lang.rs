@@ -44,7 +44,7 @@
 //!
 //! - Node kinds: `rect`, `circle`, `ellipse`. `Path` / `Group` nodes are
 //!   printed as `rect` (lossy) and not yet parseable.
-//! - `Routing::Manual` prints as `orthogonal`.
+//! - `Routing::Manual { mid_offset }` round-trips as `routing manual <n>`.
 //! - `Scene::groups` is not yet expressed.
 //! - `#` line comments: comments leading a top-level item (the file header,
 //!   `settings`, a `node`, a `wire`) survive a round-trip via
@@ -717,6 +717,7 @@ impl Parser {
             "orthogonal" => Ok(Routing::Orthogonal),
             "bezier" => Ok(Routing::Bezier),
             "straight" => Ok(Routing::Straight),
+            "manual" => Ok(Routing::Manual { mid_offset: self.number()? }),
             other => self.err(format!("unknown routing '{other}'")),
         }
     }
@@ -833,7 +834,7 @@ impl<'a> Printer<'a> {
         self.line(2, &format!("units {}", units_kw(s.grid_units)));
         self.line(2, &format!("snap {}", onoff(s.snap_to_grid)));
         self.line(2, &format!("show_grid {}", onoff(s.show_grid)));
-        self.line(2, &format!("routing {}", routing_kw(&s.default_routing)));
+        self.line(2, &format!("routing {}", routing_text(&s.default_routing)));
         if let Some(p) = &s.paper_size {
             self.line(2, &format!("paper {}", quote(p)));
         }
@@ -895,7 +896,7 @@ impl<'a> Printer<'a> {
                 edge.id.0, edge.from.0.0, edge.from.1.0, edge.to.0.0, edge.to.1.0
             ),
         );
-        self.line(2, &format!("routing {}", routing_kw(&edge.routing)));
+        self.line(2, &format!("routing {}", routing_text(&edge.routing)));
         let o = &edge.overlay;
         self.line(2, &format!("stroke {} {} {}", quote(&o.color), num(o.width), line_style_kw(o.line_style)));
         self.line(2, &format!("arrow {} {}", arrow_head_kw(o.arrow_head), arrow_head_kw(o.arrow_tail)));
@@ -958,13 +959,12 @@ fn line_style_kw(s: LineStyle) -> &'static str {
     }
 }
 
-fn routing_kw(r: &Routing) -> &'static str {
+fn routing_text(r: &Routing) -> String {
     match r {
-        Routing::Orthogonal => "orthogonal",
-        Routing::Bezier => "bezier",
-        Routing::Straight => "straight",
-        // v1: Manual is not yet expressible — printed as orthogonal.
-        Routing::Manual(_) => "orthogonal",
+        Routing::Orthogonal => "orthogonal".to_string(),
+        Routing::Bezier => "bezier".to_string(),
+        Routing::Straight => "straight".to_string(),
+        Routing::Manual { mid_offset } => format!("manual {}", num(*mid_offset)),
     }
 }
 
