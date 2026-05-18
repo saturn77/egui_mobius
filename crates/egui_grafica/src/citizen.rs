@@ -45,10 +45,11 @@ use crate::render::{
 };
 use crate::router::port_world_position;
 
-/// Pointer-to-port grab tolerance, in screen pixels.
-const PORT_GRAB_PX: f32 = 8.0;
+/// Pointer-to-port grab tolerance, in screen pixels — a generous safety ring
+/// so pressing near a port reliably grabs it instead of panning the scene.
+const PORT_GRAB_PX: f32 = 14.0;
 /// Pointer-to-wire grab tolerance, in screen pixels.
-const EDGE_GRAB_PX: f32 = 6.0;
+const EDGE_GRAB_PX: f32 = 10.0;
 
 /// What the ribbon's File menu requested this frame.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -394,9 +395,14 @@ impl CanvasCitizen {
         let shift = ui.input(|i| i.modifiers.shift);
 
         // Press: ports take priority (start a connection), then node bodies
-        // (drag the selection), then empty space (pan).
+        // (drag the selection), then wires (select), then empty space (pan).
+        //
+        // Hit-test at the true press origin, not `interact_pointer_pos` —
+        // egui only reports a drag once the pointer has moved a few pixels,
+        // and testing that drifted point misses thin wires and small ports,
+        // which is what made selection fall through to panning.
         if response.drag_started()
-            && let Some(screen) = response.interact_pointer_pos()
+            && let Some(screen) = ui.input(|i| i.pointer.press_origin())
         {
             let world = self.viewport.screen_to_world(screen);
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
