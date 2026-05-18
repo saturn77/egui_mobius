@@ -1,0 +1,49 @@
+# egui_grafica — updates log
+
+Chronological log of `egui_grafica` changes, newest first. Spans
+2026-05-14 → 2026-05-18.
+
+## Interaction & geometry
+
+- `389908f` — drag ports along the node perimeter (spatial `Connecting`
+  gesture, latches into connection-draw once the cursor leaves the node);
+  double-click a pivot to delete it.
+- `dade252` — selectable canvas background (Light / Slate / Charcoal /
+  Dark); grid ink flips to stay visible on dark backgrounds.
+- `a58f434` — node shapes as hypercurve `Contour2`; exact point-in-contour
+  hit-testing replaces the bounding-box approximation.
+- `a8b200b` — bezier routing through hypercurve's certified flattener
+  (provable flatness bound).
+- `aecb6cf` — adopted hypercurve as the geometry kernel; added the
+  `geometry` f32 ⇄ `Real` bridge.
+- `4d907e3` — waypoint-based wire re-routing: drag any segment (both axes),
+  double-click a wire to insert a pivot vertex.
+- `1ce2f02` — first wire re-routing pass (`DraggingSegment` gesture).
+- `8fb653c` — canvas interaction state machine (`CanvasFsm`).
+- `31350f6` — fix: hit-test at the true press origin so thin wires and
+  small ports select reliably instead of falling through to panning.
+- `c9e8e9b` — extracted connection routing into a dedicated `router`
+  module.
+
+## Connections & editing
+
+- `e134f31` — select and delete wires (and nodes); `Delete`/`Backspace`.
+- `d6ec427` — create connections by dragging port → port.
+- `2b14bb4` — node selection and drag (shift multi-select, snap-to-grid).
+
+## DSL
+
+- `31baf5e` — load/save `.canvas` files from the ribbon File menu.
+- `b002a7c` — comment preservation through a `.canvas` round-trip.
+- `76e22d3` — implemented the `.canvas` DSL: lexer, parser, pretty-printer.
+
+## Foundations
+
+- `d21d39a` — render pipeline, `Registry` backend-model, dockable ribbon.
+- `9167828` — new crate: programmable canvas citizen, DSL-first model.
+
+## Notes
+
+- 34 unit tests, clippy clean throughout.
+- Local-only commits may be ahead of origin — check `git status` before
+  assuming the remote is current.
