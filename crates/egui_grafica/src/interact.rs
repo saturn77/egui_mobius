@@ -92,8 +92,10 @@ pub enum CanvasState {
     MovingNodes,
     /// Drawing a new connection from a source port.
     Connecting,
-    /// Dragging a wire segment to re-route it.
+    /// Dragging a wire segment to re-route it (1 DOF, perpendicular).
     DraggingSegment,
+    /// Dragging a wire's pivot vertex (2 DOF, free).
+    DraggingWaypoint,
 }
 
 /// What the pointer pressed on — decides which gesture a press begins.
@@ -103,6 +105,8 @@ pub enum HitTarget {
     NodeBody,
     Port,
     WireSegment,
+    /// A pivot vertex on a hand-routed wire.
+    Waypoint,
 }
 
 /// Events that drive FSM transitions.
@@ -124,6 +128,7 @@ fn next_state(state: CanvasState, event: CanvasEvent, target: HitTarget) -> Opti
         (Idle, Press, Empty) => Some(Panning),
         (Idle, Press, NodeBody) => Some(MovingNodes),
         (Idle, Press, Port) => Some(Connecting),
+        (Idle, Press, Waypoint) => Some(DraggingWaypoint),
         (Idle, Press, WireSegment) => Some(DraggingSegment),
         // Any active gesture ends on release or cancel.
         (s, Release, _) | (s, Cancel, _) if s != Idle => Some(Idle),
@@ -145,8 +150,17 @@ pub struct CanvasFsm {
     pub node_origins: Vec<(NodeId, (f32, f32))>,
     /// `Connecting`: the source port.
     pub connect_from: Option<(NodeId, PortId)>,
-    /// `DraggingSegment`: the wire being re-routed.
+    /// `DraggingSegment` / `DraggingWaypoint`: the wire being re-routed.
     pub drag_edge: Option<EdgeId>,
+    /// `DraggingSegment`: index of the dragged segment in `drag_origin_pts`.
+    pub drag_segment: usize,
+    /// `DraggingSegment`: whether the dragged segment is horizontal.
+    pub drag_axis_horizontal: bool,
+    /// `DraggingSegment`: the full point list at grab time, with endpoint
+    /// stubs inserted so the grabbed segment has two movable interior ends.
+    pub drag_origin_pts: Vec<(f32, f32)>,
+    /// `DraggingWaypoint`: index into the wire's waypoint list.
+    pub drag_waypoint: usize,
 }
 
 impl CanvasFsm {
@@ -183,7 +197,117 @@ impl CanvasFsm {
         self.node_origins.clear();
         self.connect_from = None;
         self.drag_edge = None;
+        self.drag_segment = 0;
+        self.drag_origin_pts.clear();
+        self.drag_waypoint = 0;
     }
+}
+
+// =============================================================================
+// Wire re-routing geometry
+// =============================================================================
+
+/// The pivot vertex on a hand-routed wire nearest `world`, within `radius`.
+/// Only `Routing::Manual` wires have pivots. Returns `(edge id, waypoint
+/// index)`.
+pub fn hit_test_waypoint(scene: &Scene, world: (f32, f32), radius: f32) -> Option<(EdgeId, usize)> {
+    let r2 = radius * radius;
+    let mut best: Option<(f32, EdgeId, usize)> = None;
+    for edge in &scene.edges {
+        if let crate::model::Routing::Manual { waypoints } = &edge.routing {
+            for (i, &(wx, wy)) in waypoints.iter().enumerate() {
+                let d2 = (wx - world.0).powi(2) + (wy - world.1).powi(2);
+                if d2 <= r2 && best.as_ref().is_none_or(|(bd, _, _)| d2 < *bd) {
+                    best = Some((d2, edge.id.clone(), i));
+                }
+            }
+        }
+    }
+    best.map(|(_, id, i)| (id, i))
+}
+
+/// A prepared segment drag — see [`prepare_segment_drag`].
+pub struct SegmentDrag {
+    /// The full point list, with endpoint stubs inserted.
+    pub points: Vec<(f32, f32)>,
+    /// Index of the grabbed segment within `points`.
+    pub segment: usize,
+    /// Whether the grabbed segment is horizontal (drag moves it in Y).
+    pub horizontal: bool,
+}
+
+/// Prepare a segment drag. Given a wire's `polyline` and the `press` point,
+/// returns the working point list — with a stub inserted if the grabbed
+/// segment touched a pinned endpoint, so the segment has two movable interior
+/// ends — plus the grabbed segment index and orientation.
+pub fn prepare_segment_drag(polyline: &[(f32, f32)], press: (f32, f32)) -> Option<SegmentDrag> {
+    if polyline.len() < 2 {
+        return None;
+    }
+    let mut pts = polyline.to_vec();
+
+    // Nearest segment to the press.
+    let mut k = 0usize;
+    let mut best = f32::INFINITY;
+    for i in 0..pts.len() - 1 {
+        let d = point_segment_distance(press, pts[i], pts[i + 1]);
+        if d < best {
+            best = d;
+            k = i;
+        }
+    }
+
+    // If the grabbed segment touches a pinned endpoint, clone that endpoint
+    // into a new interior waypoint so the whole segment can move.
+    if k == 0 {
+        pts.insert(1, pts[0]);
+        k = 1;
+    }
+    if k + 1 == pts.len() - 1 {
+        let last = pts.len() - 1;
+        pts.insert(last, pts[last]);
+    }
+
+    let horizontal = (pts[k].1 - pts[k + 1].1).abs() <= (pts[k].0 - pts[k + 1].0).abs();
+    Some(SegmentDrag { points: pts, segment: k, horizontal })
+}
+
+/// Insert a pivot vertex into a wire's `polyline` at the point on it nearest
+/// `click`. Returns the new interior waypoint list (the polyline minus its
+/// pinned endpoints).
+pub fn insert_pivot(polyline: &[(f32, f32)], click: (f32, f32)) -> Vec<(f32, f32)> {
+    if polyline.len() < 2 {
+        return Vec::new();
+    }
+    // Nearest segment, and the projected point on it.
+    let mut k = 0usize;
+    let mut best = f32::INFINITY;
+    let mut pivot = polyline[0];
+    for i in 0..polyline.len() - 1 {
+        let p = project_onto_segment(click, polyline[i], polyline[i + 1]);
+        let d = ((p.0 - click.0).powi(2) + (p.1 - click.1).powi(2)).sqrt();
+        if d < best {
+            best = d;
+            k = i;
+            pivot = p;
+        }
+    }
+    let mut pts = polyline.to_vec();
+    pts.insert(k + 1, pivot);
+    // Interior points = the waypoint list.
+    pts[1..pts.len() - 1].to_vec()
+}
+
+/// Closest point on segment `a`–`b` to `p`.
+fn project_onto_segment(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> (f32, f32) {
+    let (abx, aby) = (b.0 - a.0, b.1 - a.1);
+    let len2 = abx * abx + aby * aby;
+    let t = if len2 <= f32::EPSILON {
+        0.0
+    } else {
+        (((p.0 - a.0) * abx + (p.1 - a.1) * aby) / len2).clamp(0.0, 1.0)
+    };
+    (a.0 + t * abx, a.1 + t * aby)
 }
 
 // =============================================================================

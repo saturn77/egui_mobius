@@ -233,11 +233,11 @@ pub enum Routing {
     Orthogonal,
     Bezier,
     Straight,
-    /// A hand-routed wire: orthogonal, but the middle vertical segment is
-    /// shifted `mid_offset` world units in X from its natural midpoint.
-    /// The offset is relative to the live endpoints, so the route survives
-    /// the nodes being moved.
-    Manual { mid_offset: f32 },
+    /// A hand-routed wire: an orthogonal polyline threaded through these
+    /// waypoints (absolute world coordinates). The full path is
+    /// `[from] + waypoints + [to]`, with `from`/`to` resolved live from the
+    /// ports. Dragging any segment edits the waypoints bounding it.
+    Manual { waypoints: Vec<(f32, f32)> },
 }
 
 /// Visual style for an edge.

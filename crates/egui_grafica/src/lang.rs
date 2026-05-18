@@ -717,7 +717,15 @@ impl Parser {
             "orthogonal" => Ok(Routing::Orthogonal),
             "bezier" => Ok(Routing::Bezier),
             "straight" => Ok(Routing::Straight),
-            "manual" => Ok(Routing::Manual { mid_offset: self.number()? }),
+            "manual" => {
+                let mut waypoints = Vec::new();
+                while matches!(self.peek(), Some(Tok::Num(_))) {
+                    let x = self.number()?;
+                    let y = self.number()?;
+                    waypoints.push((x, y));
+                }
+                Ok(Routing::Manual { waypoints })
+            }
             other => self.err(format!("unknown routing '{other}'")),
         }
     }
@@ -964,7 +972,13 @@ fn routing_text(r: &Routing) -> String {
         Routing::Orthogonal => "orthogonal".to_string(),
         Routing::Bezier => "bezier".to_string(),
         Routing::Straight => "straight".to_string(),
-        Routing::Manual { mid_offset } => format!("manual {}", num(*mid_offset)),
+        Routing::Manual { waypoints } => {
+            let mut s = String::from("manual");
+            for (x, y) in waypoints {
+                s.push_str(&format!(" {} {}", num(*x), num(*y)));
+            }
+            s
+        }
     }
 }
 

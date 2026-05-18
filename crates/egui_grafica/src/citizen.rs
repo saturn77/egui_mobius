@@ -36,8 +36,8 @@ use egui::{Color32, Key, Sense};
 use egui_phosphor::regular as ico;
 
 use crate::interact::{
-    hit_test_edge, hit_test_node, hit_test_port, snap_to_grid, CanvasEvent, CanvasFsm, CanvasState,
-    HitTarget, Selection,
+    hit_test_edge, hit_test_node, hit_test_port, hit_test_waypoint, insert_pivot,
+    prepare_segment_drag, snap_to_grid, CanvasEvent, CanvasFsm, CanvasState, HitTarget, Selection,
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing, Scene};
@@ -409,11 +409,15 @@ impl CanvasCitizen {
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
             let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
 
-            // Priority: port > node body > wire > empty.
+            // Priority: pivot vertex > port > node body > wire > empty.
+            let waypoint_hit =
+                self.registry.with_scene(|s| hit_test_waypoint(s, world, port_radius));
             let port_hit = self.registry.with_scene(|s| hit_test_port(s, world, port_radius));
             let node_hit = self.registry.with_scene(|s| hit_test_node(s, world));
             let edge_hit = self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh));
-            let target = if port_hit.is_some() {
+            let target = if waypoint_hit.is_some() {
+                HitTarget::Waypoint
+            } else if port_hit.is_some() {
                 HitTarget::Port
             } else if node_hit.is_some() {
                 HitTarget::NodeBody
@@ -453,6 +457,12 @@ impl CanvasCitizen {
                 CanvasState::Connecting => {
                     self.fsm.connect_from = port_hit;
                 }
+                CanvasState::DraggingWaypoint => {
+                    let (eid, idx) = waypoint_hit.expect("Waypoint target implies a hit");
+                    self.selection.select_only_edge(eid.clone());
+                    self.fsm.drag_edge = Some(eid);
+                    self.fsm.drag_waypoint = idx;
+                }
                 CanvasState::DraggingSegment => {
                     let eid = edge_hit.expect("WireSegment target implies a wire hit");
                     if shift {
@@ -460,7 +470,27 @@ impl CanvasCitizen {
                     } else {
                         self.selection.select_only_edge(eid.clone());
                     }
-                    self.fsm.drag_edge = Some(eid);
+                    // Materialise the wire's path and prepare the segment drag
+                    // — a stub is inserted if the grabbed segment touched a
+                    // pinned endpoint, so it has two movable interior ends.
+                    let polyline = self.registry.with_scene(|s| {
+                        s.edges.iter().find(|e| e.id == eid).and_then(|e| {
+                            let f = port_world_position(s, &e.from.0, &e.from.1)?;
+                            let t = port_world_position(s, &e.to.0, &e.to.1)?;
+                            Some(match &e.routing {
+                                Routing::Manual { .. } => crate::router::edge_polyline(s, e)?,
+                                _ => crate::router::route(f, t, &Routing::Orthogonal),
+                            })
+                        })
+                    });
+                    if let Some(poly) = polyline
+                        && let Some(sd) = prepare_segment_drag(&poly, world)
+                    {
+                        self.fsm.drag_edge = Some(eid);
+                        self.fsm.drag_segment = sd.segment;
+                        self.fsm.drag_axis_horizontal = sd.horizontal;
+                        self.fsm.drag_origin_pts = sd.points;
+                    }
                 }
                 _ => {}
             }
@@ -502,24 +532,53 @@ impl CanvasCitizen {
                     }
                 }
                 CanvasState::DraggingSegment => {
-                    // Re-route: the wire's vertical segment follows the
-                    // cursor's X. The offset is stored relative to the live
-                    // endpoints' midpoint, so the route survives node moves.
+                    // Move the grabbed segment perpendicular to itself:
+                    // a horizontal segment in Y, a vertical segment in X.
+                    if let Some(eid) = self.fsm.drag_edge.clone()
+                        && let Some(screen) = response.interact_pointer_pos()
+                        && !self.fsm.drag_origin_pts.is_empty()
+                    {
+                        let cursor = self.viewport.screen_to_world(screen);
+                        let (dx, dy) =
+                            (cursor.0 - self.fsm.grab_world.0, cursor.1 - self.fsm.grab_world.1);
+                        let mut pts = self.fsm.drag_origin_pts.clone();
+                        let k = self.fsm.drag_segment;
+                        if k + 1 < pts.len() {
+                            if self.fsm.drag_axis_horizontal {
+                                pts[k].1 += dy;
+                                pts[k + 1].1 += dy;
+                            } else {
+                                pts[k].0 += dx;
+                                pts[k + 1].0 += dx;
+                            }
+                        }
+                        let waypoints = pts[1..pts.len() - 1].to_vec();
+                        self.registry
+                            .update_edge_routing(&eid, Routing::Manual { waypoints });
+                    }
+                }
+                CanvasState::DraggingWaypoint => {
+                    // Move the pivot vertex freely (both axes).
                     if let Some(eid) = self.fsm.drag_edge.clone()
                         && let Some(screen) = response.interact_pointer_pos()
                     {
                         let cursor = self.viewport.screen_to_world(screen);
-                        let endpoints = self.registry.with_scene(|s| {
+                        let idx = self.fsm.drag_waypoint;
+                        let updated = self.registry.with_scene(|s| {
                             s.edges.iter().find(|e| e.id == eid).and_then(|e| {
-                                let f = port_world_position(s, &e.from.0, &e.from.1)?;
-                                let t = port_world_position(s, &e.to.0, &e.to.1)?;
-                                Some((f, t))
+                                if let Routing::Manual { waypoints } = &e.routing {
+                                    let mut wps = waypoints.clone();
+                                    if idx < wps.len() {
+                                        wps[idx] = cursor;
+                                        return Some(wps);
+                                    }
+                                }
+                                None
                             })
                         });
-                        if let Some((f, t)) = endpoints {
-                            let mid_offset = cursor.0 - (f.0 + t.0) * 0.5;
+                        if let Some(waypoints) = updated {
                             self.registry
-                                .update_edge_routing(&eid, Routing::Manual { mid_offset });
+                                .update_edge_routing(&eid, Routing::Manual { waypoints });
                         }
                     }
                 }
@@ -603,8 +662,26 @@ impl CanvasCitizen {
             }
         }
 
+        // Double-click: on a wire it inserts a pivot vertex; on empty space
+        // it zooms to fit.
         if response.double_clicked() {
-            self.fit_to_rect(rect);
+            let inserted = response.interact_pointer_pos().and_then(|screen| {
+                let world = self.viewport.screen_to_world(screen);
+                let thresh = EDGE_GRAB_PX / self.viewport.zoom;
+                let eid = self.registry.with_scene(|s| hit_test_edge(s, world, thresh))?;
+                let poly = self
+                    .registry
+                    .with_scene(|s| s.edges.iter().find(|e| e.id == eid).cloned())
+                    .and_then(|e| self.registry.with_scene(|s| crate::router::edge_polyline(s, &e)))?;
+                Some((eid, insert_pivot(&poly, world)))
+            });
+            match inserted {
+                Some((eid, waypoints)) => {
+                    self.registry
+                        .update_edge_routing(&eid, Routing::Manual { waypoints });
+                }
+                None => self.fit_to_rect(rect),
+            }
         }
 
         painter.rect_filled(rect, 0.0, Color32::from_rgb(0xF8, 0xFA, 0xFC));

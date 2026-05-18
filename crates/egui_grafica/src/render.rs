@@ -19,7 +19,7 @@ use egui::{Align2, Color32, CornerRadius, FontFamily, FontId, Painter, Pos2, Rec
 
 use crate::model::{
     ArrowHead, Border, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, LineStyle, Node, NodeId,
-    NodeKind, Scene, TextAnchor, TextLabel,
+    NodeKind, Routing, Scene, TextAnchor, TextLabel,
 };
 use crate::router::{edge_polyline, port_position_on_node};
 
@@ -82,6 +82,21 @@ pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport, screen
         paint_edge(painter, edge, scene, viewport);
     }
     paint_ports(painter, scene, viewport);
+    paint_waypoints(painter, scene, viewport);
+}
+
+/// Draw pivot-vertex handles for hand-routed wires so they can be seen and
+/// grabbed. Constant screen radius, like ports.
+pub fn paint_waypoints(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+    let accent = Color32::from_rgb(0x25, 0x63, 0xEB);
+    for edge in &scene.edges {
+        if let Routing::Manual { waypoints } = &edge.routing {
+            for &(wx, wy) in waypoints {
+                let p = viewport.world_to_screen((wx, wy));
+                painter.circle(p, 4.0, Color32::WHITE, Stroke::new(1.5, accent));
+            }
+        }
+    }
 }
 
 /// Draw every port as a small handle so connection points are visible and
