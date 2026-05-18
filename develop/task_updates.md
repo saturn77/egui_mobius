@@ -5,6 +5,9 @@ Chronological log of `egui_grafica` changes, newest first. Spans
 
 ## Interaction & geometry
 
+- `7aef258` — gate canvas gestures to the primary mouse button so a
+  right-click never starts a pan or drag.
+- `0e97026` — marquee selection, middle-button pan, wrapping ribbon.
 - `389908f` — drag ports along the node perimeter (spatial `Connecting`
   gesture, latches into connection-draw once the cursor leaves the node);
   double-click a pivot to delete it.
@@ -27,6 +30,11 @@ Chronological log of `egui_grafica` changes, newest first. Spans
 
 ## Connections & editing
 
+- `ae76f61` — edit wire colour, width, and line style from the context
+  menu (a 'Wire style' submenu); edits flow through
+  `Registry::update_edge_overlay`.
+- `589fb0d` — right-click context menu: delete pivot/segment/wire, add a
+  connection port to a node.
 - `e134f31` — select and delete wires (and nodes); `Delete`/`Backspace`.
 - `d6ec427` — create connections by dragging port → port.
 - `2b14bb4` — node selection and drag (shift multi-select, snap-to-grid).
