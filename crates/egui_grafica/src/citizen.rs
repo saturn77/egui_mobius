@@ -42,8 +42,8 @@ use crate::interact::{
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
-    CanvasBackground, Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing,
-    Scene,
+    CanvasBackground, Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, Port, PortId,
+    PortKind, Routing, Scene,
 };
 use crate::registry::Registry;
 use crate::render::{
@@ -95,6 +95,17 @@ pub struct CanvasCitizen {
     loaded_comments: Vec<CommentBlock>,
     /// Last load/save outcome, shown in the ribbon.
     status: String,
+    /// World position of the last right-click — what the context menu acts on.
+    context_world: Option<(f32, f32)>,
+}
+
+/// An action chosen from the right-click context menu, applied after the
+/// menu closure returns.
+enum ContextAction {
+    DeleteEdge(EdgeId),
+    DeleteSegment(EdgeId, (f32, f32)),
+    DeletePivot(EdgeId, usize),
+    AddPort(NodeId, (f32, f32)),
 }
 
 impl CanvasCitizen {
@@ -115,6 +126,7 @@ impl CanvasCitizen {
             current_path: None,
             loaded_comments: Vec::new(),
             status: String::new(),
+            context_world: None,
         }
     }
 
@@ -794,6 +806,54 @@ impl CanvasCitizen {
             }
         }
 
+        // ── Right-click context menu ──
+        if response.secondary_clicked()
+            && let Some(p) = response.interact_pointer_pos()
+        {
+            self.context_world = Some(self.viewport.screen_to_world(p));
+        }
+        let ctx = self.context_world;
+        let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+        let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
+        let (hit_wp, hit_edge, hit_node) = match ctx {
+            Some(w) => self.registry.with_scene(|s| {
+                (
+                    hit_test_waypoint(s, w, port_radius),
+                    hit_test_edge(s, w, edge_thresh),
+                    hit_test_node(s, w),
+                )
+            }),
+            None => (None, None, None),
+        };
+        let mut action: Option<ContextAction> = None;
+        response.context_menu(|ui| {
+            if let Some((eid, idx)) = &hit_wp {
+                if ui.button("Delete pivot").clicked() {
+                    action = Some(ContextAction::DeletePivot(eid.clone(), *idx));
+                    ui.close();
+                }
+            } else if let Some(eid) = &hit_edge {
+                if ui.button("Delete segment").clicked() {
+                    action = Some(ContextAction::DeleteSegment(eid.clone(), ctx.unwrap_or_default()));
+                    ui.close();
+                }
+                if ui.button("Delete wire").clicked() {
+                    action = Some(ContextAction::DeleteEdge(eid.clone()));
+                    ui.close();
+                }
+            } else if let Some(nid) = &hit_node {
+                if ui.button("Add connection").clicked() {
+                    action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
+                    ui.close();
+                }
+            } else {
+                ui.label(egui::RichText::new("Nothing here").weak());
+            }
+        });
+        if let Some(action) = action {
+            self.apply_context_action(action);
+        }
+
         let background = self.registry.with_scene(|s| s.settings.background);
         painter.rect_filled(rect, 0.0, background_color(background));
 
@@ -873,6 +933,101 @@ impl CanvasCitizen {
             self.registry.remove_node(id);
         }
         self.selection.clear();
+    }
+
+    /// Apply a right-click context-menu action.
+    fn apply_context_action(&mut self, action: ContextAction) {
+        match action {
+            ContextAction::DeleteEdge(eid) => {
+                self.registry.remove_edge(&eid);
+                self.selection.edges.retain(|e| e != &eid);
+            }
+            ContextAction::DeletePivot(eid, idx) => {
+                let routing = self.registry.with_scene(|s| {
+                    s.edges.iter().find(|e| e.id == eid).map(|e| match &e.routing {
+                        Routing::Manual { waypoints } => {
+                            let mut wps = waypoints.clone();
+                            if idx < wps.len() {
+                                wps.remove(idx);
+                            }
+                            if wps.is_empty() {
+                                Routing::Orthogonal
+                            } else {
+                                Routing::Manual { waypoints: wps }
+                            }
+                        }
+                        other => other.clone(),
+                    })
+                });
+                if let Some(routing) = routing {
+                    self.registry.update_edge_routing(&eid, routing);
+                }
+            }
+            ContextAction::DeleteSegment(eid, world) => {
+                let routing = self.registry.with_scene(|s| -> Option<Routing> {
+                    let e = s.edges.iter().find(|e| e.id == eid)?;
+                    let Routing::Manual { waypoints } = &e.routing else {
+                        return None; // an auto-routed wire has no user segments
+                    };
+                    let poly = crate::router::edge_polyline(s, e)?;
+                    let k = crate::interact::nearest_segment_index(&poly, world)?;
+                    let last_wp = poly.len().saturating_sub(2);
+                    // waypoint j corresponds to polyline index j + 1.
+                    let wp_idx = if k < last_wp {
+                        k
+                    } else if (1..=last_wp).contains(&k) {
+                        k - 1
+                    } else {
+                        return None; // segment bounded by the two ports
+                    };
+                    let mut wps = waypoints.clone();
+                    if wp_idx >= wps.len() {
+                        return None;
+                    }
+                    wps.remove(wp_idx);
+                    Some(if wps.is_empty() {
+                        Routing::Orthogonal
+                    } else {
+                        Routing::Manual { waypoints: wps }
+                    })
+                });
+                if let Some(routing) = routing {
+                    self.registry.update_edge_routing(&eid, routing);
+                }
+            }
+            ContextAction::AddPort(nid, world) => {
+                let info = self.registry.with_scene(|s| {
+                    s.nodes.iter().find(|n| n.id == nid).map(|n| {
+                        let anchor = nearest_perimeter_anchor(
+                            n.transform.position,
+                            n.transform.size,
+                            world,
+                        );
+                        let mut k = n.ports.len();
+                        let id = loop {
+                            let cand = format!("port{k}");
+                            if !n.ports.iter().any(|p| p.id.0 == cand) {
+                                break cand;
+                            }
+                            k += 1;
+                        };
+                        (id, anchor)
+                    })
+                });
+                if let Some((id, anchor)) = info {
+                    self.registry.add_port(
+                        &nid,
+                        Port {
+                            id: PortId(id.clone()),
+                            name: id,
+                            kind: PortKind::Bidir,
+                            anchor,
+                            data_type: None,
+                        },
+                    );
+                }
+            }
+        }
     }
 
     fn apply_routing_to_all(&self, routing: Routing) {

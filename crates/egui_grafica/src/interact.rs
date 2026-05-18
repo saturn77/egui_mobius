@@ -309,6 +309,22 @@ pub fn insert_pivot(polyline: &[(f32, f32)], click: (f32, f32)) -> Vec<(f32, f32
     pts[1..pts.len() - 1].to_vec()
 }
 
+/// Index of the polyline segment nearest `world` — which segment of a wire
+/// the pointer is over. `None` for a degenerate polyline.
+pub fn nearest_segment_index(polyline: &[(f32, f32)], world: (f32, f32)) -> Option<usize> {
+    if polyline.len() < 2 {
+        return None;
+    }
+    let mut best = (f32::INFINITY, 0usize);
+    for i in 0..polyline.len() - 1 {
+        let d = point_segment_distance(world, polyline[i], polyline[i + 1]);
+        if d < best.0 {
+            best = (d, i);
+        }
+    }
+    Some(best.1)
+}
+
 /// Closest point on segment `a`–`b` to `p`.
 fn project_onto_segment(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> (f32, f32) {
     let (abx, aby) = (b.0 - a.0, b.1 - a.1);

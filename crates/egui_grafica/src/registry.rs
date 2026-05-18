@@ -30,8 +30,8 @@ use std::sync::MutexGuard;
 use egui_mobius_reactive::Dynamic;
 
 use crate::model::{
-    CanvasSettings, Edge, EdgeId, EdgeOverlay, Node, NodeId, Overlay, PortAnchor, PortId, Routing,
-    Scene,
+    CanvasSettings, Edge, EdgeId, EdgeOverlay, Node, NodeId, Overlay, Port, PortAnchor, PortId,
+    Routing, Scene,
 };
 
 /// Owns the [`Scene`] and is the only legitimate place to mutate it.
@@ -101,6 +101,15 @@ impl Registry {
         self.mutate(|scene| {
             if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {
                 node.transform.position = position;
+            }
+        });
+    }
+
+    /// Append a port to a node.
+    pub fn add_port(&self, node: &NodeId, port: Port) {
+        self.mutate(|scene| {
+            if let Some(n) = scene.nodes.iter_mut().find(|n| &n.id == node) {
+                n.ports.push(port);
             }
         });
     }
