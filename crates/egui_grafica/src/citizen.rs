@@ -42,8 +42,8 @@ use crate::interact::{
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
-    CanvasBackground, Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, Port, PortId,
-    PortKind, Routing, Scene,
+    CanvasBackground, Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, LineStyle, NodeId, Port,
+    PortId, PortKind, Routing, Scene,
 };
 use crate::registry::Registry;
 use crate::render::{
@@ -106,6 +106,26 @@ enum ContextAction {
     DeleteSegment(EdgeId, (f32, f32)),
     DeletePivot(EdgeId, usize),
     AddPort(NodeId, (f32, f32)),
+    SetEdgeOverlay(EdgeId, EdgeOverlay),
+}
+
+fn hex_to_rgb(hex: &str) -> [u8; 3] {
+    let s = hex.trim_start_matches('#');
+    let byte = |i: usize| u8::from_str_radix(s.get(i..i + 2).unwrap_or("00"), 16).unwrap_or(0);
+    [byte(0), byte(2), byte(4)]
+}
+
+fn rgb_to_hex(rgb: [u8; 3]) -> String {
+    format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2])
+}
+
+fn line_style_label(s: crate::model::LineStyle) -> &'static str {
+    use crate::model::LineStyle;
+    match s {
+        LineStyle::Solid => "Solid",
+        LineStyle::Dashed => "Dashed",
+        LineStyle::Dotted => "Dotted",
+    }
 }
 
 impl CanvasCitizen {
@@ -825,6 +845,10 @@ impl CanvasCitizen {
             }),
             None => (None, None, None),
         };
+        let edge_overlay = hit_edge.as_ref().and_then(|eid| {
+            self.registry
+                .with_scene(|s| s.edges.iter().find(|e| &e.id == eid).map(|e| e.overlay.clone()))
+        });
         let mut action: Option<ContextAction> = None;
         response.context_menu(|ui| {
             if let Some((eid, idx)) = &hit_wp {
@@ -840,6 +864,30 @@ impl CanvasCitizen {
                 if ui.button("Delete wire").clicked() {
                     action = Some(ContextAction::DeleteEdge(eid.clone()));
                     ui.close();
+                }
+                if let Some(overlay) = &edge_overlay {
+                    ui.menu_button("Wire style", |ui| {
+                        let mut next = overlay.clone();
+                        let mut rgb = hex_to_rgb(&next.color);
+                        ui.horizontal(|ui| {
+                            ui.label("Color");
+                            ui.color_edit_button_srgb(&mut rgb);
+                        });
+                        next.color = rgb_to_hex(rgb);
+                        ui.add(egui::Slider::new(&mut next.width, 0.5..=6.0).text("Width"));
+                        ui.separator();
+                        for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
+                            if ui
+                                .selectable_label(next.line_style == style, line_style_label(style))
+                                .clicked()
+                            {
+                                next.line_style = style;
+                            }
+                        }
+                        if next != *overlay {
+                            action = Some(ContextAction::SetEdgeOverlay(eid.clone(), next));
+                        }
+                    });
                 }
             } else if let Some(nid) = &hit_node {
                 if ui.button("Add connection").clicked() {
@@ -1026,6 +1074,9 @@ impl CanvasCitizen {
                         },
                     );
                 }
+            }
+            ContextAction::SetEdgeOverlay(eid, overlay) => {
+                self.registry.update_edge_overlay(&eid, overlay);
             }
         }
     }
