@@ -81,13 +81,16 @@ impl Selection {
 // than by retained-mode press/move/release event callbacks.
 
 /// What the canvas pointer is currently doing.
+///
+/// These are the *primary-button* gestures. Panning is a middle-button
+/// action handled outside the FSM.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CanvasState {
     /// Resting — no gesture in progress.
     #[default]
     Idle,
-    /// Panning the viewport.
-    Panning,
+    /// Rubber-band selecting — left-drag from empty space.
+    Marquee,
     /// Moving the selected nodes.
     MovingNodes,
     /// Drawing a new connection from a source port.
@@ -125,7 +128,7 @@ fn next_state(state: CanvasState, event: CanvasEvent, target: HitTarget) -> Opti
     use HitTarget::*;
     match (state, event, target) {
         // From Idle, a press begins a gesture chosen by what was hit.
-        (Idle, Press, Empty) => Some(Panning),
+        (Idle, Press, Empty) => Some(Marquee),
         (Idle, Press, NodeBody) => Some(MovingNodes),
         (Idle, Press, Port) => Some(Connecting),
         (Idle, Press, Waypoint) => Some(DraggingWaypoint),
@@ -425,6 +428,35 @@ pub fn nearest_perimeter_anchor(pos: (f32, f32), size: (f32, f32), world: (f32, 
     }
 }
 
+/// Nodes and edges caught by a rubber-band rectangle spanning corners `a`
+/// and `b` (world coordinates). A node is caught if its bounding box
+/// intersects the rectangle; an edge if its whole routed path lies inside.
+pub fn marquee_pick(scene: &Scene, a: (f32, f32), b: (f32, f32)) -> (Vec<NodeId>, Vec<EdgeId>) {
+    let (min_x, max_x) = (a.0.min(b.0), a.0.max(b.0));
+    let (min_y, max_y) = (a.1.min(b.1), a.1.max(b.1));
+
+    let mut nodes = Vec::new();
+    for n in &scene.nodes {
+        let (x, y) = n.transform.position;
+        let (w, h) = n.transform.size;
+        if x < max_x && x + w > min_x && y < max_y && y + h > min_y {
+            nodes.push(n.id.clone());
+        }
+    }
+
+    let mut edges = Vec::new();
+    for e in &scene.edges {
+        if let Some(poly) = edge_polyline(scene, e)
+            && poly
+                .iter()
+                .all(|&(px, py)| px >= min_x && px <= max_x && py >= min_y && py <= max_y)
+        {
+            edges.push(e.id.clone());
+        }
+    }
+    (nodes, edges)
+}
+
 /// Snap a world coordinate to the nearest grid multiple. Returns `pos`
 /// unchanged when `spacing` is non-positive.
 pub fn snap_to_grid(pos: (f32, f32), spacing: f32) -> (f32, f32) {
@@ -567,7 +599,7 @@ mod tests {
         assert_eq!(fsm.state, CanvasState::Idle);
 
         fsm.dispatch(CanvasEvent::Press, HitTarget::Empty);
-        assert_eq!(fsm.state, CanvasState::Panning);
+        assert_eq!(fsm.state, CanvasState::Marquee);
     }
 
     #[test]

@@ -32,7 +32,7 @@
 
 use std::path::{Path, PathBuf};
 
-use egui::{Color32, Key, Sense};
+use egui::{Color32, Key, Sense, Stroke};
 use egui_phosphor::regular as ico;
 
 use crate::interact::{
@@ -136,7 +136,8 @@ impl CanvasCitizen {
             if vertical {
                 ui.vertical(body);
             } else {
-                ui.horizontal(body);
+                // Wrap onto extra rows when the controls don't fit one line.
+                ui.horizontal_wrapped(body);
             }
         };
 
@@ -534,10 +535,10 @@ impl CanvasCitizen {
         // ── Drag: act on the FSM's current state (primary button only) ──
         if response.dragged_by(egui::PointerButton::Primary) {
             match self.fsm.state {
-                CanvasState::Panning => {
-                    let delta = response.drag_delta();
-                    self.viewport.origin.x += delta.x;
-                    self.viewport.origin.y += delta.y;
+                CanvasState::Marquee => {
+                    if let Some(screen) = response.interact_pointer_pos() {
+                        self.fsm.cursor_world = self.viewport.screen_to_world(screen);
+                    }
                 }
                 CanvasState::MovingNodes => {
                     if let Some(screen) = response.interact_pointer_pos() {
@@ -651,6 +652,13 @@ impl CanvasCitizen {
             }
         }
 
+        // ── Middle-button drag pans the viewport (independent of the FSM). ──
+        if response.dragged_by(egui::PointerButton::Middle) {
+            let delta = response.drag_delta();
+            self.viewport.origin.x += delta.x;
+            self.viewport.origin.y += delta.y;
+        }
+
         // ── Release: finalise the gesture, return the FSM to Idle ──
         if response.drag_stopped_by(egui::PointerButton::Primary) {
             // Only a latched (left-the-node) gesture creates an edge; an
@@ -660,6 +668,14 @@ impl CanvasCitizen {
                 && let Some(from) = self.fsm.connect_from.clone()
             {
                 self.finish_connection(from, self.fsm.cursor_world);
+            }
+            // A marquee selects every node/edge it caught.
+            if self.fsm.state == CanvasState::Marquee {
+                let (nodes, edges) = self.registry.with_scene(|s| {
+                    crate::interact::marquee_pick(s, self.fsm.grab_world, self.fsm.cursor_world)
+                });
+                self.selection.nodes = nodes;
+                self.selection.edges = edges;
             }
             self.fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
         }
@@ -795,6 +811,21 @@ impl CanvasCitizen {
                 self.registry.with_scene(|s| port_world_position(s, &from.0, &from.1))
         {
             paint_connection_preview(&painter, from_world, self.fsm.cursor_world, &self.viewport);
+        }
+
+        // Rubber-band rectangle while marquee-selecting.
+        if self.fsm.state == CanvasState::Marquee {
+            let a = self.viewport.world_to_screen(self.fsm.grab_world);
+            let b = self.viewport.world_to_screen(self.fsm.cursor_world);
+            let marquee = egui::Rect::from_two_pos(a, b);
+            let accent = Color32::from_rgb(0x25, 0x63, 0xEB);
+            painter.rect_filled(marquee, 0.0, Color32::from_rgba_unmultiplied(0x25, 0x63, 0xEB, 28));
+            painter.rect_stroke(
+                marquee,
+                0.0,
+                Stroke::new(1.0, accent),
+                egui::StrokeKind::Inside,
+            );
         }
     }
 
