@@ -80,6 +80,45 @@ pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport, screen
     for edge in &scene.edges {
         paint_edge(painter, edge, scene, viewport);
     }
+    paint_ports(painter, scene, viewport);
+}
+
+/// Draw every port as a small handle so connection points are visible and
+/// grabbable. Handle radius is constant in screen pixels — ports stay the
+/// same grabbable size at any zoom. Filled colour encodes [`PortKind`].
+pub fn paint_ports(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+    const R: f32 = 4.0;
+    for node in &scene.nodes {
+        for port in &node.ports {
+            let p = viewport.world_to_screen(port_position_on_node(node, port));
+            painter.circle(p, R, port_fill(port.kind), Stroke::new(1.0, Color32::from_gray(40)));
+        }
+    }
+}
+
+/// Dashed rubber-band preview for a connection being drawn, from a source
+/// port to the current cursor position.
+pub fn paint_connection_preview(
+    painter: &Painter,
+    from_world: (f32, f32),
+    cursor_world: (f32, f32),
+    viewport: &Viewport,
+) {
+    let a = viewport.world_to_screen(from_world);
+    let b = viewport.world_to_screen(cursor_world);
+    let accent = Color32::from_rgb(0x25, 0x63, 0xEB);
+    paint_dashed_line(painter, a, b, Stroke::new(2.0, accent), 6.0, 4.0);
+    painter.circle_filled(b, 4.0, accent);
+}
+
+fn port_fill(kind: crate::model::PortKind) -> Color32 {
+    use crate::model::PortKind;
+    match kind {
+        PortKind::In => Color32::from_rgb(0x25, 0x63, 0xEB),
+        PortKind::Out => Color32::from_rgb(0x05, 0x96, 0x69),
+        PortKind::Bidir => Color32::from_rgb(0x7C, 0x3A, 0xED),
+        PortKind::Untyped => Color32::from_rgb(0x6B, 0x72, 0x80),
+    }
 }
 
 /// Paint the grid using `settings.grid_style`. Auto-hides when zoom is so low
@@ -496,7 +535,9 @@ fn paint_arrowhead(painter: &Painter, edge: &Edge, viewport: &Viewport, last_seg
 // Port position resolution
 // =============================================================================
 
-fn port_position_on_node(node: &Node, port: &Port) -> (f32, f32) {
+/// World-space position of a port, from its node's transform and the port's
+/// parametric anchor. Public so the interaction layer can hit-test ports.
+pub fn port_position_on_node(node: &Node, port: &Port) -> (f32, f32) {
     let (x, y) = node.transform.position;
     let (w, h) = node.transform.size;
     match port.anchor {

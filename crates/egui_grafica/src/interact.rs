@@ -8,7 +8,8 @@
 //!
 //! [`Registry`]: crate::registry::Registry
 
-use crate::model::{Node, NodeId, Scene};
+use crate::model::{Node, NodeId, PortId, Scene};
+use crate::render::port_position_on_node;
 
 // =============================================================================
 // Selection
@@ -73,6 +74,13 @@ pub enum DragState {
         grab_world: (f32, f32),
         origins: Vec<(NodeId, (f32, f32))>,
     },
+    /// Drawing a new connection from a source port. `cursor_world` tracks the
+    /// pointer so the rubber-band preview can be drawn; on release, the
+    /// nearest port to `cursor_world` becomes the edge's destination.
+    Connecting {
+        from: (NodeId, PortId),
+        cursor_world: (f32, f32),
+    },
 }
 
 // =============================================================================
@@ -97,6 +105,24 @@ fn node_bounds_contains(node: &Node, world: (f32, f32)) -> bool {
     let (x, y) = node.transform.position;
     let (w, h) = node.transform.size;
     world.0 >= x && world.0 <= x + w && world.1 >= y && world.1 <= y + h
+}
+
+/// The port nearest to `world`, if one is within `radius` world units.
+/// Used to start a connection (press near a port) and to finish one
+/// (release near a port).
+pub fn hit_test_port(scene: &Scene, world: (f32, f32), radius: f32) -> Option<(NodeId, PortId)> {
+    let r2 = radius * radius;
+    let mut best: Option<(f32, (NodeId, PortId))> = None;
+    for node in &scene.nodes {
+        for port in &node.ports {
+            let (px, py) = port_position_on_node(node, port);
+            let d2 = (px - world.0).powi(2) + (py - world.1).powi(2);
+            if d2 <= r2 && best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
+                best = Some((d2, (node.id.clone(), port.id.clone())));
+            }
+        }
+    }
+    best.map(|(_, ids)| ids)
 }
 
 // =============================================================================
@@ -145,6 +171,28 @@ mod tests {
         assert_eq!(hit_test_node(&scene, (90.0, 90.0)), Some(NodeId("under".into())));
         // Point outside both.
         assert_eq!(hit_test_node(&scene, (500.0, 500.0)), None);
+    }
+
+    #[test]
+    fn hit_test_port_finds_nearest_within_radius() {
+        use crate::model::{Port, PortAnchor, PortKind};
+        let mut node = rect_node("n", (0.0, 0.0), (100.0, 100.0));
+        // East(0.5) → world (100, 50).
+        node.ports.push(Port {
+            id: PortId("p".into()),
+            name: "p".into(),
+            kind: PortKind::Out,
+            anchor: PortAnchor::East(0.5),
+            data_type: None,
+        });
+        let mut scene = Scene::default();
+        scene.nodes.push(node);
+
+        assert_eq!(
+            hit_test_port(&scene, (102.0, 51.0), 5.0),
+            Some((NodeId("n".into()), PortId("p".into()))),
+        );
+        assert_eq!(hit_test_port(&scene, (130.0, 50.0), 5.0), None);
     }
 
     #[test]

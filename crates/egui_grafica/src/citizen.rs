@@ -35,11 +35,17 @@ use std::path::{Path, PathBuf};
 use egui::{Color32, Key, Sense};
 use egui_phosphor::regular as ico;
 
-use crate::interact::{hit_test_node, snap_to_grid, DragState, Selection};
+use crate::interact::{hit_test_node, hit_test_port, snap_to_grid, DragState, Selection};
 use crate::lang::{self, CommentBlock, ParsedDocument};
-use crate::model::{GridStyle, GridUnits, Routing, Scene};
+use crate::model::{Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing, Scene};
 use crate::registry::Registry;
-use crate::render::{paint_scene, paint_selection, scene_bounds, viewport_fit_to, Viewport};
+use crate::render::{
+    paint_connection_preview, paint_scene, paint_selection, port_world_position, scene_bounds,
+    viewport_fit_to, Viewport,
+};
+
+/// Pointer-to-port grab tolerance, in screen pixels.
+const PORT_GRAB_PX: f32 = 8.0;
 
 /// What the ribbon's File menu requested this frame.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -384,42 +390,45 @@ impl CanvasCitizen {
 
         let shift = ui.input(|i| i.modifiers.shift);
 
-        // Press: hit-test to decide pan vs node-drag, and prime the selection
-        // so the user sees what they're about to move.
+        // Press: ports take priority (start a connection), then node bodies
+        // (drag the selection), then empty space (pan).
         if response.drag_started()
             && let Some(screen) = response.interact_pointer_pos()
         {
             let world = self.viewport.screen_to_world(screen);
-            match self.registry.with_scene(|s| hit_test_node(s, world)) {
-                Some(id) => {
-                    if !self.selection.contains(&id) {
-                        if shift {
-                            self.selection.toggle(id.clone());
-                        } else {
-                            self.selection.select_only(id.clone());
-                        }
+            let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+            let port_hit = self.registry.with_scene(|s| hit_test_port(s, world, port_radius));
+            if let Some(from) = port_hit {
+                self.drag = DragState::Connecting { from, cursor_world: world };
+            } else if let Some(id) = self.registry.with_scene(|s| hit_test_node(s, world)) {
+                if !self.selection.contains(&id) {
+                    if shift {
+                        self.selection.toggle(id.clone());
+                    } else {
+                        self.selection.select_only(id.clone());
                     }
-                    let origins = self.registry.with_scene(|s| {
-                        self.selection
-                            .nodes
-                            .iter()
-                            .filter_map(|nid| {
-                                s.nodes
-                                    .iter()
-                                    .find(|n| &n.id == nid)
-                                    .map(|n| (nid.clone(), n.transform.position))
-                            })
-                            .collect()
-                    });
-                    self.drag = DragState::Nodes { grab_world: world, origins };
                 }
-                None => self.drag = DragState::Pan,
+                let origins = self.registry.with_scene(|s| {
+                    self.selection
+                        .nodes
+                        .iter()
+                        .filter_map(|nid| {
+                            s.nodes
+                                .iter()
+                                .find(|n| &n.id == nid)
+                                .map(|n| (nid.clone(), n.transform.position))
+                        })
+                        .collect()
+                });
+                self.drag = DragState::Nodes { grab_world: world, origins };
+            } else {
+                self.drag = DragState::Pan;
             }
         }
 
         // Drag continue.
         if response.dragged() {
-            match &self.drag {
+            match &mut self.drag {
                 DragState::Pan => {
                     let delta = response.drag_delta();
                     self.viewport.origin.x += delta.x;
@@ -445,11 +454,21 @@ impl CanvasCitizen {
                         self.registry.move_nodes(&moves);
                     }
                 }
+                DragState::Connecting { cursor_world, .. } => {
+                    if let Some(screen) = response.interact_pointer_pos() {
+                        *cursor_world = self.viewport.screen_to_world(screen);
+                    }
+                }
                 DragState::Idle => {}
             }
         }
 
         if response.drag_stopped() {
+            if let DragState::Connecting { from, cursor_world } = &self.drag {
+                let from = from.clone();
+                let cursor = *cursor_world;
+                self.finish_connection(from, cursor);
+            }
             self.drag = DragState::Idle;
         }
 
@@ -521,6 +540,39 @@ impl CanvasCitizen {
             paint_scene(&painter, scene, &self.viewport, rect);
             paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
         });
+
+        // Rubber-band preview while a connection is being drawn.
+        if let DragState::Connecting { from, cursor_world } = &self.drag
+            && let Some(from_world) =
+                self.registry.with_scene(|s| port_world_position(s, &from.0, &from.1))
+        {
+            paint_connection_preview(&painter, from_world, *cursor_world, &self.viewport);
+        }
+    }
+
+    /// Finish a connection drag: if the pointer was released near a port,
+    /// add an edge from the source port to it.
+    fn finish_connection(&mut self, from: (NodeId, PortId), cursor_world: (f32, f32)) {
+        let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+        let Some(to) = self
+            .registry
+            .with_scene(|s| hit_test_port(s, cursor_world, port_radius))
+        else {
+            return;
+        };
+        if to == from {
+            return;
+        }
+        let (id, routing) = self
+            .registry
+            .with_scene(|s| (fresh_edge_id(s), s.settings.default_routing.clone()));
+        self.registry.add_edge(Edge {
+            id,
+            from,
+            to,
+            routing,
+            overlay: EdgeOverlay::default(),
+        });
     }
 
     fn fit_to_rect(&mut self, screen_rect: egui::Rect) {
@@ -544,6 +596,18 @@ const HOTKEY_TABLE: &[(&str, &str)] = &[
     ("Y", "Mirror about Y axis"),
     ("R", "Rotate 90° clockwise"),
 ];
+
+/// A `edge{n}` id not already used by any edge in the scene.
+fn fresh_edge_id(scene: &Scene) -> EdgeId {
+    let mut n = scene.edges.len();
+    loop {
+        let candidate = EdgeId(format!("edge{n}"));
+        if !scene.edges.iter().any(|e| e.id == candidate) {
+            return candidate;
+        }
+        n += 1;
+    }
+}
 
 fn file_name(p: &Path) -> String {
     p.file_name()
