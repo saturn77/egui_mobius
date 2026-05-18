@@ -46,8 +46,11 @@
 //!   printed as `rect` (lossy) and not yet parseable.
 //! - `Routing::Manual` prints as `orthogonal`.
 //! - `Scene::groups` is not yet expressed.
-//! - `#` line comments are accepted by the lexer but not preserved through a
-//!   round-trip. Comment + formatting preservation is deferred.
+//! - `#` line comments: comments leading a top-level item (the file header,
+//!   `settings`, a `node`, a `wire`) survive a round-trip via
+//!   [`parse_document`] / [`pretty_document`]. Comments *inside* a block, and
+//!   trailing comments before a closing `}`, are not yet preserved. The bare
+//!   [`parse`] / [`pretty`] pair discards all comments.
 
 use crate::model::{
     ArrowHead, Border, CanvasSettings, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, GridUnits,
@@ -75,19 +78,79 @@ impl std::fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 // =============================================================================
+// Comment-preserving document
+// =============================================================================
+
+/// A parsed `.canvas` document: the [`Scene`] plus the comment blocks
+/// authored against its top-level items.
+///
+/// `parse`/`pretty` deal in bare `Scene` and discard comments. A GUI that
+/// wants a load → edit → save cycle to preserve authored comments uses
+/// [`parse_document`] / [`pretty_document`] and carries the
+/// `ParsedDocument` instead.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ParsedDocument {
+    pub scene: Scene,
+    pub comments: Vec<CommentBlock>,
+}
+
+/// A run of consecutive comment lines anchored to one place in the document.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommentBlock {
+    pub anchor: CommentAnchor,
+    /// Comment lines, verbatim text after the `#` (without the `#` itself).
+    pub lines: Vec<String>,
+}
+
+/// Where a [`CommentBlock`] sits. v1 anchors comments to top-level items
+/// only; comments inside a block, and trailing comments before `}`, are
+/// not preserved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommentAnchor {
+    /// Before the `canvas` keyword — the file header.
+    Header,
+    /// Immediately before the `settings` block.
+    Settings,
+    /// Immediately before the node with this id.
+    Node(NodeId),
+    /// Immediately before the wire with this id.
+    Wire(EdgeId),
+}
+
+// =============================================================================
 // Public API
 // =============================================================================
 
-/// Parse `.canvas` source into a [`Scene`].
+/// Parse `.canvas` source into a [`Scene`], discarding comments.
 pub fn parse(source: &str) -> Result<Scene, ParseError> {
+    Ok(parse_document(source)?.scene)
+}
+
+/// Parse `.canvas` source into a [`ParsedDocument`] — a [`Scene`] plus the
+/// comment blocks anchored to its top-level items.
+pub fn parse_document(source: &str) -> Result<ParsedDocument, ParseError> {
     let tokens = lex(source)?;
-    Parser::new(tokens).parse_scene()
+    Parser::new(tokens).parse_document()
 }
 
 /// Emit canonical `.canvas` text for a [`Scene`]. Round-trip stable:
 /// `parse(&pretty(&s))` reconstructs an equal `Scene`.
 pub fn pretty(scene: &Scene) -> String {
-    Printer::default().print(scene)
+    Printer::new(&[]).print(scene)
+}
+
+/// Emit canonical `.canvas` text for a [`ParsedDocument`], re-emitting each
+/// comment block before the item it is anchored to. Round-trip stable:
+/// `parse_document(&pretty_document(&d))` reconstructs an equal document.
+pub fn pretty_document(doc: &ParsedDocument) -> String {
+    Printer::new(&doc.comments).print(&doc.scene)
+}
+
+/// Attach accumulated comments to `anchor`, clearing the pending buffer.
+fn attach(comments: &mut Vec<CommentBlock>, anchor: CommentAnchor, pending: &mut Vec<String>) {
+    if !pending.is_empty() {
+        comments.push(CommentBlock { anchor, lines: std::mem::take(pending) });
+    }
 }
 
 // =============================================================================
@@ -105,6 +168,8 @@ enum Tok {
     Dot,
     Arrow,
     Newline,
+    /// A `#` line comment — the verbatim text after the `#`.
+    Comment(String),
 }
 
 #[derive(Debug, Clone)]
@@ -129,9 +194,13 @@ fn lex(src: &str) -> Result<Vec<Lexed>, ParseError> {
                 i += 1;
             }
             '#' => {
+                i += 1;
+                let start = i;
                 while i < chars.len() && chars[i] != '\n' {
                     i += 1;
                 }
+                let text: String = chars[start..i].iter().collect();
+                out.push(Lexed { tok: Tok::Comment(text), line });
             }
             '{' => {
                 out.push(Lexed { tok: Tok::LBrace, line });
@@ -251,10 +320,27 @@ impl Parser {
         Err(ParseError { line: self.line(), message: msg.into() })
     }
 
-    fn skip_newlines(&mut self) {
-        while matches!(self.peek(), Some(Tok::Newline)) {
+    /// Skip newlines and comments. Used inside blocks, where comments are not
+    /// preserved (v1 keeps only the comments leading top-level items).
+    fn skip_trivia(&mut self) {
+        while matches!(self.peek(), Some(Tok::Newline) | Some(Tok::Comment(_))) {
             self.pos += 1;
         }
+    }
+
+    fn peek_comment(&self) -> Option<String> {
+        match self.peek() {
+            Some(Tok::Comment(c)) => Some(c.clone()),
+            _ => None,
+        }
+    }
+
+    fn at_newline(&self) -> bool {
+        matches!(self.peek(), Some(Tok::Newline))
+    }
+
+    fn at_rbrace(&self) -> bool {
+        matches!(self.peek(), Some(Tok::RBrace))
     }
 
     fn ident(&mut self) -> Result<String, ParseError> {
@@ -313,8 +399,8 @@ impl Parser {
     /// the block (RBrace). Catches trailing garbage.
     fn end_statement(&mut self) -> Result<(), ParseError> {
         match self.peek() {
-            Some(Tok::Newline) => {
-                self.skip_newlines();
+            Some(Tok::Newline) | Some(Tok::Comment(_)) => {
+                self.skip_trivia();
                 Ok(())
             }
             Some(Tok::RBrace) | None => Ok(()),
@@ -322,39 +408,82 @@ impl Parser {
         }
     }
 
-    // ── Scene ────────────────────────────────────────────────────────────
+    // ── Document ─────────────────────────────────────────────────────────
 
-    fn parse_scene(&mut self) -> Result<Scene, ParseError> {
-        self.skip_newlines();
+    fn parse_document(&mut self) -> Result<ParsedDocument, ParseError> {
+        let mut comments: Vec<CommentBlock> = Vec::new();
+
+        // Header: comments appearing before the `canvas` keyword.
+        let mut header: Vec<String> = Vec::new();
+        loop {
+            if let Some(c) = self.peek_comment() {
+                header.push(c);
+                self.pos += 1;
+            } else if self.at_newline() {
+                self.pos += 1;
+            } else {
+                break;
+            }
+        }
+        if !header.is_empty() {
+            comments.push(CommentBlock { anchor: CommentAnchor::Header, lines: header });
+        }
+
         self.expect_kw("canvas")?;
         let name = self.string()?;
         self.expect(&Tok::LBrace, "'{'")?;
-        self.skip_newlines();
 
         let mut scene = Scene { name, ..Scene::default() };
+        // Comments seen since the last item — attached to the next one parsed.
+        let mut pending: Vec<String> = Vec::new();
 
         loop {
-            match self.peek() {
-                Some(Tok::RBrace) => {
+            // Collect leading trivia; comments accumulate into `pending`.
+            loop {
+                if let Some(c) = self.peek_comment() {
+                    pending.push(c);
                     self.pos += 1;
+                } else if self.at_newline() {
+                    self.pos += 1;
+                } else {
                     break;
                 }
+            }
+
+            if self.at_rbrace() {
+                self.pos += 1;
+                break;
+            }
+
+            match self.peek() {
                 Some(Tok::Ident(kw)) => match kw.as_str() {
-                    "settings" => scene.settings = self.parse_settings()?,
-                    "node" => scene.nodes.push(self.parse_node()?),
-                    "wire" => scene.edges.push(self.parse_wire()?),
+                    "settings" => {
+                        scene.settings = self.parse_settings()?;
+                        attach(&mut comments, CommentAnchor::Settings, &mut pending);
+                    }
+                    "node" => {
+                        let node = self.parse_node()?;
+                        let anchor = CommentAnchor::Node(node.id.clone());
+                        scene.nodes.push(node);
+                        attach(&mut comments, anchor, &mut pending);
+                    }
+                    "wire" => {
+                        let edge = self.parse_wire()?;
+                        let anchor = CommentAnchor::Wire(edge.id.clone());
+                        scene.edges.push(edge);
+                        attach(&mut comments, anchor, &mut pending);
+                    }
                     other => return self.err(format!("unexpected keyword '{other}'")),
                 },
                 _ => return self.err("expected 'settings', 'node', 'wire', or '}'"),
             }
-            self.skip_newlines();
         }
 
-        self.skip_newlines();
+        self.skip_trivia();
         if self.peek().is_some() {
             return self.err("unexpected content after canvas block");
         }
-        Ok(scene)
+        Ok(ParsedDocument { scene, comments })
     }
 
     // ── settings ─────────────────────────────────────────────────────────
@@ -362,7 +491,7 @@ impl Parser {
     fn parse_settings(&mut self) -> Result<CanvasSettings, ParseError> {
         self.expect_kw("settings")?;
         self.expect(&Tok::LBrace, "'{'")?;
-        self.skip_newlines();
+        self.skip_trivia();
 
         let mut s = CanvasSettings::default();
         while !matches!(self.peek(), Some(Tok::RBrace)) {
@@ -393,7 +522,7 @@ impl Parser {
         self.expect(&Tok::Colon, "':'")?;
         let kind = self.parse_node_kind()?;
         self.expect(&Tok::LBrace, "'{'")?;
-        self.skip_newlines();
+        self.skip_trivia();
 
         let mut node = Node {
             id: NodeId(id),
@@ -446,7 +575,7 @@ impl Parser {
 
     fn parse_text(&mut self) -> Result<TextLabel, ParseError> {
         self.expect(&Tok::LBrace, "'{'")?;
-        self.skip_newlines();
+        self.skip_trivia();
 
         let mut t = TextLabel {
             value: String::new(),
@@ -522,7 +651,7 @@ impl Parser {
         self.expect(&Tok::Arrow, "'->'")?;
         let to = self.parse_endpoint()?;
         self.expect(&Tok::LBrace, "'{'")?;
-        self.skip_newlines();
+        self.skip_trivia();
 
         let mut edge = Edge {
             id: EdgeId(id),
@@ -645,25 +774,47 @@ impl Parser {
 // Pretty-printer
 // =============================================================================
 
-#[derive(Default)]
-struct Printer {
+struct Printer<'a> {
     out: String,
+    /// Comment blocks to re-emit before their anchored items. Empty slice
+    /// for the comment-less `pretty`.
+    comments: &'a [CommentBlock],
 }
 
-impl Printer {
+impl<'a> Printer<'a> {
+    fn new(comments: &'a [CommentBlock]) -> Self {
+        Self { out: String::new(), comments }
+    }
+
     fn print(mut self, scene: &Scene) -> String {
+        self.emit_comments(&CommentAnchor::Header, 0);
         self.line(0, &format!("canvas {} {{", quote(&scene.name)));
+        self.emit_comments(&CommentAnchor::Settings, 1);
         self.print_settings(&scene.settings);
         for node in &scene.nodes {
             self.out.push('\n');
+            self.emit_comments(&CommentAnchor::Node(node.id.clone()), 1);
             self.print_node(node);
         }
         for edge in &scene.edges {
             self.out.push('\n');
+            self.emit_comments(&CommentAnchor::Wire(edge.id.clone()), 1);
             self.print_wire(edge);
         }
         self.line(0, "}");
         self.out
+    }
+
+    /// Emit every comment block anchored at `anchor`, as `#`-prefixed lines.
+    fn emit_comments(&mut self, anchor: &CommentAnchor, depth: usize) {
+        let blocks = self.comments;
+        for block in blocks {
+            if &block.anchor == anchor {
+                for text in &block.lines {
+                    self.line(depth, &format!("#{text}"));
+                }
+            }
+        }
     }
 
     fn line(&mut self, depth: usize, text: &str) {
@@ -1010,5 +1161,54 @@ mod tests {
     fn unknown_keyword_is_rejected() {
         let text = "canvas \"C\" {\n  banana foo\n}\n";
         assert!(parse(text).is_err());
+    }
+
+    #[test]
+    fn document_round_trip_preserves_comments() {
+        let src = "\
+# file header
+# second header line
+canvas \"C\" {
+  # about the settings
+  settings {
+    grid 10
+  }
+
+  # the alpha node
+  node a : rect {
+    at 0 0
+    size 10 10
+    rotation 0
+    border solid 1 \"#000000\"
+    fill \"#FFFFFF\" 1
+  }
+}
+";
+        let doc = parse_document(src).expect("parse");
+        let printed = pretty_document(&doc);
+        let reparsed = parse_document(&printed).expect("reparse");
+        assert_eq!(reparsed, doc, "document must survive pretty_document -> parse_document");
+        assert!(printed.contains("# file header"));
+        assert!(printed.contains("# about the settings"));
+        assert!(printed.contains("# the alpha node"));
+    }
+
+    #[test]
+    fn comments_anchor_to_the_right_items() {
+        let src = "# hdr\ncanvas \"C\" {\n  settings { grid 1 }\n  # for a\n  node a : rect { at 0 0\n size 1 1\n rotation 0\n border solid 1 \"#000000\"\n fill \"#FFFFFF\" 1 }\n}\n";
+        let doc = parse_document(src).expect("parse");
+        let header = doc.comments.iter().find(|b| b.anchor == CommentAnchor::Header);
+        assert_eq!(header.map(|b| b.lines.as_slice()), Some(&[" hdr".to_string()][..]));
+        let node_a = doc
+            .comments
+            .iter()
+            .find(|b| b.anchor == CommentAnchor::Node(NodeId("a".into())));
+        assert_eq!(node_a.map(|b| b.lines.as_slice()), Some(&[" for a".to_string()][..]));
+    }
+
+    #[test]
+    fn plain_pretty_drops_comments() {
+        let doc = parse_document("# gone\ncanvas \"C\" {\n  settings { grid 1 }\n}\n").unwrap();
+        assert!(!pretty(&doc.scene).contains('#'));
     }
 }
