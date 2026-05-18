@@ -35,7 +35,10 @@ use std::path::{Path, PathBuf};
 use egui::{Color32, Key, Sense};
 use egui_phosphor::regular as ico;
 
-use crate::interact::{hit_test_edge, hit_test_node, hit_test_port, snap_to_grid, DragState, Selection};
+use crate::interact::{
+    hit_test_edge, hit_test_node, hit_test_port, snap_to_grid, CanvasEvent, CanvasFsm, CanvasState,
+    HitTarget, Selection,
+};
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing, Scene};
 use crate::registry::Registry;
@@ -77,8 +80,8 @@ pub struct CanvasCitizen {
     pub ribbon_side: RibbonSide,
     /// Currently-selected nodes.
     pub selection: Selection,
-    /// In-progress pointer gesture (pan vs node-drag).
-    drag: DragState,
+    /// Canvas interaction state machine (pan / move / connect / re-route).
+    fsm: CanvasFsm,
     /// Set by the Fit button; consumed in the canvas pass where the real
     /// canvas rect is available.
     pending_fit: bool,
@@ -103,7 +106,7 @@ impl CanvasCitizen {
             routing_picker_applies_to_all: true,
             ribbon_side: RibbonSide::Top,
             selection: Selection::default(),
-            drag: DragState::Idle,
+            fsm: CanvasFsm::new(),
             pending_fit: false,
             current_path: None,
             loaded_comments: Vec::new(),
@@ -394,74 +397,93 @@ impl CanvasCitizen {
 
         let shift = ui.input(|i| i.modifiers.shift);
 
-        // Press: ports take priority (start a connection), then node bodies
-        // (drag the selection), then wires (select), then empty space (pan).
+        // ── Press: classify what was hit and drive the FSM ──
         //
         // Hit-test at the true press origin, not `interact_pointer_pos` —
         // egui only reports a drag once the pointer has moved a few pixels,
-        // and testing that drifted point misses thin wires and small ports,
-        // which is what made selection fall through to panning.
+        // and testing that drifted point misses thin wires and small ports.
         if response.drag_started()
             && let Some(screen) = ui.input(|i| i.pointer.press_origin())
         {
             let world = self.viewport.screen_to_world(screen);
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
             let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
+
+            // Priority: port > node body > wire > empty.
             let port_hit = self.registry.with_scene(|s| hit_test_port(s, world, port_radius));
-            if let Some(from) = port_hit {
-                self.drag = DragState::Connecting { from, cursor_world: world };
-            } else if let Some(id) = self.registry.with_scene(|s| hit_test_node(s, world)) {
-                if !self.selection.contains(&id) {
-                    if shift {
-                        self.selection.toggle(id.clone());
-                    } else {
-                        self.selection.select_only(id.clone());
-                    }
-                }
-                let origins = self.registry.with_scene(|s| {
-                    self.selection
-                        .nodes
-                        .iter()
-                        .filter_map(|nid| {
-                            s.nodes
-                                .iter()
-                                .find(|n| &n.id == nid)
-                                .map(|n| (nid.clone(), n.transform.position))
-                        })
-                        .collect()
-                });
-                self.drag = DragState::Nodes { grab_world: world, origins };
-            } else if let Some(eid) =
-                self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh))
-            {
-                // Pressing a wire selects it — and does NOT start a pan.
-                if shift {
-                    self.selection.toggle_edge(eid);
-                } else {
-                    self.selection.select_only_edge(eid);
-                }
-                self.drag = DragState::Idle;
+            let node_hit = self.registry.with_scene(|s| hit_test_node(s, world));
+            let edge_hit = self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh));
+            let target = if port_hit.is_some() {
+                HitTarget::Port
+            } else if node_hit.is_some() {
+                HitTarget::NodeBody
+            } else if edge_hit.is_some() {
+                HitTarget::WireSegment
             } else {
-                self.drag = DragState::Pan;
+                HitTarget::Empty
+            };
+
+            self.fsm.dispatch(CanvasEvent::Press, target);
+            self.fsm.grab_world = world;
+            self.fsm.cursor_world = world;
+
+            match self.fsm.state {
+                CanvasState::MovingNodes => {
+                    let id = node_hit.expect("NodeBody target implies a node hit");
+                    if !self.selection.contains(&id) {
+                        if shift {
+                            self.selection.toggle(id);
+                        } else {
+                            self.selection.select_only(id);
+                        }
+                    }
+                    self.fsm.node_origins = self.registry.with_scene(|s| {
+                        self.selection
+                            .nodes
+                            .iter()
+                            .filter_map(|nid| {
+                                s.nodes
+                                    .iter()
+                                    .find(|n| &n.id == nid)
+                                    .map(|n| (nid.clone(), n.transform.position))
+                            })
+                            .collect()
+                    });
+                }
+                CanvasState::Connecting => {
+                    self.fsm.connect_from = port_hit;
+                }
+                CanvasState::DraggingSegment => {
+                    let eid = edge_hit.expect("WireSegment target implies a wire hit");
+                    if shift {
+                        self.selection.toggle_edge(eid.clone());
+                    } else {
+                        self.selection.select_only_edge(eid.clone());
+                    }
+                    self.fsm.drag_edge = Some(eid);
+                }
+                _ => {}
             }
         }
 
-        // Drag continue.
+        // ── Drag: act on the FSM's current state ──
         if response.dragged() {
-            match &mut self.drag {
-                DragState::Pan => {
+            match self.fsm.state {
+                CanvasState::Panning => {
                     let delta = response.drag_delta();
                     self.viewport.origin.x += delta.x;
                     self.viewport.origin.y += delta.y;
                 }
-                DragState::Nodes { grab_world, origins } => {
+                CanvasState::MovingNodes => {
                     if let Some(screen) = response.interact_pointer_pos() {
                         let now = self.viewport.screen_to_world(screen);
-                        let (dx, dy) = (now.0 - grab_world.0, now.1 - grab_world.1);
+                        let (dx, dy) = (now.0 - self.fsm.grab_world.0, now.1 - self.fsm.grab_world.1);
                         let (snap, spacing) = self
                             .registry
                             .with_scene(|s| (s.settings.snap_to_grid, s.settings.grid_spacing));
-                        let moves: Vec<_> = origins
+                        let moves: Vec<_> = self
+                            .fsm
+                            .node_origins
                             .iter()
                             .map(|(id, origin)| {
                                 let mut pos = (origin.0 + dx, origin.1 + dy);
@@ -474,22 +496,27 @@ impl CanvasCitizen {
                         self.registry.move_nodes(&moves);
                     }
                 }
-                DragState::Connecting { cursor_world, .. } => {
+                CanvasState::Connecting => {
                     if let Some(screen) = response.interact_pointer_pos() {
-                        *cursor_world = self.viewport.screen_to_world(screen);
+                        self.fsm.cursor_world = self.viewport.screen_to_world(screen);
                     }
                 }
-                DragState::Idle => {}
+                CanvasState::DraggingSegment => {
+                    // Segment re-routing mechanics land next; the wire is
+                    // already selected from the press.
+                }
+                CanvasState::Idle => {}
             }
         }
 
+        // ── Release: finalise the gesture, return the FSM to Idle ──
         if response.drag_stopped() {
-            if let DragState::Connecting { from, cursor_world } = &self.drag {
-                let from = from.clone();
-                let cursor = *cursor_world;
-                self.finish_connection(from, cursor);
+            if self.fsm.state == CanvasState::Connecting
+                && let Some(from) = self.fsm.connect_from.clone()
+            {
+                self.finish_connection(from, self.fsm.cursor_world);
             }
-            self.drag = DragState::Idle;
+            self.fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
         }
 
         // Click (press + release, no movement): select node, else wire, else clear.
@@ -571,11 +598,12 @@ impl CanvasCitizen {
         });
 
         // Rubber-band preview while a connection is being drawn.
-        if let DragState::Connecting { from, cursor_world } = &self.drag
+        if self.fsm.state == CanvasState::Connecting
+            && let Some(from) = &self.fsm.connect_from
             && let Some(from_world) =
                 self.registry.with_scene(|s| port_world_position(s, &from.0, &from.1))
         {
-            paint_connection_preview(&painter, from_world, *cursor_world, &self.viewport);
+            paint_connection_preview(&painter, from_world, self.fsm.cursor_world, &self.viewport);
         }
     }
 

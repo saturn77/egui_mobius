@@ -72,34 +72,118 @@ impl Selection {
 }
 
 // =============================================================================
-// Drag state
+// Interaction state machine
 // =============================================================================
+//
+// Ported from simcore's router FSM. The states and the transition table are
+// the same; the only adaptation for egui is that transitions are driven by
+// per-frame `Response` polling (drag_started / dragged / drag_stopped) rather
+// than by retained-mode press/move/release event callbacks.
 
-/// The in-progress pointer gesture on the canvas.
-#[derive(Debug, Clone, Default)]
-pub enum DragState {
-    /// No drag in progress.
+/// What the canvas pointer is currently doing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CanvasState {
+    /// Resting — no gesture in progress.
     #[default]
     Idle,
     /// Panning the viewport.
-    Pan,
-    /// Moving selected nodes.
-    ///
-    /// `origins` records each dragged node's position at the moment the drag
-    /// began. Moves are applied as absolute `origin + delta` offsets rather
-    /// than accumulated per frame — accumulation drifts under snapping and
-    /// rounding.
-    Nodes {
-        grab_world: (f32, f32),
-        origins: Vec<(NodeId, (f32, f32))>,
-    },
-    /// Drawing a new connection from a source port. `cursor_world` tracks the
-    /// pointer so the rubber-band preview can be drawn; on release, the
-    /// nearest port to `cursor_world` becomes the edge's destination.
-    Connecting {
-        from: (NodeId, PortId),
-        cursor_world: (f32, f32),
-    },
+    Panning,
+    /// Moving the selected nodes.
+    MovingNodes,
+    /// Drawing a new connection from a source port.
+    Connecting,
+    /// Dragging a wire segment to re-route it.
+    DraggingSegment,
+}
+
+/// What the pointer pressed on — decides which gesture a press begins.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HitTarget {
+    Empty,
+    NodeBody,
+    Port,
+    WireSegment,
+}
+
+/// Events that drive FSM transitions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CanvasEvent {
+    Press,
+    Release,
+    Cancel,
+}
+
+/// The transition table — `(state, event, target) -> next state`. `None`
+/// means the event is not valid in the current state and is ignored.
+fn next_state(state: CanvasState, event: CanvasEvent, target: HitTarget) -> Option<CanvasState> {
+    use CanvasEvent::*;
+    use CanvasState::*;
+    use HitTarget::*;
+    match (state, event, target) {
+        // From Idle, a press begins a gesture chosen by what was hit.
+        (Idle, Press, Empty) => Some(Panning),
+        (Idle, Press, NodeBody) => Some(MovingNodes),
+        (Idle, Press, Port) => Some(Connecting),
+        (Idle, Press, WireSegment) => Some(DraggingSegment),
+        // Any active gesture ends on release or cancel.
+        (s, Release, _) | (s, Cancel, _) if s != Idle => Some(Idle),
+        _ => None,
+    }
+}
+
+/// Runtime state for the canvas interaction FSM: the current state plus the
+/// context for whatever gesture is active. Context is cleared on return to
+/// [`CanvasState::Idle`], exactly as in simcore's `RouterFSMState`.
+#[derive(Debug, Clone, Default)]
+pub struct CanvasFsm {
+    pub state: CanvasState,
+    /// World point where the active gesture began.
+    pub grab_world: (f32, f32),
+    /// Live pointer position in world space (updated each drag frame).
+    pub cursor_world: (f32, f32),
+    /// `MovingNodes`: each dragged node's position at grab time.
+    pub node_origins: Vec<(NodeId, (f32, f32))>,
+    /// `Connecting`: the source port.
+    pub connect_from: Option<(NodeId, PortId)>,
+    /// `DraggingSegment`: the wire being re-routed.
+    pub drag_edge: Option<EdgeId>,
+}
+
+impl CanvasFsm {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn is_idle(&self) -> bool {
+        self.state == CanvasState::Idle
+    }
+
+    /// Drive a transition. Returns `true` if it was valid (state changed or a
+    /// self-loop fired); `false` if the event is not legal in this state.
+    pub fn dispatch(&mut self, event: CanvasEvent, target: HitTarget) -> bool {
+        match next_state(self.state, event, target) {
+            Some(next) => {
+                self.state = next;
+                if next == CanvasState::Idle {
+                    self.clear_context();
+                }
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Force the FSM back to `Idle` — e.g. on focus loss.
+    pub fn force_idle(&mut self) {
+        self.state = CanvasState::Idle;
+        self.clear_context();
+    }
+
+    fn clear_context(&mut self) {
+        self.node_origins.clear();
+        self.connect_from = None;
+        self.drag_edge = None;
+    }
 }
 
 // =============================================================================
@@ -297,6 +381,42 @@ mod tests {
         assert!(!sel.contains(&NodeId("a".into())));
         sel.select_only(NodeId("c".into()));
         assert_eq!(sel.nodes, vec![NodeId("c".into())]);
+    }
+
+    #[test]
+    fn fsm_press_chooses_gesture_by_hit_target() {
+        let mut fsm = CanvasFsm::new();
+        assert!(fsm.dispatch(CanvasEvent::Press, HitTarget::Port));
+        assert_eq!(fsm.state, CanvasState::Connecting);
+        assert!(fsm.dispatch(CanvasEvent::Release, HitTarget::Empty));
+        assert_eq!(fsm.state, CanvasState::Idle);
+
+        fsm.dispatch(CanvasEvent::Press, HitTarget::WireSegment);
+        assert_eq!(fsm.state, CanvasState::DraggingSegment);
+        fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
+        assert_eq!(fsm.state, CanvasState::Idle);
+
+        fsm.dispatch(CanvasEvent::Press, HitTarget::Empty);
+        assert_eq!(fsm.state, CanvasState::Panning);
+    }
+
+    #[test]
+    fn fsm_rejects_a_press_while_already_in_a_gesture() {
+        let mut fsm = CanvasFsm::new();
+        fsm.dispatch(CanvasEvent::Press, HitTarget::NodeBody);
+        assert_eq!(fsm.state, CanvasState::MovingNodes);
+        // A second press mid-gesture is not a legal transition.
+        assert!(!fsm.dispatch(CanvasEvent::Press, HitTarget::Port));
+        assert_eq!(fsm.state, CanvasState::MovingNodes);
+    }
+
+    #[test]
+    fn fsm_clears_context_on_return_to_idle() {
+        let mut fsm = CanvasFsm::new();
+        fsm.dispatch(CanvasEvent::Press, HitTarget::Port);
+        fsm.connect_from = Some((NodeId("n".into()), PortId("p".into())));
+        fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
+        assert!(fsm.connect_from.is_none(), "context must clear on Idle");
     }
 
     #[test]
