@@ -49,6 +49,10 @@ egui_quill = { version = "0.4.0", path = "crates/egui_quill" }
 egui_grafica = { version = "0.4.0", path = "crates/egui_grafica" }
 egui_3d_viewer = { version = "0.4.0", path = "crates/egui_3d_viewer" }
 
+# Exact-geometry kernel — the geometry foundation for egui_grafica's
+# routing and shapes (timschmidt's hyper ecosystem).
+hypercurve = "0.2"
+
 # egui and eframe
 egui_plot = "0.35.0"
 egui = "0.34"

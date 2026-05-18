@@ -16,5 +16,6 @@ include                = ["**/*.rs", "Cargo.toml", "README.md"]
 egui                 = { workspace = true }
 egui-phosphor        = { workspace = true }
 egui_mobius_reactive = { workspace = true }
+hypercurve           = { workspace = true }
 rfd                  = { workspace = true }
 serde                = { workspace = true }
