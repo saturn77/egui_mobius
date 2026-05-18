@@ -8,7 +8,7 @@
 //!
 //! [`Registry`]: crate::registry::Registry
 
-use crate::model::{EdgeId, Node, NodeId, PortId, Scene};
+use crate::model::{EdgeId, Node, NodeId, PortAnchor, PortId, Scene};
 use crate::router::{edge_polyline, port_position_on_node};
 
 // =============================================================================
@@ -150,6 +150,12 @@ pub struct CanvasFsm {
     pub node_origins: Vec<(NodeId, (f32, f32))>,
     /// `Connecting`: the source port.
     pub connect_from: Option<(NodeId, PortId)>,
+    /// `Connecting`: the source port's anchor at grab time — restored if the
+    /// gesture turns out to be a connection draw rather than a reposition.
+    pub connect_origin_anchor: Option<PortAnchor>,
+    /// `Connecting`: latched true once the cursor leaves the source node —
+    /// from then on the gesture is a connection draw, not a port reposition.
+    pub connect_latched: bool,
     /// `DraggingSegment` / `DraggingWaypoint`: the wire being re-routed.
     pub drag_edge: Option<EdgeId>,
     /// `DraggingSegment`: index of the dragged segment in `drag_origin_pts`.
@@ -196,6 +202,8 @@ impl CanvasFsm {
     fn clear_context(&mut self) {
         self.node_origins.clear();
         self.connect_from = None;
+        self.connect_origin_anchor = None;
+        self.connect_latched = false;
         self.drag_edge = None;
         self.drag_segment = 0;
         self.drag_origin_pts.clear();
@@ -391,6 +399,30 @@ fn point_segment_distance(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
     };
     let (cx, cy) = (a.0 + t * abx, a.1 + t * aby);
     ((p.0 - cx).powi(2) + (p.1 - cy).powi(2)).sqrt()
+}
+
+/// The point on a node's perimeter nearest `world`, as a [`PortAnchor`].
+/// Used to slide a port along its node's edge while it is being dragged.
+pub fn nearest_perimeter_anchor(pos: (f32, f32), size: (f32, f32), world: (f32, f32)) -> PortAnchor {
+    let (x, y) = pos;
+    let (w, h) = size;
+    let d_left = (world.0 - x).abs();
+    let d_right = (world.0 - (x + w)).abs();
+    let d_top = (world.1 - y).abs();
+    let d_bottom = (world.1 - (y + h)).abs();
+    let nearest = d_left.min(d_right).min(d_top).min(d_bottom);
+    // Parametric position along the chosen edge, clamped to [0, 1].
+    let tx = if w > 0.0 { ((world.0 - x) / w).clamp(0.0, 1.0) } else { 0.5 };
+    let ty = if h > 0.0 { ((world.1 - y) / h).clamp(0.0, 1.0) } else { 0.5 };
+    if nearest == d_left {
+        PortAnchor::West(ty)
+    } else if nearest == d_right {
+        PortAnchor::East(ty)
+    } else if nearest == d_top {
+        PortAnchor::North(tx)
+    } else {
+        PortAnchor::South(tx)
+    }
 }
 
 /// Snap a world coordinate to the nearest grid multiple. Returns `pos`

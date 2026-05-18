@@ -37,7 +37,8 @@ use egui_phosphor::regular as ico;
 
 use crate::interact::{
     hit_test_edge, hit_test_node, hit_test_port, hit_test_waypoint, insert_pivot,
-    prepare_segment_drag, snap_to_grid, CanvasEvent, CanvasFsm, CanvasState, HitTarget, Selection,
+    nearest_perimeter_anchor, prepare_segment_drag, snap_to_grid, CanvasEvent, CanvasFsm,
+    CanvasState, HitTarget, Selection,
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
@@ -473,6 +474,19 @@ impl CanvasCitizen {
                 }
                 CanvasState::Connecting => {
                     self.fsm.connect_from = port_hit;
+                    self.fsm.connect_latched = false;
+                    // Record the port's anchor so a connection-draw gesture
+                    // can restore it (a reposition keeps the dragged anchor).
+                    let origin = self.fsm.connect_from.as_ref().and_then(|(nid, pid)| {
+                        self.registry.with_scene(|s| {
+                            s.nodes
+                                .iter()
+                                .find(|n| &n.id == nid)
+                                .and_then(|n| n.ports.iter().find(|p| &p.id == pid))
+                                .map(|p| p.anchor)
+                        })
+                    });
+                    self.fsm.connect_origin_anchor = origin;
                 }
                 CanvasState::DraggingWaypoint => {
                     let (eid, idx) = waypoint_hit.expect("Waypoint target implies a hit");
@@ -544,8 +558,38 @@ impl CanvasCitizen {
                     }
                 }
                 CanvasState::Connecting => {
+                    // Spatial gesture: while the cursor stays over the source
+                    // node, slide the port along its perimeter; once it
+                    // leaves, latch into drawing a connection instead.
                     if let Some(screen) = response.interact_pointer_pos() {
-                        self.fsm.cursor_world = self.viewport.screen_to_world(screen);
+                        let now = self.viewport.screen_to_world(screen);
+                        self.fsm.cursor_world = now;
+                        if !self.fsm.connect_latched
+                            && let Some((nid, pid)) = self.fsm.connect_from.clone()
+                        {
+                            let node_box = self.registry.with_scene(|s| {
+                                s.nodes
+                                    .iter()
+                                    .find(|n| n.id == nid)
+                                    .map(|n| (n.transform.position, n.transform.size))
+                            });
+                            if let Some((pos, size)) = node_box {
+                                let m = 24.0 / self.viewport.zoom;
+                                let inside = now.0 >= pos.0 - m
+                                    && now.0 <= pos.0 + size.0 + m
+                                    && now.1 >= pos.1 - m
+                                    && now.1 <= pos.1 + size.1 + m;
+                                if inside {
+                                    let anchor = nearest_perimeter_anchor(pos, size, now);
+                                    self.registry.set_port_anchor(&nid, &pid, anchor);
+                                } else {
+                                    self.fsm.connect_latched = true;
+                                    if let Some(orig) = self.fsm.connect_origin_anchor {
+                                        self.registry.set_port_anchor(&nid, &pid, orig);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 CanvasState::DraggingSegment => {
@@ -605,7 +649,10 @@ impl CanvasCitizen {
 
         // ── Release: finalise the gesture, return the FSM to Idle ──
         if response.drag_stopped() {
+            // Only a latched (left-the-node) gesture creates an edge; an
+            // unlatched one was a port reposition, already committed live.
             if self.fsm.state == CanvasState::Connecting
+                && self.fsm.connect_latched
                 && let Some(from) = self.fsm.connect_from.clone()
             {
                 self.finish_connection(from, self.fsm.cursor_world);
@@ -679,25 +726,51 @@ impl CanvasCitizen {
             }
         }
 
-        // Double-click: on a wire it inserts a pivot vertex; on empty space
-        // it zooms to fit.
-        if response.double_clicked() {
-            let inserted = response.interact_pointer_pos().and_then(|screen| {
-                let world = self.viewport.screen_to_world(screen);
-                let thresh = EDGE_GRAB_PX / self.viewport.zoom;
-                let eid = self.registry.with_scene(|s| hit_test_edge(s, world, thresh))?;
+        // Double-click: on a pivot vertex it deletes that pivot; on a wire it
+        // inserts a pivot; on empty space it zooms to fit.
+        if response.double_clicked()
+            && let Some(screen) = response.interact_pointer_pos()
+        {
+            let world = self.viewport.screen_to_world(screen);
+            let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+            let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
+
+            if let Some((eid, idx)) =
+                self.registry.with_scene(|s| hit_test_waypoint(s, world, port_radius))
+            {
+                // Delete the pivot — the two segments on either side merge.
+                let routing = self.registry.with_scene(|s| {
+                    s.edges.iter().find(|e| e.id == eid).map(|e| match &e.routing {
+                        Routing::Manual { waypoints } => {
+                            let mut wps = waypoints.clone();
+                            if idx < wps.len() {
+                                wps.remove(idx);
+                            }
+                            if wps.is_empty() {
+                                Routing::Orthogonal
+                            } else {
+                                Routing::Manual { waypoints: wps }
+                            }
+                        }
+                        other => other.clone(),
+                    })
+                });
+                if let Some(routing) = routing {
+                    self.registry.update_edge_routing(&eid, routing);
+                }
+            } else if let Some(eid) =
+                self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh))
+            {
                 let poly = self
                     .registry
                     .with_scene(|s| s.edges.iter().find(|e| e.id == eid).cloned())
-                    .and_then(|e| self.registry.with_scene(|s| crate::router::edge_polyline(s, &e)))?;
-                Some((eid, insert_pivot(&poly, world)))
-            });
-            match inserted {
-                Some((eid, waypoints)) => {
+                    .and_then(|e| self.registry.with_scene(|s| crate::router::edge_polyline(s, &e)));
+                if let Some(poly) = poly {
                     self.registry
-                        .update_edge_routing(&eid, Routing::Manual { waypoints });
+                        .update_edge_routing(&eid, Routing::Manual { waypoints: insert_pivot(&poly, world) });
                 }
-                None => self.fit_to_rect(rect),
+            } else {
+                self.fit_to_rect(rect);
             }
         }
 
@@ -712,6 +785,7 @@ impl CanvasCitizen {
 
         // Rubber-band preview while a connection is being drawn.
         if self.fsm.state == CanvasState::Connecting
+            && self.fsm.connect_latched
             && let Some(from) = &self.fsm.connect_from
             && let Some(from_world) =
                 self.registry.with_scene(|s| port_world_position(s, &from.0, &from.1))
