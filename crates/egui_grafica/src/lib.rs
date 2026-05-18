@@ -33,7 +33,7 @@ pub mod registry;
 pub use model::{
     Edge, EdgeId, EdgeOverlay, Fill, Border, Group, Node, NodeId, NodeKind,
     Overlay, Port, PortAnchor, PortId, PortKind, Routing, Scene,
-    CanvasSettings, GridStyle, GridUnits, TextLabel, Transform,
+    CanvasBackground, CanvasSettings, GridStyle, GridUnits, TextLabel, Transform,
 };
 pub use registry::Registry;
 pub use citizen::CanvasCitizen;

@@ -40,11 +40,14 @@ use crate::interact::{
     prepare_segment_drag, snap_to_grid, CanvasEvent, CanvasFsm, CanvasState, HitTarget, Selection,
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
-use crate::model::{Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing, Scene};
+use crate::model::{
+    CanvasBackground, Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, NodeId, PortId, Routing,
+    Scene,
+};
 use crate::registry::Registry;
 use crate::render::{
-    paint_connection_preview, paint_scene, paint_selected_edges, paint_selection, scene_bounds,
-    viewport_fit_to, Viewport,
+    background_color, paint_connection_preview, paint_scene, paint_selected_edges, paint_selection,
+    scene_bounds, viewport_fit_to, Viewport,
 };
 use crate::router::port_world_position;
 
@@ -223,6 +226,20 @@ impl CanvasCitizen {
                     ui.selectable_value(&mut settings.grid_units, GridUnits::Inches, "Inches");
                 });
             if before_units != settings.grid_units {
+                settings_changed = true;
+            }
+
+            ui.label(format!("{} Bg", ico::PALETTE));
+            let before_bg = settings.background;
+            egui::ComboBox::from_id_salt("grafica_background")
+                .selected_text(settings.background.label())
+                .show_ui(ui, |ui| {
+                    use CanvasBackground::*;
+                    for bg in [Light, Slate, Charcoal, Dark] {
+                        ui.selectable_value(&mut settings.background, bg, bg.label());
+                    }
+                });
+            if before_bg != settings.background {
                 settings_changed = true;
             }
 
@@ -684,7 +701,8 @@ impl CanvasCitizen {
             }
         }
 
-        painter.rect_filled(rect, 0.0, Color32::from_rgb(0xF8, 0xFA, 0xFC));
+        let background = self.registry.with_scene(|s| s.settings.background);
+        painter.rect_filled(rect, 0.0, background_color(background));
 
         self.registry.with_scene(|scene| {
             paint_scene(&painter, scene, &self.viewport, rect);

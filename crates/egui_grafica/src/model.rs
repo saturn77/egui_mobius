@@ -59,6 +59,8 @@ pub struct CanvasSettings {
     pub paper_size: Option<String>,
     pub paper_orientation: Option<String>,
     pub default_routing: Routing,
+    /// Canvas background tone.
+    pub background: CanvasBackground,
 }
 
 impl Default for CanvasSettings {
@@ -73,7 +75,38 @@ impl Default for CanvasSettings {
             paper_size: None,
             paper_orientation: None,
             default_routing: Routing::Orthogonal,
+            background: CanvasBackground::Light,
         }
+    }
+}
+
+/// Canvas background preset. The renderer maps each to a fill colour and a
+/// contrasting grid tone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CanvasBackground {
+    /// Near-white.
+    Light,
+    /// Soft grey — easy on the eyes.
+    Slate,
+    /// Dark blue-grey.
+    Charcoal,
+    /// Near-black.
+    Dark,
+}
+
+impl CanvasBackground {
+    pub fn label(self) -> &'static str {
+        match self {
+            CanvasBackground::Light => "Light",
+            CanvasBackground::Slate => "Slate",
+            CanvasBackground::Charcoal => "Charcoal",
+            CanvasBackground::Dark => "Dark",
+        }
+    }
+
+    /// True for backgrounds dark enough that the grid should be drawn light.
+    pub fn is_dark(self) -> bool {
+        matches!(self, CanvasBackground::Charcoal | CanvasBackground::Dark)
     }
 }
 

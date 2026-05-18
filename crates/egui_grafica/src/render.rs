@@ -18,8 +18,8 @@
 use egui::{Align2, Color32, CornerRadius, FontFamily, FontId, Painter, Pos2, Rect, Stroke, StrokeKind, Vec2};
 
 use crate::model::{
-    ArrowHead, Border, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, LineStyle, Node, NodeId,
-    NodeKind, Routing, Scene, TextAnchor, TextLabel,
+    ArrowHead, Border, CanvasBackground, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, LineStyle,
+    Node, NodeId, NodeKind, Routing, Scene, TextAnchor, TextLabel,
 };
 use crate::router::{edge_polyline, port_position_on_node};
 
@@ -154,6 +154,16 @@ fn port_fill(kind: crate::model::PortKind) -> Color32 {
     }
 }
 
+/// Fill colour for a [`CanvasBackground`] preset.
+pub fn background_color(bg: CanvasBackground) -> Color32 {
+    match bg {
+        CanvasBackground::Light => Color32::from_rgb(0xF8, 0xFA, 0xFC),
+        CanvasBackground::Slate => Color32::from_rgb(0xDD, 0xE1, 0xE7),
+        CanvasBackground::Charcoal => Color32::from_rgb(0x2B, 0x30, 0x3A),
+        CanvasBackground::Dark => Color32::from_rgb(0x14, 0x17, 0x1C),
+    }
+}
+
 /// Paint the grid using `settings.grid_style`. Auto-hides when zoom is so low
 /// that the grid would just look like noise.
 pub fn paint_grid(painter: &Painter, viewport: &Viewport, settings: &crate::model::CanvasSettings, screen_clip: Rect) {
@@ -173,10 +183,14 @@ pub fn paint_grid(painter: &Painter, viewport: &Viewport, settings: &crate::mode
     let start_iy = (wy0 / world_spacing).floor() as i32;
     let end_iy = (wy1 / world_spacing).ceil() as i32;
 
+    // Grid ink contrasts with the background — dark ink on light canvases,
+    // light ink on dark ones — so it stays visible either way.
+    let ink = if settings.background.is_dark() { 255u8 } else { 0u8 };
+
     match settings.grid_style {
         GridStyle::Lines => {
-            let minor = Stroke::new(1.0, Color32::from_rgba_unmultiplied(0, 0, 0, 18));
-            let major = Stroke::new(1.0, Color32::from_rgba_unmultiplied(0, 0, 0, 45));
+            let minor = Stroke::new(1.0, Color32::from_rgba_unmultiplied(ink, ink, ink, 26));
+            let major = Stroke::new(1.0, Color32::from_rgba_unmultiplied(ink, ink, ink, 60));
             for ix in start_ix..=end_ix {
                 let x_screen = viewport.world_to_screen((ix as f32 * world_spacing, 0.0)).x;
                 let stroke = if ix % 5 == 0 { major } else { minor };
@@ -195,8 +209,8 @@ pub fn paint_grid(painter: &Painter, viewport: &Viewport, settings: &crate::mode
             }
         }
         GridStyle::Dots => {
-            let minor = Color32::from_rgba_unmultiplied(0, 0, 0, 70);
-            let major = Color32::from_rgba_unmultiplied(0, 0, 0, 130);
+            let minor = Color32::from_rgba_unmultiplied(ink, ink, ink, 90);
+            let major = Color32::from_rgba_unmultiplied(ink, ink, ink, 150);
             // Diameter in screen px; clamp so dots never disappear nor blob out.
             let radius = ((settings.dot_size * viewport.zoom) * 0.5).clamp(0.6, 6.0);
             for ix in start_ix..=end_ix {

@@ -53,9 +53,9 @@
 //!   [`parse`] / [`pretty`] pair discards all comments.
 
 use crate::model::{
-    ArrowHead, Border, CanvasSettings, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, GridUnits,
-    LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortAnchor, PortId, PortKind, Routing,
-    Scene, TextAnchor, TextLabel, Transform,
+    ArrowHead, Border, CanvasBackground, CanvasSettings, Edge, EdgeId, EdgeOverlay, Fill,
+    GridStyle, GridUnits, LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortAnchor, PortId,
+    PortKind, Routing, Scene, TextAnchor, TextLabel, Transform,
 };
 
 // =============================================================================
@@ -506,6 +506,7 @@ impl Parser {
                 "routing" => s.default_routing = self.parse_routing()?,
                 "paper" => s.paper_size = Some(self.string()?),
                 "orientation" => s.paper_orientation = Some(self.string()?),
+                "background" => s.background = self.parse_background()?,
                 other => return self.err(format!("unknown setting '{other}'")),
             }
             self.end_statement()?;
@@ -730,6 +731,17 @@ impl Parser {
         }
     }
 
+    fn parse_background(&mut self) -> Result<CanvasBackground, ParseError> {
+        let v = self.ident()?;
+        match v.as_str() {
+            "light" => Ok(CanvasBackground::Light),
+            "slate" => Ok(CanvasBackground::Slate),
+            "charcoal" => Ok(CanvasBackground::Charcoal),
+            "dark" => Ok(CanvasBackground::Dark),
+            other => self.err(format!("unknown background '{other}'")),
+        }
+    }
+
     fn parse_grid_style(&mut self) -> Result<GridStyle, ParseError> {
         let v = self.ident()?;
         match v.as_str() {
@@ -843,6 +855,7 @@ impl<'a> Printer<'a> {
         self.line(2, &format!("snap {}", onoff(s.snap_to_grid)));
         self.line(2, &format!("show_grid {}", onoff(s.show_grid)));
         self.line(2, &format!("routing {}", routing_text(&s.default_routing)));
+        self.line(2, &format!("background {}", background_kw(s.background)));
         if let Some(p) = &s.paper_size {
             self.line(2, &format!("paper {}", quote(p)));
         }
@@ -982,6 +995,15 @@ fn routing_text(r: &Routing) -> String {
     }
 }
 
+fn background_kw(b: CanvasBackground) -> &'static str {
+    match b {
+        CanvasBackground::Light => "light",
+        CanvasBackground::Slate => "slate",
+        CanvasBackground::Charcoal => "charcoal",
+        CanvasBackground::Dark => "dark",
+    }
+}
+
 fn grid_style_kw(s: GridStyle) -> &'static str {
     match s {
         GridStyle::Lines => "lines",
@@ -1052,6 +1074,7 @@ mod tests {
                 paper_size: Some("A4".to_string()),
                 paper_orientation: Some("portrait".to_string()),
                 default_routing: Routing::Bezier,
+                background: CanvasBackground::Slate,
             },
             nodes: vec![
                 Node {
