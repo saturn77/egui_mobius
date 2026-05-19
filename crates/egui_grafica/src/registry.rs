@@ -109,11 +109,9 @@ impl Registry {
     }
 
     pub fn move_node(&self, id: &NodeId, position: (f32, f32)) {
-        self.mutate(|scene| {
-            if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {
-                node.transform.position = position;
-            }
-        });
+        // Single-node moves go through the multi-node path so the
+        // adjacent-waypoint translation kicks in there too.
+        self.move_nodes(&[(id.clone(), position)]);
     }
 
     /// Append a port to a node.
@@ -138,9 +136,93 @@ impl Registry {
     }
 
     /// Move several nodes in one mutation — a single change notification
-    /// rather than one per node. This is the path a multi-node drag uses.
+    /// rather than one per node. The path a multi-node drag uses.
+    ///
+    /// Manual-wire waypoints adjacent to a moved port translate with
+    /// the port: a horizontal port-entry segment stays horizontal, a
+    /// vertical one stays vertical. Without this, dragging a node
+    /// would leave its wires' "elbows" frozen at the old position.
     pub fn move_nodes(&self, moves: &[(NodeId, (f32, f32))]) {
         self.mutate(|scene| {
+            // Per-node delta (new − old). Skip ids that don't exist.
+            let deltas: Vec<(NodeId, (f32, f32))> = moves
+                .iter()
+                .filter_map(|(id, new_pos)| {
+                    let n = scene.nodes.iter().find(|n| &n.id == id)?;
+                    let old = n.transform.position;
+                    Some((id.clone(), (new_pos.0 - old.0, new_pos.1 - old.1)))
+                })
+                .collect();
+
+            // Pre-move snapshot of each Manual edge's port positions —
+            // needed to decide segment orientation, taken before we
+            // start mutating.
+            type PortSnap = (EdgeId, Option<(f32, f32)>, Option<(f32, f32)>);
+            let port_snapshots: Vec<PortSnap> = scene
+                .edges
+                .iter()
+                .filter(|e| matches!(e.routing, Routing::Manual { .. }))
+                .map(|e| {
+                    (
+                        e.id.clone(),
+                        crate::router::edge_end_position(scene, &e.from),
+                        crate::router::edge_end_position(scene, &e.to),
+                    )
+                })
+                .collect();
+
+            // Translate Manual-wire waypoints so the segments touching
+            // a moved port follow the port.
+            for edge in scene.edges.iter_mut() {
+                let Routing::Manual { waypoints } = &mut edge.routing else {
+                    continue;
+                };
+                if waypoints.is_empty() {
+                    continue;
+                }
+                let from_delta = edge.from.node_id().and_then(|n| {
+                    deltas.iter().find(|(id, _)| id == n).map(|(_, d)| *d)
+                });
+                let to_delta = edge.to.node_id().and_then(|n| {
+                    deltas.iter().find(|(id, _)| id == n).map(|(_, d)| *d)
+                });
+                if from_delta.is_none() && to_delta.is_none() {
+                    continue;
+                }
+                // A self-loop on a single moved node: translate every
+                // waypoint by the (shared) delta — the whole wire moves.
+                let same_node = matches!(
+                    (&edge.from, &edge.to),
+                    (EdgeEnd::Port(a, _), EdgeEnd::Port(b, _)) if a == b,
+                );
+                if same_node && let Some((dx, dy)) = from_delta {
+                    for w in waypoints.iter_mut() {
+                        w.0 += dx;
+                        w.1 += dy;
+                    }
+                    continue;
+                }
+
+                let (from_port, to_port) = port_snapshots
+                    .iter()
+                    .find(|(id, _, _)| id == &edge.id)
+                    .map(|(_, f, t)| (*f, *t))
+                    .unwrap_or((None, None));
+
+                if let Some(delta) = from_delta
+                    && let Some(port) = from_port
+                {
+                    translate_adjacent(&mut waypoints[0], port, delta);
+                }
+                if let Some(delta) = to_delta
+                    && let Some(port) = to_port
+                {
+                    let last = waypoints.len() - 1;
+                    translate_adjacent(&mut waypoints[last], port, delta);
+                }
+            }
+
+            // Apply the new positions.
             for (id, position) in moves {
                 if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {
                     node.transform.position = *position;
@@ -299,6 +381,31 @@ impl Registry {
 // Helpers
 // =============================================================================
 
+/// Translate a Manual waypoint by `delta`, but only along the axis that
+/// keeps the segment `port → waypoint` perpendicular to whichever
+/// cardinal axis it was on. A horizontal segment tracks the port's
+/// y-component, a vertical one tracks x, a clearly-diagonal one
+/// translates by the full delta.
+fn translate_adjacent(
+    waypoint: &mut (f32, f32),
+    port: (f32, f32),
+    delta: (f32, f32),
+) {
+    let seg = (waypoint.0 - port.0, waypoint.1 - port.1);
+    let dx_abs = seg.0.abs();
+    let dy_abs = seg.1.abs();
+    if dy_abs < dx_abs * 0.1 {
+        // Horizontal segment — only update Y so it stays horizontal.
+        waypoint.1 += delta.1;
+    } else if dx_abs < dy_abs * 0.1 {
+        // Vertical segment — only update X so it stays vertical.
+        waypoint.0 += delta.0;
+    } else {
+        waypoint.0 += delta.0;
+        waypoint.1 += delta.1;
+    }
+}
+
 fn scene_world_center(scene: &Scene) -> Option<(f32, f32)> {
     let bounds = crate::render::scene_bounds(scene)?;
     Some((bounds.center().x, bounds.center().y))
@@ -311,7 +418,9 @@ fn scene_world_center(scene: &Scene) -> Option<(f32, f32)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{NodeKind, Transform};
+    use crate::model::{
+        EdgeEnd, NodeKind, Port, PortAnchor, PortKind, Transform,
+    };
 
     fn node_rect(id: &str, pos: (f32, f32), size: (f32, f32)) -> Node {
         Node {
@@ -358,5 +467,54 @@ mod tests {
         let scene = reg.scene();
         assert_eq!(scene.nodes.len(), 1);
         assert_eq!(scene.nodes[0].transform.position, (100.0, 100.0));
+    }
+
+    #[test]
+    fn moving_a_node_drags_its_adjacent_manual_waypoint_along() {
+        // Two boards on the same horizontal band, manually-routed L
+        // between them: (a.east)=(100,50) → (150,50) → (150,150) →
+        // (200,150)=(b.west, with b at y=100). The entry into B is a
+        // horizontal run.
+        let reg = Registry::new(Scene::default());
+        let mut a = node_rect("a", (0.0, 0.0), (100.0, 100.0));
+        a.ports.push(Port {
+            id: PortId("pa".into()),
+            name: "pa".into(),
+            kind: PortKind::Out,
+            anchor: PortAnchor::East(0.5),
+            data_type: None,
+        });
+        let mut b = node_rect("b", (200.0, 100.0), (100.0, 100.0));
+        b.ports.push(Port {
+            id: PortId("pb".into()),
+            name: "pb".into(),
+            kind: PortKind::In,
+            anchor: PortAnchor::West(0.5),
+            data_type: None,
+        });
+        reg.add_node(a);
+        reg.add_node(b);
+        reg.add_edge(Edge {
+            id: EdgeId("e".into()),
+            from: EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+            to: EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
+            routing: Routing::Manual { waypoints: vec![(150.0, 50.0), (150.0, 150.0)] },
+            overlay: EdgeOverlay::default(),
+        });
+
+        // Move B up so its west port goes from (200, 150) to (200, 100).
+        reg.move_node(&NodeId("b".into()), (200.0, 50.0));
+
+        let scene = reg.scene();
+        let edge = &scene.edges[0];
+        let Routing::Manual { waypoints } = &edge.routing else {
+            panic!("edge should still be Manual");
+        };
+        // First waypoint (sense_board side) is unchanged.
+        assert_eq!(waypoints[0], (150.0, 50.0));
+        // Second waypoint (B-adjacent) tracks B's Y so the horizontal
+        // entry stays horizontal — y followed by -50, x unchanged.
+        assert!((waypoints[1].1 - 100.0).abs() < 1e-3, "w2.y = {}", waypoints[1].1);
+        assert_eq!(waypoints[1].0, 150.0);
     }
 }
