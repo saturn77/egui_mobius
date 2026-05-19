@@ -48,12 +48,19 @@ fn build_quad_cluster_scene() -> Scene {
     scene.edges.push(orth_edge("e_s_a", ("sense_board", "adc_bus"), ("adc", "sense_bus"), green));
     scene.edges.push(orth_edge("e_a_f", ("adc", "fpga_link"), ("fpga", "adc_link"), red));
 
-    // FPGA → power return path — orthogonal with a dashed line style.
+    // FPGA → power return path — dashed grey, routed *below* every
+    // board with an explicit U so the wire isn't pinned to their
+    // bottoms. Auto-orthogonal of two south-facing ports otherwise
+    // hugs the node edges. A direction-aware router would obviate
+    // these waypoints; for now the demo prescribes them.
+    //
+    // FPGA south(0.5) = (890, 500); power_board south(0.3) = (156, 420).
+    // Drop to y = 560, well clear of the deepest board (FPGA, y = 500).
     scene.edges.push(Edge {
         id: EdgeId("e_f_p".to_string()),
         from: EdgeEnd::Port(NodeId("fpga".to_string()), PortId("fpga_intf".to_string())),
         to: EdgeEnd::Port(NodeId("power_board".to_string()), PortId("fpga_intf".to_string())),
-        routing: Routing::Orthogonal,
+        routing: Routing::Manual { waypoints: vec![(890.0, 560.0), (156.0, 560.0)] },
         overlay: EdgeOverlay {
             color: grey.to_string(),
             width: 1.5,
