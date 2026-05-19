@@ -4,7 +4,7 @@ Status snapshot of the `egui_grafica` crate (a programmable canvas citizen:
 system block diagrams + node graphs, hybrid of schematic-entry and Simulink,
 with a round-trip `.canvas` DSL).
 
-Last updated: 2026-05-18.
+Last updated: 2026-05-19.
 
 ## Working
 
@@ -32,10 +32,22 @@ Last updated: 2026-05-18.
 - Node shapes build as hypercurve `Contour2`; hit-testing uses exact
   contour containment.
 
-**Rendering (`render.rs`)**
+**Rendering (`render.rs`)** — CPU path / glow / web backend
 - Viewport (pan/zoom), grid (lines/dots), nodes (rect/circle/ellipse),
   edges, ports, waypoint handles, selection highlights.
 - Selectable canvas background (Light / Slate / Charcoal / Dark).
+
+**GPU rendering (`gpu` module, `gpu` cargo feature)** — wgpu path
+- Retained wgpu pipeline; pan / zoom is a uniform update, not a
+  re-tessellation. See `develop/gpu_rendering_plan.md`.
+- Phase 0 — wgpu plumbing: `GraficaRenderer` resource, `gpu::init`,
+  `CanvasCallback`. Done.
+- Phase 1 — procedural grid shader: grid computed per-pixel, zero
+  geometry. Done.
+- Phase 2a — instanced node bodies: one instance per node, rect /
+  circle / ellipse via fragment SDF, inside border stroke. Done.
+- Phase 2b (edges) and Phase 3 (dirty tracking) — pending.
+- Off by default; the example `grafica_quad_cluster` enables it.
 
 **Interaction (`interact.rs` + `citizen.rs`)**
 - `CanvasFsm` — explicit interaction state machine: Idle, Panning,
@@ -60,6 +72,10 @@ Last updated: 2026-05-18.
   only.
 - Net-equivalence connection model (undirected nets joined by labels);
   edges are currently point-to-point and directed.
+- Wire segment selection when a wire has no intermediate waypoints —
+  cannot yet click/select/delete a single orthogonal run.
+- Movable left-column shape ribbon with CAD-style tool icons (rect,
+  square, circle, ellipse, parallelogram, text).
 
 ## Tests
 

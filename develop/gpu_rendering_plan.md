@@ -57,7 +57,7 @@ crate still builds for glow / web, where `render.rs` remains the path).
   painter, composited on top of the callback. egui's glyph atlas is
   already GPU-cached; text-on-GPU is out of scope.
 
-## Phase 0 — wgpu plumbing
+## Phase 0 — wgpu plumbing — DONE (commit, 2026-05-19)
 
 Stand up the pipeline end to end with the smallest real payload.
 
@@ -72,7 +72,7 @@ Stand up the pipeline end to end with the smallest real payload.
   host for the Phase 1 grid shader.
 - `grafica_quad_cluster`: enable the `gpu` feature, call `gpu::init`.
 
-## Phase 1 — procedural grid shader
+## Phase 1 — procedural grid shader — DONE (2026-05-19)
 
 - Upgrade the fullscreen quad's fragment shader to compute the grid
   procedurally from viewport uniforms: origin, zoom, world spacing,
@@ -83,13 +83,15 @@ Stand up the pipeline end to end with the smallest real payload.
 
 ## Phase 2 — instanced scene geometry
 
-- A unit-quad mesh; one GPU **instance** per node carrying transform,
-  fill, border. Rect renders directly; circle/ellipse via an SDF in the
-  fragment shader keyed by `NodeKind`.
-- Edges: each polyline segment expanded to an instanced quad (line as
-  oriented rectangle), with dash/dot handled in-shader.
-- Pan/zoom updates only `ViewportUniform` — no buffer re-upload.
-- Ports and waypoints: instanced from the same quad pipeline.
+- Phase 2a — DONE (2026-05-19): a unit-quad mesh; one GPU **instance**
+  per node carrying transform, fill, border. Rect renders directly;
+  circle/ellipse via an SDF in the fragment shader keyed by `NodeKind`.
+  Pan/zoom updates only `ViewportUniform`.
+- Phase 2b — pending: edges — each polyline segment expanded to an
+  instanced quad (line as oriented rectangle), with dash/dot in-shader.
+  Arrowheads stay on the painter for now.
+- Ports and waypoints stay on the egui painter — few per scene, cheap,
+  constant screen size. Revisit only if profiling says otherwise.
 
 ## Phase 3 — dirty tracking
 

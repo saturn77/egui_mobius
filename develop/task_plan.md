@@ -37,3 +37,24 @@ tx.send(MyRequest::Fetch { url });
 - [ ] Update README to reflect relationship with egui-citizen
 - [ ] Add getting-started guide (like egui-citizen's)
 - [ ] Document when to use signals/slots vs crossbeam channels
+
+## egui_grafica
+
+### GPU rendering — see `develop/gpu_rendering_plan.md`
+- [x] Phase 0 — wgpu plumbing
+- [x] Phase 1 — procedural grid shader
+- [x] Phase 2a — instanced node bodies
+- [ ] Phase 2b — instanced edge segments
+- [ ] Phase 3 — dirty tracking (generation counter)
+- [ ] Phase 4 (deferred) — over-render texture cache / LOD tiling
+
+### Editor features
+- [ ] Wire segment selection when a wire has no intermediate waypoints
+  — click an orthogonal run bounded by an endpoint and a bend, select
+  only that segment, allow deletion. Hit-testing in `interact.rs`.
+- [ ] Movable left-column shape ribbon, dockable to any side like the
+  top ribbon, with CAD-style tool icons — rectangle, square, circle,
+  ellipse, parallelogram, text. Reuse `citizen.rs::show_ribbon`
+  (`vertical` flag). Icons via `egui-phosphor` or a shadcn-style egui
+  theme. `square` maps to `Rect`; `parallelogram` likely needs a new
+  `NodeKind`.

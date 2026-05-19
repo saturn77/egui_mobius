@@ -70,6 +70,36 @@ geometry foundation for routing and shapes.
 - `Real → f32` is the only lossy step, confined to the `geometry` bridge,
   at the rendering/interaction edge.
 
+## GPU rendering — a retained wgpu path beside the CPU painter
+
+Decision (James + Tim Schmidt, 2026-05-19): `egui_grafica` gains a
+retained wgpu rendering pipeline, behind a `gpu` cargo feature, rather
+than relying on egui's per-frame tessellator for everything.
+
+The motivation: `render::paint_scene` re-tessellates every node, edge,
+and grid intersection each frame, even when the user only pans or zooms
+— none of that geometry changed, only the view transform did. Uploading
+geometry to VRAM once and making pan/zoom a uniform update removes that
+cost.
+
+Principles, from the design discussion:
+
+- **Static geometry belongs in the wgpu layer**, not the tessellator.
+- Once geometry is on the GPU, **pan/zoom only moves the view window**;
+  the CPU re-uploads only when the scene graph changes.
+- **Instancing** — many copies of one primitive upload once, draw N
+  times.
+- **"Hyperreals as truth, VRAM as an f64 cache."** The hypercurve
+  geometry kernel is the source of truth; GPU buffers are a derived,
+  lossy cache keyed by a generation counter.
+
+`render.rs` stays the path for the glow / web backends — the `gpu`
+feature is additive, not a replacement. The staged plan and its
+rationale live in `develop/gpu_rendering_plan.md`. Text, selection
+highlights, and rubber-band previews stay on the egui painter: its
+glyph atlas is already GPU-cached, and text-on-GPU is a separate
+rabbit hole.
+
 ## Memory accuracy note
 
 An earlier internal note recorded "no geometry kernel" as a settled

@@ -1,7 +1,20 @@
 # egui_grafica — updates log
 
 Chronological log of `egui_grafica` changes, newest first. Spans
-2026-05-14 → 2026-05-18.
+2026-05-14 → 2026-05-19.
+
+## GPU rendering — retained wgpu pipeline (`gpu` feature)
+
+See `develop/gpu_rendering_plan.md` for the staged plan.
+
+- Phase 2a — instanced node bodies on the GPU: one instance per node,
+  rect / circle / ellipse via a fragment-shader SDF, inside border
+  stroke. Edges, text, ports, waypoints, selection stay on the painter.
+- Phase 1 — procedural grid shader: the grid is computed per-pixel from
+  the viewport transform, replacing thousands of tessellated circles
+  and line segments with zero geometry.
+- Phase 0 — wgpu plumbing: `GraficaRenderer` resource, `gpu::init`,
+  `CanvasCallback`; the canvas background became a fullscreen GPU quad.
 
 ## Interaction & geometry
 
