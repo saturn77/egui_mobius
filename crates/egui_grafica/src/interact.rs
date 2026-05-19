@@ -8,7 +8,9 @@
 //!
 //! [`Registry`]: crate::registry::Registry
 
-use crate::model::{Edge, EdgeEnd, EdgeId, Node, NodeId, PortAnchor, PortId, Routing, Scene};
+use crate::model::{
+    Edge, EdgeEnd, EdgeEndSide, EdgeId, Node, NodeId, PortAnchor, PortId, Routing, Scene,
+};
 use crate::router::{edge_polyline, port_position_on_node};
 
 // =============================================================================
@@ -125,6 +127,9 @@ pub enum CanvasState {
     DraggingSegment,
     /// Dragging a wire's pivot vertex (2 DOF, free).
     DraggingWaypoint,
+    /// Dragging a wire's dangling free endpoint, possibly to snap it
+    /// back onto a port.
+    DraggingFreeEnd,
 }
 
 /// What the pointer pressed on — decides which gesture a press begins.
@@ -136,6 +141,8 @@ pub enum HitTarget {
     WireSegment,
     /// A pivot vertex on a hand-routed wire.
     Waypoint,
+    /// A dangling, non-port endpoint of a wire.
+    FreeEnd,
 }
 
 /// Events that drive FSM transitions.
@@ -158,6 +165,7 @@ fn next_state(state: CanvasState, event: CanvasEvent, target: HitTarget) -> Opti
         (Idle, Press, NodeBody) => Some(MovingNodes),
         (Idle, Press, Port) => Some(Connecting),
         (Idle, Press, Waypoint) => Some(DraggingWaypoint),
+        (Idle, Press, FreeEnd) => Some(DraggingFreeEnd),
         (Idle, Press, WireSegment) => Some(DraggingSegment),
         // Any active gesture ends on release or cancel.
         (s, Release, _) | (s, Cancel, _) if s != Idle => Some(Idle),
@@ -196,6 +204,8 @@ pub struct CanvasFsm {
     pub drag_origin_pts: Vec<(f32, f32)>,
     /// `DraggingWaypoint`: index into the wire's waypoint list.
     pub drag_waypoint: usize,
+    /// `DraggingFreeEnd`: which end of `drag_edge` is being dragged.
+    pub drag_free_side: Option<EdgeEndSide>,
 }
 
 impl CanvasFsm {
@@ -237,6 +247,7 @@ impl CanvasFsm {
         self.drag_segment = 0;
         self.drag_origin_pts.clear();
         self.drag_waypoint = 0;
+        self.drag_free_side = None;
     }
 }
 
@@ -261,6 +272,30 @@ pub fn hit_test_waypoint(scene: &Scene, world: (f32, f32), radius: f32) -> Optio
         }
     }
     best.map(|(_, id, i)| (id, i))
+}
+
+/// The wire free endpoint nearest `world`, within `radius`. Used to
+/// pick up a dangling wire end and drag it onto a port.
+pub fn hit_test_free_end(
+    scene: &Scene,
+    world: (f32, f32),
+    radius: f32,
+) -> Option<(EdgeId, EdgeEndSide)> {
+    let r2 = radius * radius;
+    let mut best: Option<(f32, EdgeId, EdgeEndSide)> = None;
+    for edge in &scene.edges {
+        for (side, end) in
+            [(EdgeEndSide::From, &edge.from), (EdgeEndSide::To, &edge.to)]
+        {
+            if let EdgeEnd::Free(x, y) = end {
+                let d2 = (*x - world.0).powi(2) + (*y - world.1).powi(2);
+                if d2 <= r2 && best.as_ref().is_none_or(|(bd, _, _)| d2 < *bd) {
+                    best = Some((d2, edge.id.clone(), side));
+                }
+            }
+        }
+    }
+    best.map(|(_, id, side)| (id, side))
 }
 
 /// A prepared segment drag — see [`prepare_segment_drag`].

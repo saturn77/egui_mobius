@@ -31,8 +31,8 @@ use std::sync::{Arc, MutexGuard};
 use egui_mobius_reactive::Dynamic;
 
 use crate::model::{
-    CanvasSettings, Edge, EdgeId, EdgeOverlay, Node, NodeId, Overlay, Port, PortAnchor, PortId,
-    Routing, Scene,
+    CanvasSettings, Edge, EdgeEnd, EdgeEndSide, EdgeId, EdgeOverlay, Node, NodeId, Overlay, Port,
+    PortAnchor, PortId, Routing, Scene,
 };
 
 /// Owns the [`Scene`] and is the only legitimate place to mutate it.
@@ -185,6 +185,20 @@ impl Registry {
         self.mutate(|scene| {
             if let Some(edge) = scene.edges.iter_mut().find(|e| &e.id == id) {
                 edge.routing = routing;
+            }
+        });
+    }
+
+    /// Reattach (or move) one end of a wire — used to drag a dangling
+    /// `EdgeEnd::Free` endpoint onto a port (`EdgeEnd::Port`), or to
+    /// move it to a new free position during the drag.
+    pub fn update_edge_end(&self, id: &EdgeId, side: EdgeEndSide, end: EdgeEnd) {
+        self.mutate(|scene| {
+            if let Some(edge) = scene.edges.iter_mut().find(|e| &e.id == id) {
+                match side {
+                    EdgeEndSide::From => edge.from = end,
+                    EdgeEndSide::To => edge.to = end,
+                }
             }
         });
     }

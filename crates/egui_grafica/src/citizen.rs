@@ -36,9 +36,9 @@ use egui::{Color32, Key, Sense, Stroke};
 use egui_phosphor::regular as ico;
 
 use crate::interact::{
-    hit_test_edge, hit_test_edge_segment, hit_test_node, hit_test_port, hit_test_waypoint,
-    insert_pivot, nearest_perimeter_anchor, prepare_segment_drag, snap_to_grid, CanvasEvent,
-    CanvasFsm, CanvasState, HitTarget, Selection,
+    hit_test_edge, hit_test_edge_segment, hit_test_free_end, hit_test_node, hit_test_port,
+    hit_test_waypoint, insert_pivot, nearest_perimeter_anchor, prepare_segment_drag,
+    snap_to_grid, CanvasEvent, CanvasFsm, CanvasState, HitTarget, Selection,
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
@@ -467,14 +467,20 @@ impl CanvasCitizen {
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
             let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
 
-            // Priority: pivot vertex > port > node body > wire > empty.
+            // Priority: pivot vertex > free end > port > node body > wire > empty.
+            // Free ends are draggable handles for reattachment, so they
+            // win over a port that happens to sit at the same point.
             let waypoint_hit =
                 self.registry.with_scene(|s| hit_test_waypoint(s, world, port_radius));
+            let free_end_hit =
+                self.registry.with_scene(|s| hit_test_free_end(s, world, port_radius));
             let port_hit = self.registry.with_scene(|s| hit_test_port(s, world, port_radius));
             let node_hit = self.registry.with_scene(|s| hit_test_node(s, world));
             let edge_hit = self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh));
             let target = if waypoint_hit.is_some() {
                 HitTarget::Waypoint
+            } else if free_end_hit.is_some() {
+                HitTarget::FreeEnd
             } else if port_hit.is_some() {
                 HitTarget::Port
             } else if node_hit.is_some() {
@@ -533,6 +539,12 @@ impl CanvasCitizen {
                     self.selection.select_only_edge(eid.clone());
                     self.fsm.drag_edge = Some(eid);
                     self.fsm.drag_waypoint = idx;
+                }
+                CanvasState::DraggingFreeEnd => {
+                    let (eid, side) = free_end_hit.expect("FreeEnd target implies a hit");
+                    self.selection.select_only_edge(eid.clone());
+                    self.fsm.drag_edge = Some(eid);
+                    self.fsm.drag_free_side = Some(side);
                 }
                 CanvasState::DraggingSegment => {
                     let eid = edge_hit.expect("WireSegment target implies a wire hit");
@@ -683,6 +695,19 @@ impl CanvasCitizen {
                         }
                     }
                 }
+                CanvasState::DraggingFreeEnd => {
+                    // Live-track the dangling end to the cursor — the rest
+                    // of the wire stays put. Snap-to-port happens on release.
+                    if let Some(eid) = self.fsm.drag_edge.clone()
+                        && let Some(side) = self.fsm.drag_free_side
+                        && let Some(screen) = response.interact_pointer_pos()
+                    {
+                        let cursor = self.viewport.screen_to_world(screen);
+                        self.fsm.cursor_world = cursor;
+                        self.registry
+                            .update_edge_end(&eid, side, EdgeEnd::Free(cursor.0, cursor.1));
+                    }
+                }
                 CanvasState::Idle => {}
             }
         }
@@ -711,6 +736,21 @@ impl CanvasCitizen {
                 });
                 self.selection.nodes = nodes;
                 self.selection.edges = edges;
+            }
+            // Snap a dragged free end back onto a port if released over one.
+            // Otherwise the live-tracked Free position from the drag stays.
+            if self.fsm.state == CanvasState::DraggingFreeEnd
+                && let Some(eid) = self.fsm.drag_edge.clone()
+                && let Some(side) = self.fsm.drag_free_side
+            {
+                let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+                let snap = self
+                    .registry
+                    .with_scene(|s| hit_test_port(s, self.fsm.cursor_world, port_radius));
+                if let Some((nid, pid)) = snap {
+                    self.registry
+                        .update_edge_end(&eid, side, EdgeEnd::Port(nid, pid));
+                }
             }
             self.fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
         }
@@ -1090,35 +1130,20 @@ impl CanvasCitizen {
                 }
             }
             ContextAction::DeleteSegment(eid, world) => {
-                let routing = self.registry.with_scene(|s| -> Option<Routing> {
+                // Resolve the right-click point to a polyline segment, then
+                // truncate the wire at it. Works for any routing — the
+                // surviving runs become edges with a free endpoint at the
+                // cut.
+                let seg = self.registry.with_scene(|s| {
                     let e = s.edges.iter().find(|e| e.id == eid)?;
-                    let Routing::Manual { waypoints } = &e.routing else {
-                        return None; // an auto-routed wire has no user segments
-                    };
                     let poly = crate::router::edge_polyline(s, e)?;
-                    let k = crate::interact::nearest_segment_index(&poly, world)?;
-                    let last_wp = poly.len().saturating_sub(2);
-                    // waypoint j corresponds to polyline index j + 1.
-                    let wp_idx = if k < last_wp {
-                        k
-                    } else if (1..=last_wp).contains(&k) {
-                        k - 1
-                    } else {
-                        return None; // segment bounded by the two ports
-                    };
-                    let mut wps = waypoints.clone();
-                    if wp_idx >= wps.len() {
-                        return None;
-                    }
-                    wps.remove(wp_idx);
-                    Some(if wps.is_empty() {
-                        Routing::Orthogonal
-                    } else {
-                        Routing::Manual { waypoints: wps }
-                    })
+                    crate::interact::nearest_segment_index(&poly, world)
                 });
-                if let Some(routing) = routing {
-                    self.registry.update_edge_routing(&eid, routing);
+                if let Some(k) = seg {
+                    self.truncate_edge_segments(&eid, &[k]);
+                    // Segment indices shift after truncation — drop any
+                    // selection entries for this edge so they don't dangle.
+                    self.selection.segments.retain(|(e, _)| e != &eid);
                 }
             }
             ContextAction::AddPort(nid, world) => {

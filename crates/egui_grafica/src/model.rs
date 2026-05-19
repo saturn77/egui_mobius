@@ -289,6 +289,14 @@ impl EdgeEnd {
     }
 }
 
+/// Which end of an [`Edge`] — `from` or `to`. Used to address a single
+/// endpoint when reattaching a dangling wire to a port.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EdgeEndSide {
+    From,
+    To,
+}
+
 /// How an edge is routed between its endpoints.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub enum Routing {
