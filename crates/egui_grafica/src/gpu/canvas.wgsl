@@ -5,6 +5,7 @@
 // from the viewport transform — no grid geometry is uploaded, and the
 // grid stays crisp at any zoom.
 
+// MUST match `nodes.wgsl` and the `ViewportUniform` struct in `mod.rs`.
 struct Viewport {
     // Screen point (egui points) where world (0, 0) lands, and
     // pixels-per-world-unit.
@@ -15,10 +16,14 @@ struct Viewport {
     bg_color: vec4<f32>,
     // Grid ink, linear, alpha = 1 (the shader applies the tier alpha).
     grid_color: vec4<f32>,
+    // Full window size, egui points (used by the node shader).
+    screen_size: vec2<f32>,
     grid_spacing: f32,   // world units between grid lines
     dot_size: f32,       // dot diameter, world units (dot style)
     grid_style: u32,     // 0 = lines, 1 = dots
     flags: u32,          // bit0 = show_grid, bit1 = srgb_target
+    pad0: u32,
+    pad1: u32,
 };
 
 @group(0) @binding(0) var<uniform> vp: Viewport;

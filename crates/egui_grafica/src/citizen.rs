@@ -47,12 +47,12 @@ use crate::model::{
 };
 use crate::registry::Registry;
 use crate::render::{
-    paint_connection_preview, paint_scene, paint_selected_edges, paint_selection,
+    paint_connection_preview, paint_selected_edges, paint_selection,
     scene_bounds, viewport_fit_to, Viewport,
 };
-// The CPU background fill is only compiled when the GPU path is off.
+// CPU-path-only entry points — unused when the GPU pipeline is compiled.
 #[cfg(not(feature = "gpu"))]
-use crate::render::background_color;
+use crate::render::{background_color, paint_scene};
 use crate::router::port_world_position;
 
 /// Pointer-to-port grab tolerance, in screen pixels — a generous safety ring
@@ -905,27 +905,29 @@ impl CanvasCitizen {
             self.apply_context_action(action);
         }
 
-        let settings = self.registry.with_scene(|s| s.settings.clone());
-        // The GPU path draws background + grid as a fullscreen quad; the
-        // CPU path fills the rect and strokes the grid. See `gpu` module.
+        // Background, grid, and — on the GPU path — node bodies are drawn
+        // by the wgpu pipeline; everything else stays on the egui painter.
+        // The CPU path fills and strokes the whole scene on the painter.
         #[cfg(feature = "gpu")]
-        crate::gpu::paint_canvas(
-            &painter,
-            rect,
-            &self.viewport,
-            &settings,
-            ui.ctx().pixels_per_point(),
-        );
+        self.registry.with_scene(|scene| {
+            crate::gpu::paint_canvas(&painter, rect, &self.viewport, scene);
+            crate::render::paint_edges(&painter, scene, &self.viewport);
+            crate::render::paint_node_labels(&painter, scene, &self.viewport);
+            crate::render::paint_ports(&painter, scene, &self.viewport);
+            crate::render::paint_waypoints(&painter, scene, &self.viewport);
+        });
         #[cfg(not(feature = "gpu"))]
         {
+            let settings = self.registry.with_scene(|s| s.settings.clone());
             painter.rect_filled(rect, 0.0, background_color(settings.background));
             if settings.show_grid {
                 crate::render::paint_grid(&painter, &self.viewport, &settings, rect);
             }
+            self.registry.with_scene(|scene| paint_scene(&painter, scene, &self.viewport));
         }
 
+        // Selection highlights — painter-side on both paths.
         self.registry.with_scene(|scene| {
-            paint_scene(&painter, scene, &self.viewport);
             paint_selected_edges(&painter, scene, &self.selection.edges, &self.viewport);
             paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
         });

@@ -282,7 +282,7 @@ pub fn paint_selection(painter: &Painter, scene: &Scene, selected: &[NodeId], vi
 
 /// Parse `#RRGGBB` or `#RRGGBBAA` into a [`Color32`]. Returns transparent on
 /// malformed input — the renderer prefers graceful degradation to panics.
-fn parse_color(hex: &str) -> Color32 {
+pub(crate) fn parse_color(hex: &str) -> Color32 {
     let s = hex.trim_start_matches('#');
     let parse_byte = |i: usize| u8::from_str_radix(&s[i..i + 2], 16).ok();
     match s.len() {
@@ -298,7 +298,7 @@ fn parse_color(hex: &str) -> Color32 {
     }
 }
 
-fn fill_to_color(fill: &Fill) -> Color32 {
+pub(crate) fn fill_to_color(fill: &Fill) -> Color32 {
     let base = parse_color(&fill.color);
     let alpha = (fill.alpha.clamp(0.0, 1.0) * 255.0) as u8;
     Color32::from_rgba_unmultiplied(base.r(), base.g(), base.b(), alpha)
@@ -352,6 +352,22 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
     }
 }
 
+/// Paint only the text labels of every node. The GPU path draws node
+/// bodies on the GPU but keeps text on the egui painter.
+pub fn paint_node_labels(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+    for node in &scene.nodes {
+        let Some(text) = &node.overlay.text else {
+            continue;
+        };
+        let (x, y) = node.transform.position;
+        let (w, h) = node.transform.size;
+        let top_left = viewport.world_to_screen((x, y));
+        let bot_right = viewport.world_to_screen((x + w, y + h));
+        let screen_rect = Rect::from_min_max(top_left, bot_right);
+        paint_node_text(painter, text, screen_rect, viewport);
+    }
+}
+
 fn paint_ellipse(painter: &Painter, center: Pos2, rx: f32, ry: f32, fill: Color32, stroke: Stroke) {
     // Polygon approximation. 64 segments looks smooth at any reasonable zoom.
     const SEGMENTS: usize = 64;
@@ -397,6 +413,14 @@ fn paint_node_text(painter: &Painter, text: &TextLabel, screen_rect: Rect, viewp
 // =============================================================================
 // Edge painting
 // =============================================================================
+
+/// Paint every edge of the scene. The GPU path that draws node bodies
+/// on the GPU but not yet edges calls this directly.
+pub fn paint_edges(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+    for edge in &scene.edges {
+        paint_edge(painter, edge, scene, viewport);
+    }
+}
 
 fn paint_edge(painter: &Painter, edge: &Edge, scene: &Scene, viewport: &Viewport) {
     // The router owns the path; the renderer only maps it to screen and draws.
