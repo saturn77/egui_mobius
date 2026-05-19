@@ -53,7 +53,7 @@
 //!   [`parse`] / [`pretty`] pair discards all comments.
 
 use crate::model::{
-    ArrowHead, Border, CanvasBackground, CanvasSettings, Edge, EdgeId, EdgeOverlay, Fill,
+    ArrowHead, Border, CanvasBackground, CanvasSettings, Edge, EdgeEnd, EdgeId, EdgeOverlay, Fill,
     GridStyle, GridUnits, LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortAnchor, PortId,
     PortKind, Routing, Scene, TextAnchor, TextLabel, Transform,
 };
@@ -684,11 +684,11 @@ impl Parser {
         Ok(edge)
     }
 
-    fn parse_endpoint(&mut self) -> Result<(NodeId, PortId), ParseError> {
+    fn parse_endpoint(&mut self) -> Result<EdgeEnd, ParseError> {
         let node = self.ident()?;
         self.expect(&Tok::Dot, "'.'")?;
         let port = self.ident()?;
-        Ok((NodeId(node), PortId(port)))
+        Ok(EdgeEnd::Port(NodeId(node), PortId(port)))
     }
 
     // ── small enums ──────────────────────────────────────────────────────
@@ -818,6 +818,12 @@ impl<'a> Printer<'a> {
             self.print_node(node);
         }
         for edge in &scene.edges {
+            // Dangling (free-ended) wires aren't representable in the
+            // DSL yet — they're an in-memory-only construct, so skip
+            // them on save. Re-loading drops them silently.
+            if edge.from.is_free() || edge.to.is_free() {
+                continue;
+            }
             self.out.push('\n');
             self.emit_comments(&CommentAnchor::Wire(edge.id.clone()), 1);
             self.print_wire(edge);
@@ -910,11 +916,18 @@ impl<'a> Printer<'a> {
     }
 
     fn print_wire(&mut self, edge: &Edge) {
+        // The caller filters out free-ended edges; this guard is just
+        // defense-in-depth so the field accesses below stay valid.
+        let (EdgeEnd::Port(fn_id, fp_id), EdgeEnd::Port(tn_id, tp_id)) =
+            (&edge.from, &edge.to)
+        else {
+            return;
+        };
         self.line(
             1,
             &format!(
                 "wire {} {}.{} -> {}.{} {{",
-                edge.id.0, edge.from.0.0, edge.from.1.0, edge.to.0.0, edge.to.1.0
+                edge.id.0, fn_id.0, fp_id.0, tn_id.0, tp_id.0
             ),
         );
         self.line(2, &format!("routing {}", routing_text(&edge.routing)));
@@ -1139,8 +1152,8 @@ mod tests {
             ],
             edges: vec![Edge {
                 id: EdgeId("e1".into()),
-                from: (NodeId("a".into()), PortId("p1".into())),
-                to: (NodeId("b".into()), PortId("q1".into())),
+                from: EdgeEnd::Port(NodeId("a".into()), PortId("p1".into())),
+                to: EdgeEnd::Port(NodeId("b".into()), PortId("q1".into())),
                 routing: Routing::Orthogonal,
                 overlay: EdgeOverlay {
                     color: "#FF0000".into(),

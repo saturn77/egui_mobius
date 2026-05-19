@@ -249,14 +249,44 @@ pub enum PortAnchor {
 // Edge
 // =============================================================================
 
-/// A connection between two ports.
+/// A connection between two endpoints.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Edge {
     pub id: EdgeId,
-    pub from: (NodeId, PortId),
-    pub to: (NodeId, PortId),
+    pub from: EdgeEnd,
+    pub to: EdgeEnd,
     pub routing: Routing,
     pub overlay: EdgeOverlay,
+}
+
+/// One end of an [`Edge`]: anchored to a port, or a free-floating point.
+///
+/// The model is otherwise strictly relational — `Free` exists so that
+/// deleting a wire segment can leave the surviving run intact, dangling
+/// at the cut. A `Free` end is expected to be transient: dragged onto a
+/// port to reconnect, or removed. The `.canvas` DSL does not yet
+/// represent free ends, so a dangling wire isn't persisted on save.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EdgeEnd {
+    /// Anchored to a node's port — follows the port as the node moves.
+    Port(NodeId, PortId),
+    /// A free-floating world-space point.
+    Free(f32, f32),
+}
+
+impl EdgeEnd {
+    /// The node this end is anchored to, if it is a port end.
+    pub fn node_id(&self) -> Option<&NodeId> {
+        match self {
+            EdgeEnd::Port(n, _) => Some(n),
+            EdgeEnd::Free(..) => None,
+        }
+    }
+
+    /// True iff this end is a free, dangling point.
+    pub fn is_free(&self) -> bool {
+        matches!(self, EdgeEnd::Free(..))
+    }
 }
 
 /// How an edge is routed between its endpoints.

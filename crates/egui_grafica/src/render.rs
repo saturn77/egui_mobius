@@ -18,8 +18,8 @@
 use egui::{Align2, Color32, CornerRadius, FontFamily, FontId, Painter, Pos2, Rect, Stroke, StrokeKind, Vec2};
 
 use crate::model::{
-    ArrowHead, Border, CanvasBackground, Edge, EdgeId, EdgeOverlay, Fill, GridStyle, LineStyle,
-    Node, NodeId, NodeKind, Routing, Scene, TextAnchor, TextLabel,
+    ArrowHead, Border, CanvasBackground, Edge, EdgeEnd, EdgeId, EdgeOverlay, Fill, GridStyle,
+    LineStyle, Node, NodeId, NodeKind, Routing, Scene, TextAnchor, TextLabel,
 };
 use crate::router::{edge_polyline, port_position_on_node};
 
@@ -80,6 +80,21 @@ pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport) {
     }
     paint_ports(painter, scene, viewport);
     paint_waypoints(painter, scene, viewport);
+    paint_free_ends(painter, scene, viewport);
+}
+
+/// Draw a small open marker at every dangling (non-port) wire end —
+/// visual cue that the wire is unfinished and needs reconnection.
+pub fn paint_free_ends(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+    let ink = Color32::from_rgb(0xEF, 0x44, 0x44);
+    for edge in &scene.edges {
+        for end in [&edge.from, &edge.to] {
+            if let EdgeEnd::Free(x, y) = end {
+                let p = viewport.world_to_screen((*x, *y));
+                painter.circle(p, 4.5, Color32::TRANSPARENT, Stroke::new(1.5, ink));
+            }
+        }
+    }
 }
 
 /// Draw pivot-vertex handles for hand-routed wires so they can be seen and

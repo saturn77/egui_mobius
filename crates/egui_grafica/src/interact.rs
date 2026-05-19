@@ -8,7 +8,7 @@
 //!
 //! [`Registry`]: crate::registry::Registry
 
-use crate::model::{EdgeId, Node, NodeId, PortAnchor, PortId, Scene};
+use crate::model::{Edge, EdgeEnd, EdgeId, Node, NodeId, PortAnchor, PortId, Routing, Scene};
 use crate::router::{edge_polyline, port_position_on_node};
 
 // =============================================================================
@@ -335,6 +335,72 @@ pub fn insert_pivot(polyline: &[(f32, f32)], click: (f32, f32)) -> Vec<(f32, f32
     pts[1..pts.len() - 1].to_vec()
 }
 
+/// Endpoints and routing for one surviving run after some of an edge's
+/// segments are deleted. The caller assigns IDs and copies the overlay.
+#[derive(Debug, Clone)]
+pub struct EdgeSurvivor {
+    pub from: EdgeEnd,
+    pub to: EdgeEnd,
+    pub routing: Routing,
+}
+
+/// Rebuild a wire after some of its segments are deleted.
+///
+/// `poly` is the edge's materialized polyline (n + 1 points → n
+/// segments); `deleted` lists the segment indices to drop. The
+/// remaining segments split into maximal contiguous runs — each run
+/// becomes one [`EdgeSurvivor`]. A run that begins at segment 0 keeps
+/// the wire's original `from` end; otherwise that end is `Free` at the
+/// cut point. Symmetrically for `to`. An empty list means every segment
+/// was deleted — the wire is gone.
+pub fn split_edge_on_deletes(
+    edge: &Edge,
+    poly: &[(f32, f32)],
+    deleted: &[usize],
+) -> Vec<EdgeSurvivor> {
+    let Some(n) = poly.len().checked_sub(1) else {
+        return Vec::new();
+    };
+    if n == 0 {
+        return Vec::new();
+    }
+    let is_deleted = |i: usize| deleted.contains(&i);
+
+    let mut survivors = Vec::new();
+    let mut i = 0usize;
+    while i < n {
+        if is_deleted(i) {
+            i += 1;
+            continue;
+        }
+        let a = i;
+        let mut b = i;
+        while b + 1 < n && !is_deleted(b + 1) {
+            b += 1;
+        }
+        // Run covers point indices a ..= b + 1.
+        let from = if a == 0 {
+            edge.from.clone()
+        } else {
+            EdgeEnd::Free(poly[a].0, poly[a].1)
+        };
+        let to = if b == n - 1 {
+            edge.to.clone()
+        } else {
+            EdgeEnd::Free(poly[b + 1].0, poly[b + 1].1)
+        };
+        let interior: Vec<(f32, f32)> = poly[a + 1..=b].to_vec();
+        let routing = if interior.is_empty() {
+            Routing::Straight
+        } else {
+            Routing::Manual { waypoints: interior }
+        };
+        survivors.push(EdgeSurvivor { from, to, routing });
+        i = b + 1;
+    }
+    survivors
+}
+
 /// Index of the polyline segment nearest `world` — which segment of a wire
 /// the pointer is over. `None` for a degenerate polyline.
 pub fn nearest_segment_index(polyline: &[(f32, f32)], world: (f32, f32)) -> Option<usize> {
@@ -619,8 +685,8 @@ mod tests {
         scene.nodes.push(b);
         scene.edges.push(Edge {
             id: EdgeId("e".into()),
-            from: (NodeId("a".into()), PortId("pa".into())),
-            to: (NodeId("b".into()), PortId("pb".into())),
+            from: crate::model::EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+            to: crate::model::EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
             routing: Routing::Straight,
             overlay: EdgeOverlay::default(),
         });
@@ -684,8 +750,8 @@ mod tests {
         scene.nodes.push(b);
         scene.edges.push(Edge {
             id: EdgeId("e".into()),
-            from: (NodeId("a".into()), PortId("pa".into())),
-            to: (NodeId("b".into()), PortId("pb".into())),
+            from: crate::model::EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+            to: crate::model::EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
             routing: Routing::Orthogonal,
             overlay: EdgeOverlay::default(),
         });
@@ -735,6 +801,59 @@ mod tests {
         fsm.connect_from = Some((NodeId("n".into()), PortId("p".into())));
         fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
         assert!(fsm.connect_from.is_none(), "context must clear on Idle");
+    }
+
+    #[test]
+    fn split_edge_on_deletes_keeps_the_surviving_run_of_an_l() {
+        use crate::model::{EdgeId, EdgeOverlay};
+        let edge = Edge {
+            id: EdgeId("e".into()),
+            from: EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+            to: EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
+            routing: Routing::Manual { waypoints: vec![(50.0, 0.0)] },
+            overlay: EdgeOverlay::default(),
+        };
+        // L-shape: A(0,0) — corner(50,0) — B(50,50).
+        let poly = vec![(0.0, 0.0), (50.0, 0.0), (50.0, 50.0)];
+
+        // Delete the bottom leg (segment 0) — the "I" from corner to B
+        // survives, dangling at the corner.
+        let s = split_edge_on_deletes(&edge, &poly, &[0]);
+        assert_eq!(s.len(), 1);
+        assert!(matches!(s[0].from, EdgeEnd::Free(x, y) if x == 50.0 && y == 0.0));
+        assert_eq!(s[0].to, edge.to);
+        assert_eq!(s[0].routing, Routing::Straight);
+
+        // Delete the vertical leg — the horizontal leg survives.
+        let s = split_edge_on_deletes(&edge, &poly, &[1]);
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].from, edge.from);
+        assert!(matches!(s[0].to, EdgeEnd::Free(x, y) if x == 50.0 && y == 0.0));
+
+        // Delete both — nothing left.
+        assert!(split_edge_on_deletes(&edge, &poly, &[0, 1]).is_empty());
+    }
+
+    #[test]
+    fn split_edge_on_deletes_splits_at_a_middle_cut() {
+        use crate::model::{EdgeId, EdgeOverlay};
+        let edge = Edge {
+            id: EdgeId("e".into()),
+            from: EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+            to: EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
+            routing: Routing::Manual { waypoints: vec![(10.0, 0.0), (20.0, 0.0)] },
+            overlay: EdgeOverlay::default(),
+        };
+        // Four points, three segments.
+        let poly = vec![(0.0, 0.0), (10.0, 0.0), (20.0, 0.0), (30.0, 0.0)];
+
+        // Delete the middle segment — two survivors flank the cut.
+        let s = split_edge_on_deletes(&edge, &poly, &[1]);
+        assert_eq!(s.len(), 2);
+        assert_eq!(s[0].from, edge.from);
+        assert!(matches!(s[0].to, EdgeEnd::Free(x, y) if x == 10.0 && y == 0.0));
+        assert!(matches!(s[1].from, EdgeEnd::Free(x, y) if x == 20.0 && y == 0.0));
+        assert_eq!(s[1].to, edge.to);
     }
 
     #[test]

@@ -36,7 +36,7 @@ pub mod registry;
 pub mod gpu;
 
 pub use model::{
-    Edge, EdgeId, EdgeOverlay, Fill, Border, Group, Node, NodeId, NodeKind,
+    Edge, EdgeEnd, EdgeId, EdgeOverlay, Fill, Border, Group, Node, NodeId, NodeKind,
     Overlay, Port, PortAnchor, PortId, PortKind, Routing, Scene,
     CanvasBackground, CanvasSettings, GridStyle, GridUnits, TextLabel, Transform,
 };

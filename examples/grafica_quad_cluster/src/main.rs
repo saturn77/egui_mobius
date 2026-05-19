@@ -7,8 +7,9 @@
 
 use eframe::egui;
 use egui_grafica::model::{
-    Border, CanvasSettings, Edge, EdgeId, EdgeOverlay, Fill, LineStyle, Node, NodeId, NodeKind,
-    Overlay, Port, PortAnchor, PortId, PortKind, Routing, Scene, TextAnchor, TextLabel, Transform,
+    Border, CanvasSettings, Edge, EdgeEnd, EdgeId, EdgeOverlay, Fill, LineStyle, Node, NodeId,
+    NodeKind, Overlay, Port, PortAnchor, PortId, PortKind, Routing, Scene, TextAnchor, TextLabel,
+    Transform,
 };
 use egui_grafica::CanvasCitizen;
 
@@ -50,8 +51,8 @@ fn build_quad_cluster_scene() -> Scene {
     // FPGA → power return path — orthogonal with a dashed line style.
     scene.edges.push(Edge {
         id: EdgeId("e_f_p".to_string()),
-        from: (NodeId("fpga".to_string()), PortId("fpga_intf".to_string())),
-        to: (NodeId("power_board".to_string()), PortId("fpga_intf".to_string())),
+        from: EdgeEnd::Port(NodeId("fpga".to_string()), PortId("fpga_intf".to_string())),
+        to: EdgeEnd::Port(NodeId("power_board".to_string()), PortId("fpga_intf".to_string())),
         routing: Routing::Orthogonal,
         overlay: EdgeOverlay {
             color: grey.to_string(),
@@ -152,8 +153,8 @@ fn port(name: &str, kind: PortKind, anchor: PortAnchor) -> Port {
 fn orth_edge(id: &str, from: (&str, &str), to: (&str, &str), color: &str) -> Edge {
     Edge {
         id: EdgeId(id.to_string()),
-        from: (NodeId(from.0.to_string()), PortId(from.1.to_string())),
-        to: (NodeId(to.0.to_string()), PortId(to.1.to_string())),
+        from: EdgeEnd::Port(NodeId(from.0.to_string()), PortId(from.1.to_string())),
+        to: EdgeEnd::Port(NodeId(to.0.to_string()), PortId(to.1.to_string())),
         routing: Routing::Orthogonal,
         overlay: EdgeOverlay {
             color: color.to_string(),

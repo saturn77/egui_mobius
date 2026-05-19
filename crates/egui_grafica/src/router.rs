@@ -9,7 +9,7 @@
 //! zoom/pan and lets the same polyline serve both rendering and hit-testing.
 
 use crate::geometry;
-use crate::model::{Edge, Node, NodeId, Port, PortAnchor, PortId, Routing, Scene};
+use crate::model::{Edge, EdgeEnd, Node, NodeId, Port, PortAnchor, PortId, Routing, Scene};
 
 /// Certified maximum distance, in world units, between a flattened bezier
 /// polyline and the true curve. hypercurve guarantees the emitted polyline
@@ -49,11 +49,20 @@ pub fn port_world_position(scene: &Scene, node_id: &NodeId, port_id: &PortId) ->
 // Routing
 // =============================================================================
 
-/// The routed path of an edge as a world-space polyline. `None` if either
-/// endpoint port is missing.
+/// World-space position of an edge end — the port's position, or the
+/// free point itself. `None` if a port end references a missing port.
+pub fn edge_end_position(scene: &Scene, end: &EdgeEnd) -> Option<(f32, f32)> {
+    match end {
+        EdgeEnd::Port(n, p) => port_world_position(scene, n, p),
+        EdgeEnd::Free(x, y) => Some((*x, *y)),
+    }
+}
+
+/// The routed path of an edge as a world-space polyline. `None` if a
+/// port endpoint references a missing port.
 pub fn edge_polyline(scene: &Scene, edge: &Edge) -> Option<Vec<(f32, f32)>> {
-    let from = port_world_position(scene, &edge.from.0, &edge.from.1)?;
-    let to = port_world_position(scene, &edge.to.0, &edge.to.1)?;
+    let from = edge_end_position(scene, &edge.from)?;
+    let to = edge_end_position(scene, &edge.to)?;
     Some(route(from, to, &edge.routing))
 }
 

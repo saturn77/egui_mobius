@@ -42,8 +42,8 @@ use crate::interact::{
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
-    CanvasBackground, Edge, EdgeId, EdgeOverlay, GridStyle, GridUnits, LineStyle, NodeId, Port,
-    PortId, PortKind, Routing, Scene,
+    CanvasBackground, Edge, EdgeEnd, EdgeId, EdgeOverlay, GridStyle, GridUnits, LineStyle, NodeId,
+    Port, PortId, PortKind, Routing, Scene,
 };
 use crate::registry::Registry;
 use crate::render::{
@@ -53,7 +53,7 @@ use crate::render::{
 // CPU-path-only entry points — unused when the GPU pipeline is compiled.
 #[cfg(not(feature = "gpu"))]
 use crate::render::{background_color, paint_scene};
-use crate::router::port_world_position;
+use crate::router::{edge_end_position, port_world_position};
 
 /// Pointer-to-port grab tolerance, in screen pixels — a generous safety ring
 /// so pressing near a port reliably grabs it instead of panning the scene.
@@ -546,8 +546,8 @@ impl CanvasCitizen {
                     // pinned endpoint, so it has two movable interior ends.
                     let polyline = self.registry.with_scene(|s| {
                         s.edges.iter().find(|e| e.id == eid).and_then(|e| {
-                            let f = port_world_position(s, &e.from.0, &e.from.1)?;
-                            let t = port_world_position(s, &e.to.0, &e.to.1)?;
+                            let f = edge_end_position(s, &e.from)?;
+                            let t = edge_end_position(s, &e.to)?;
                             Some(match &e.routing {
                                 Routing::Manual { .. } => crate::router::edge_polyline(s, e)?,
                                 _ => crate::router::route(f, t, &Routing::Orthogonal),
@@ -921,6 +921,7 @@ impl CanvasCitizen {
             crate::render::paint_node_labels(&painter, scene, &self.viewport);
             crate::render::paint_ports(&painter, scene, &self.viewport);
             crate::render::paint_waypoints(&painter, scene, &self.viewport);
+            crate::render::paint_free_ends(&painter, scene, &self.viewport);
         });
         #[cfg(not(feature = "gpu"))]
         {
@@ -983,8 +984,8 @@ impl CanvasCitizen {
             .with_scene(|s| (fresh_edge_id(s), s.settings.default_routing.clone()));
         self.registry.add_edge(Edge {
             id,
-            from,
-            to,
+            from: EdgeEnd::Port(from.0, from.1),
+            to: EdgeEnd::Port(to.0, to.1),
             routing,
             overlay: EdgeOverlay::default(),
         });
@@ -1000,23 +1001,64 @@ impl CanvasCitizen {
     /// Remove every selected edge and node through the registry. Removing a
     /// node also drops its attached edges (registry handles the cascade).
     fn delete_selection(&mut self) {
-        let mut edges: Vec<EdgeId> = self.selection.edges.clone();
-        // A segment-selected wire deletes whole — a port-to-port
-        // connection can't survive in pieces. Segment-specific delete
-        // semantics are a deliberately deferred decision.
-        for (eid, _) in &self.selection.segments {
-            if !edges.contains(eid) {
-                edges.push(eid.clone());
+        // Whole-edge and node selections delete outright.
+        for id in self.selection.edges.clone() {
+            self.registry.remove_edge(&id);
+        }
+        for id in self.selection.nodes.clone() {
+            self.registry.remove_node(&id);
+        }
+        // Segment selections truncate their wire — surviving runs stay,
+        // dangling at the cuts. Group by edge so multiple segments on
+        // one wire delete in a single pass.
+        let mut handled: Vec<EdgeId> = Vec::new();
+        for (eid, _) in self.selection.segments.clone() {
+            if handled.contains(&eid) {
+                continue;
             }
-        }
-        let nodes: Vec<NodeId> = self.selection.nodes.clone();
-        for id in &edges {
-            self.registry.remove_edge(id);
-        }
-        for id in &nodes {
-            self.registry.remove_node(id);
+            let segs: Vec<usize> = self
+                .selection
+                .segments
+                .iter()
+                .filter(|(e, _)| e == &eid)
+                .map(|(_, s)| *s)
+                .collect();
+            self.truncate_edge_segments(&eid, &segs);
+            handled.push(eid);
         }
         self.selection.clear();
+    }
+
+    /// Remove `deleted` segments from edge `eid`, replacing it with the
+    /// surviving runs. A run that no longer reaches the original port
+    /// keeps the geometry but dangles as a [`EdgeEnd::Free`] end.
+    fn truncate_edge_segments(&mut self, eid: &EdgeId, deleted: &[usize]) {
+        let prepared = self.registry.with_scene(|s| {
+            let edge = s.edges.iter().find(|e| &e.id == eid)?;
+            let poly = crate::router::edge_polyline(s, edge)?;
+            Some((
+                edge.overlay.clone(),
+                crate::interact::split_edge_on_deletes(edge, &poly, deleted),
+            ))
+        });
+        let Some((overlay, survivors)) = prepared else {
+            return;
+        };
+        self.registry.remove_edge(eid);
+        for (i, surv) in survivors.into_iter().enumerate() {
+            let id = if i == 0 {
+                eid.clone()
+            } else {
+                self.registry.with_scene(fresh_edge_id)
+            };
+            self.registry.add_edge(Edge {
+                id,
+                from: surv.from,
+                to: surv.to,
+                routing: surv.routing,
+                overlay: overlay.clone(),
+            });
+        }
     }
 
     /// Apply a right-click context-menu action.

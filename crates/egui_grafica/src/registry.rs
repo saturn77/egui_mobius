@@ -104,7 +104,7 @@ impl Registry {
             scene.nodes.retain(|n| &n.id != id);
             // Drop edges that touch the removed node — otherwise the scene
             // has dangling references and the renderer silently skips them.
-            scene.edges.retain(|e| &e.from.0 != id && &e.to.0 != id);
+            scene.edges.retain(|e| e.from.node_id() != Some(id) && e.to.node_id() != Some(id));
         });
     }
 
@@ -325,8 +325,8 @@ mod tests {
         reg.add_node(node_rect("b", (50.0, 0.0), (10.0, 10.0)));
         reg.add_edge(Edge {
             id: EdgeId("e".to_string()),
-            from: (NodeId("a".to_string()), crate::model::PortId("x".to_string())),
-            to: (NodeId("b".to_string()), crate::model::PortId("y".to_string())),
+            from: crate::model::EdgeEnd::Port(NodeId("a".to_string()), crate::model::PortId("x".to_string())),
+            to: crate::model::EdgeEnd::Port(NodeId("b".to_string()), crate::model::PortId("y".to_string())),
             routing: Routing::default(),
             overlay: EdgeOverlay::default(),
         });
