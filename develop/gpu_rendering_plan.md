@@ -87,21 +87,25 @@ Stand up the pipeline end to end with the smallest real payload.
   per node carrying transform, fill, border. Rect renders directly;
   circle/ellipse via an SDF in the fragment shader keyed by `NodeKind`.
   Pan/zoom updates only `ViewportUniform`.
-- Phase 2b — pending: edges — each polyline segment expanded to an
-  instanced quad (line as oriented rectangle), with dash/dot in-shader.
-  Arrowheads stay on the painter for now.
+- Phase 2b — DONE (2026-05-19): edges — each polyline segment expanded
+  to an instanced, antialiased quad, with dash/dot in-shader.
+  Arrowheads stay on the painter.
 - Ports and waypoints stay on the egui painter — few per scene, cheap,
   constant screen size. Revisit only if profiling says otherwise.
 
-## Phase 3 — dirty tracking
+## Phase 3 — dirty tracking — DONE (2026-05-19)
 
-- `Registry` gains a `generation: u64` counter, bumped by every mutation
-  method.
+- `Registry` gained a `generation: u64` counter, bumped by every
+  mutation (all funnel through `mutate` / `set_scene`).
 - The GPU instance buffers record the generation they were built from.
 - `CanvasCallback::prepare` compares generations and re-uploads only on
   mismatch — pan/zoom frames upload nothing but the uniform.
-- This is the "VRAM as an f64 cache" model made concrete: the cache key
-  is the generation; the hypercurve geometry is the truth.
+- This is the "VRAM as a cache" model made concrete: the cache key is
+  the generation; the scene is the truth.
+- Follow-up: CPU-side instance construction (`collect_edge_instances`,
+  `node_instance`) still runs every frame. Deferring it behind the same
+  generation key — so unchanged frames skip routing and color parsing —
+  is a separable optimization, not yet done.
 
 ## Phase 4 — over-render texture cache / LOD tiling (deferred)
 

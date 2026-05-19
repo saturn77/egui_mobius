@@ -44,9 +44,11 @@ tx.send(MyRequest::Fetch { url });
 - [x] Phase 0 — wgpu plumbing
 - [x] Phase 1 — procedural grid shader
 - [x] Phase 2a — instanced node bodies
-- [ ] Phase 2b — instanced edge segments
-- [ ] Phase 3 — dirty tracking (generation counter)
+- [x] Phase 2b — instanced edge segments
+- [x] Phase 3 — dirty tracking (generation counter)
 - [ ] Phase 4 (deferred) — over-render texture cache / LOD tiling
+- [ ] Follow-up — defer CPU instance construction behind the
+  generation key (skip routing / color parsing on unchanged frames)
 
 ### Editor features
 - [ ] Wire segment selection when a wire has no intermediate waypoints

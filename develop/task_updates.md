@@ -7,6 +7,14 @@ Chronological log of `egui_grafica` changes, newest first. Spans
 
 See `develop/gpu_rendering_plan.md` for the staged plan.
 
+- Phase 3 — dirty tracking: `Registry` gained a generation counter; the
+  GPU instance buffers are a VRAM cache rebuilt only when the scene
+  changes. Pan / zoom re-uploads only the 80-byte viewport uniform.
+- Phase 2b — instanced edge segments: one instance per polyline
+  segment, antialiased, with dash / dot computed in-shader. Arrowheads
+  stay on the painter.
+- Fix — node clip space mapped to the canvas rect, not the window:
+  egui-wgpu scopes the render-pass viewport to the callback rect.
 - Phase 2a — instanced node bodies on the GPU: one instance per node,
   rect / circle / ellipse via a fragment-shader SDF, inside border
   stroke. Edges, text, ports, waypoints, selection stay on the painter.

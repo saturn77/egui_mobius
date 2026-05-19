@@ -46,7 +46,12 @@ Last updated: 2026-05-19.
   geometry. Done.
 - Phase 2a — instanced node bodies: one instance per node, rect /
   circle / ellipse via fragment SDF, inside border stroke. Done.
-- Phase 2b (edges) and Phase 3 (dirty tracking) — pending.
+- Phase 2b — instanced edge segments: one instance per polyline
+  segment, antialiased, dash / dot in-shader. Done.
+- Phase 3 — dirty tracking: `Registry` generation counter; GPU
+  instance buffers are a VRAM cache, re-uploaded only when the scene
+  changes — pan / zoom uploads only the viewport uniform. Done.
+- Phase 4 (over-render texture cache / LOD tiling) — deferred.
 - Off by default; the example `grafica_quad_cluster` enables it.
 
 **Interaction (`interact.rs` + `citizen.rs`)**
