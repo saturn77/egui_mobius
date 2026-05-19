@@ -25,7 +25,8 @@
 //! `Registry::scene_dynamic()` returns the underlying `Dynamic<Scene>`;
 //! callers can `.on_change(...)` to receive notifications.
 
-use std::sync::MutexGuard;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, MutexGuard};
 
 use egui_mobius_reactive::Dynamic;
 
@@ -38,17 +39,26 @@ use crate::model::{
 #[derive(Clone)]
 pub struct Registry {
     scene: Dynamic<Scene>,
+    /// Bumped on every mutation. `Arc` so clones share one counter.
+    generation: Arc<AtomicU64>,
 }
 
 impl Registry {
     /// Wrap a freshly-constructed scene.
     pub fn new(scene: Scene) -> Self {
-        Self { scene: Dynamic::new(scene) }
+        Self { scene: Dynamic::new(scene), generation: Arc::new(AtomicU64::new(0)) }
     }
 
     /// Wrap an already-reactive scene (e.g. one shared across citizens).
     pub fn from_dynamic(scene: Dynamic<Scene>) -> Self {
-        Self { scene }
+        Self { scene, generation: Arc::new(AtomicU64::new(0)) }
+    }
+
+    /// Monotonic counter, bumped on every mutation. Consumers cache
+    /// derived data — e.g. the GPU instance buffers — keyed by this
+    /// value and rebuild only when it changes.
+    pub fn generation(&self) -> u64 {
+        self.generation.load(Ordering::Relaxed)
     }
 
     /// Underlying reactive container for subscription-based observers.
@@ -73,6 +83,7 @@ impl Registry {
     /// Replace the entire scene — e.g. after loading a `.canvas` file.
     pub fn set_scene(&self, scene: Scene) {
         self.scene.set(scene);
+        self.generation.fetch_add(1, Ordering::Relaxed);
     }
 
     // ─── Mutations ────────────────────────────────────────────────────────
@@ -266,6 +277,7 @@ impl Registry {
             guard.clone()
         };
         self.scene.set(new_scene);
+        self.generation.fetch_add(1, Ordering::Relaxed);
     }
 }
 

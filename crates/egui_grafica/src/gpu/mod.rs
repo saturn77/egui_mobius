@@ -22,6 +22,10 @@
 //! with dash / dot in-shader). Node text, ports, waypoints, arrowheads,
 //! and selection highlights still go through [`crate::render`] on the
 //! egui painter.
+//!
+//! Instance buffers are a VRAM cache keyed by [`crate::Registry`]'s
+//! generation counter — rebuilt only when the scene changes, so pan /
+//! zoom frames re-upload nothing but the viewport uniform.
 
 use egui_wgpu::{CallbackResources, CallbackTrait, RenderState, ScreenDescriptor};
 
@@ -189,6 +193,12 @@ pub struct GraficaRenderer {
     node_capacity: u32,
     edge_instances: wgpu::Buffer,
     edge_capacity: u32,
+    /// Live instance counts and the registry generation the buffers were
+    /// built from. Pan / zoom frames reuse the buffers untouched and
+    /// re-upload only the viewport uniform.
+    node_count: u32,
+    edge_count: u32,
+    uploaded_generation: u64,
     /// True when the render target is an sRGB texture format — the GPU
     /// then converts linear → sRGB on store, so the shader must not.
     srgb_target: bool,
@@ -346,6 +356,10 @@ impl GraficaRenderer {
             node_capacity: INITIAL_CAPACITY,
             edge_instances: new_instance_buffer::<EdgeInstance>(device, "edges", INITIAL_CAPACITY),
             edge_capacity: INITIAL_CAPACITY,
+            node_count: 0,
+            edge_count: 0,
+            // u64::MAX never equals a real generation — forces a first upload.
+            uploaded_generation: u64::MAX,
             srgb_target: target_format.is_srgb(),
         }
     }
@@ -410,6 +424,8 @@ pub fn init(render_state: &RenderState) {
 /// [`GraficaRenderer`].
 struct CanvasCallback {
     uniform: ViewportUniform,
+    /// Registry generation this frame's instances were built from.
+    generation: u64,
     nodes: Vec<NodeInstance>,
     edges: Vec<EdgeInstance>,
 }
@@ -433,21 +449,31 @@ impl CallbackTrait for CanvasCallback {
             }
             queue.write_buffer(&renderer.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
-            if !self.nodes.is_empty() {
-                renderer.reserve_nodes(device, self.nodes.len() as u32);
-                queue.write_buffer(
-                    &renderer.node_instances,
-                    0,
-                    bytemuck::cast_slice(&self.nodes),
-                );
-            }
-            if !self.edges.is_empty() {
-                renderer.reserve_edges(device, self.edges.len() as u32);
-                queue.write_buffer(
-                    &renderer.edge_instances,
-                    0,
-                    bytemuck::cast_slice(&self.edges),
-                );
+            // The instance buffers are a VRAM cache of the scene — rebuilt
+            // only when the registry generation moves. Pan / zoom changes
+            // the uniform above and nothing else.
+            if self.generation != renderer.uploaded_generation {
+                let node_count = self.nodes.len() as u32;
+                let edge_count = self.edges.len() as u32;
+                if node_count > 0 {
+                    renderer.reserve_nodes(device, node_count);
+                    queue.write_buffer(
+                        &renderer.node_instances,
+                        0,
+                        bytemuck::cast_slice(&self.nodes),
+                    );
+                }
+                if edge_count > 0 {
+                    renderer.reserve_edges(device, edge_count);
+                    queue.write_buffer(
+                        &renderer.edge_instances,
+                        0,
+                        bytemuck::cast_slice(&self.edges),
+                    );
+                }
+                renderer.node_count = node_count;
+                renderer.edge_count = edge_count;
+                renderer.uploaded_generation = self.generation;
             }
         }
         Vec::new()
@@ -468,24 +494,29 @@ impl CallbackTrait for CanvasCallback {
         render_pass.set_pipeline(&renderer.canvas_pipeline);
         render_pass.draw(0..3, 0..1);
 
-        // Node bodies: one instanced quad per node.
-        if !self.nodes.is_empty() {
+        // Node bodies: one instanced quad per node. Counts come from the
+        // renderer — the buffers persist across pan / zoom frames.
+        if renderer.node_count > 0 {
             render_pass.set_pipeline(&renderer.node_pipeline);
             render_pass.set_vertex_buffer(0, renderer.node_instances.slice(..));
-            render_pass.draw(0..6, 0..self.nodes.len() as u32);
+            render_pass.draw(0..6, 0..renderer.node_count);
         }
 
         // Edge segments on top — one instanced quad per polyline segment.
-        if !self.edges.is_empty() {
+        if renderer.edge_count > 0 {
             render_pass.set_pipeline(&renderer.edge_pipeline);
             render_pass.set_vertex_buffer(0, renderer.edge_instances.slice(..));
-            render_pass.draw(0..6, 0..self.edges.len() as u32);
+            render_pass.draw(0..6, 0..renderer.edge_count);
         }
     }
 }
 
 /// Paint the canvas — background, grid, node bodies, and edge segments —
 /// on the GPU, over `rect`.
+///
+/// `generation` is [`crate::Registry::generation`]; the GPU instance
+/// buffers are rebuilt only when it changes, so pan / zoom frames upload
+/// nothing but the viewport uniform.
 ///
 /// Adds a paint callback to `painter`. If [`init`] was never called the
 /// callback finds no [`GraficaRenderer`] and silently draws nothing —
@@ -495,6 +526,7 @@ pub fn paint_canvas(
     rect: egui::Rect,
     viewport: &Viewport,
     scene: &Scene,
+    generation: u64,
 ) {
     let settings = &scene.settings;
     let bg: egui::Rgba = background_color(settings.background).into();
@@ -536,6 +568,6 @@ pub fn paint_canvas(
 
     painter.add(egui_wgpu::Callback::new_paint_callback(
         rect,
-        CanvasCallback { uniform, nodes, edges },
+        CanvasCallback { uniform, generation, nodes, edges },
     ));
 }

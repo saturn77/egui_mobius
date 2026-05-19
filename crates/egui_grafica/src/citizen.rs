@@ -909,9 +909,11 @@ impl CanvasCitizen {
         // by the wgpu pipeline; everything else stays on the egui painter.
         // The CPU path fills and strokes the whole scene on the painter.
         #[cfg(feature = "gpu")]
+        let generation = self.registry.generation();
+        #[cfg(feature = "gpu")]
         self.registry.with_scene(|scene| {
             // GPU: background, grid, node bodies, edge segments.
-            crate::gpu::paint_canvas(&painter, rect, &self.viewport, scene);
+            crate::gpu::paint_canvas(&painter, rect, &self.viewport, scene, generation);
             // Painter: everything the GPU path leaves out.
             crate::render::paint_arrowheads(&painter, scene, &self.viewport);
             crate::render::paint_node_labels(&painter, scene, &self.viewport);
