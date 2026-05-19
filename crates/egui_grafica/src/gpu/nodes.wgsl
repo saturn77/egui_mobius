@@ -14,13 +14,12 @@ struct Viewport {
     pixels_per_point: f32,
     bg_color: vec4<f32>,
     grid_color: vec4<f32>,
-    screen_size: vec2<f32>,
+    canvas_min: vec2<f32>,
     grid_spacing: f32,
     dot_size: f32,
     grid_style: u32,
     flags: u32,
-    pad0: u32,
-    pad1: u32,
+    canvas_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> vp: Viewport;
@@ -40,11 +39,13 @@ struct VsOut {
     @location(5) @interpolate(flat) kind: u32,
 };
 
-// World point -> normalized device coordinates. egui's render pass spans
-// the whole surface, so clip space maps to the full window.
+// World point -> normalized device coordinates. egui-wgpu sets the
+// render-pass viewport to the callback's canvas rect, so clip space
+// maps to that rect — not the whole window.
 fn world_to_ndc(world: vec2<f32>) -> vec2<f32> {
-    let sp = vp.origin + world * vp.zoom;            // egui points
-    let ndc = sp / vp.screen_size * 2.0 - vec2<f32>(1.0);
+    let sp = vp.origin + world * vp.zoom;            // absolute egui points
+    let rel = (sp - vp.canvas_min) / vp.canvas_size; // 0..1 within the canvas
+    let ndc = rel * 2.0 - vec2<f32>(1.0);
     return vec2<f32>(ndc.x, -ndc.y);
 }
 

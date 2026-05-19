@@ -53,16 +53,17 @@ struct ViewportUniform {
     bg_color: [f32; 4],
     /// Grid ink, linear RGBA (the shader applies the tier alpha).
     grid_color: [f32; 4],
-    /// Full window size, egui points.
-    screen_size: [f32; 2],
+    /// Canvas rect top-left, egui points (absolute, window-relative).
+    canvas_min: [f32; 2],
     grid_spacing: f32,
     dot_size: f32,
     /// 0 = lines, 1 = dots.
     grid_style: u32,
     /// Bit 0 = show grid, bit 1 = sRGB-format target.
     flags: u32,
-    _pad0: u32,
-    _pad1: u32,
+    /// Canvas rect size, egui points. egui-wgpu sets the render-pass
+    /// viewport to the callback rect, so clip space maps to this.
+    canvas_size: [f32; 2],
 }
 
 /// One scene node, as uploaded to the instance buffer. Mirrors the
@@ -330,13 +331,9 @@ impl CallbackTrait for CanvasCallback {
     ) -> Vec<wgpu::CommandBuffer> {
         if let Some(renderer) = resources.get_mut::<GraficaRenderer>() {
             let mut uniform = self.uniform;
-            // egui's render pass covers the whole surface — take its size
-            // from the authoritative screen descriptor, in egui points.
+            // The grid shader reads physical-pixel fragment coordinates;
+            // it needs the points-per-pixel ratio to recover world space.
             uniform.pixels_per_point = screen.pixels_per_point;
-            uniform.screen_size = [
-                screen.size_in_pixels[0] as f32 / screen.pixels_per_point,
-                screen.size_in_pixels[1] as f32 / screen.pixels_per_point,
-            ];
             if renderer.srgb_target {
                 uniform.flags |= FLAG_SRGB_TARGET;
             }
@@ -417,7 +414,7 @@ pub fn paint_canvas(
         pixels_per_point: 1.0,
         bg_color: bg.to_array(),
         grid_color: ink.to_array(),
-        screen_size: [0.0, 0.0],
+        canvas_min: [rect.min.x, rect.min.y],
         grid_spacing: settings.grid_spacing,
         dot_size: settings.dot_size,
         grid_style: match settings.grid_style {
@@ -425,8 +422,7 @@ pub fn paint_canvas(
             crate::model::GridStyle::Dots => 1,
         },
         flags: if show_grid { FLAG_SHOW_GRID } else { 0 },
-        _pad0: 0,
-        _pad1: 0,
+        canvas_size: [rect.width(), rect.height()],
     };
 
     let nodes: Vec<NodeInstance> = scene.nodes.iter().map(node_instance).collect();

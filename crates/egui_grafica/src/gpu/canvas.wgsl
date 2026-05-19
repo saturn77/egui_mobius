@@ -16,14 +16,13 @@ struct Viewport {
     bg_color: vec4<f32>,
     // Grid ink, linear, alpha = 1 (the shader applies the tier alpha).
     grid_color: vec4<f32>,
-    // Full window size, egui points (used by the node shader).
-    screen_size: vec2<f32>,
+    // Canvas rect top-left, egui points (used by the node shader).
+    canvas_min: vec2<f32>,
     grid_spacing: f32,   // world units between grid lines
     dot_size: f32,       // dot diameter, world units (dot style)
     grid_style: u32,     // 0 = lines, 1 = dots
     flags: u32,          // bit0 = show_grid, bit1 = srgb_target
-    pad0: u32,
-    pad1: u32,
+    canvas_size: vec2<f32>,  // canvas rect size, egui points
 };
 
 @group(0) @binding(0) var<uniform> vp: Viewport;
