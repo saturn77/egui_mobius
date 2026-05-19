@@ -211,6 +211,11 @@ fn main() -> Result<(), eframe::Error> {
         },
         Box::new(|cc| {
             egui_grafica::install_fonts(&cc.egui_ctx);
+            // Register the wgpu canvas pipeline. Present only on the wgpu
+            // backend — eframe's default renderer here.
+            if let Some(render_state) = cc.wgpu_render_state.as_ref() {
+                egui_grafica::gpu::init(render_state);
+            }
             Ok(Box::new(DemoApp::new()))
         }),
     )

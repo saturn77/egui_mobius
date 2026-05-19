@@ -10,7 +10,13 @@ homepage               = "https://github.com/saturn77/egui_mobius"
 repository             = "https://github.com/saturn77/egui_mobius"
 categories             = ["gui", "graphics", "visualization"]
 keywords               = ["egui", "canvas", "diagram", "node-graph", "egui-mobius"]
-include                = ["**/*.rs", "Cargo.toml", "README.md"]
+include                = ["**/*.rs", "**/*.wgsl", "Cargo.toml", "README.md"]
+
+[features]
+default = []
+# Retained wgpu rendering pipeline. Off by default so the crate still
+# builds for the glow / web backends, where `render.rs` is the path.
+gpu = ["dep:egui-wgpu", "dep:wgpu", "dep:bytemuck"]
 
 [dependencies]
 egui                 = { workspace = true }
@@ -19,3 +25,6 @@ egui_mobius_reactive = { workspace = true }
 hypercurve           = { workspace = true }
 rfd                  = { workspace = true }
 serde                = { workspace = true }
+egui-wgpu            = { workspace = true, optional = true }
+wgpu                 = { workspace = true, optional = true }
+bytemuck             = { workspace = true, optional = true }

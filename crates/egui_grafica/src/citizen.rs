@@ -47,9 +47,12 @@ use crate::model::{
 };
 use crate::registry::Registry;
 use crate::render::{
-    background_color, paint_connection_preview, paint_scene, paint_selected_edges, paint_selection,
+    paint_connection_preview, paint_scene, paint_selected_edges, paint_selection,
     scene_bounds, viewport_fit_to, Viewport,
 };
+// The CPU background fill is only compiled when the GPU path is off.
+#[cfg(not(feature = "gpu"))]
+use crate::render::background_color;
 use crate::router::port_world_position;
 
 /// Pointer-to-port grab tolerance, in screen pixels — a generous safety ring
@@ -903,6 +906,17 @@ impl CanvasCitizen {
         }
 
         let background = self.registry.with_scene(|s| s.settings.background);
+        // The GPU path draws the background as a fullscreen quad; the CPU
+        // path keeps the painter fill. See `gpu` module / render plan.
+        #[cfg(feature = "gpu")]
+        crate::gpu::paint_background(
+            &painter,
+            rect,
+            &self.viewport,
+            background,
+            ui.ctx().pixels_per_point(),
+        );
+        #[cfg(not(feature = "gpu"))]
         painter.rect_filled(rect, 0.0, background_color(background));
 
         self.registry.with_scene(|scene| {

@@ -7,4 +7,4 @@ publish           = false
 [dependencies]
 eframe       = { workspace = true, features = ["default"] }
 egui         = { workspace = true }
-egui_grafica = { workspace = true }
+egui_grafica = { workspace = true, features = ["gpu"] }

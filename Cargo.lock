@@ -1675,12 +1675,15 @@ dependencies = [
 name = "egui_grafica"
 version = "0.4.0"
 dependencies = [
+ "bytemuck",
  "egui",
  "egui-phosphor",
+ "egui-wgpu",
  "egui_mobius_reactive",
  "hypercurve",
  "rfd",
  "serde",
+ "wgpu",
 ]
 
 [[package]]
