@@ -68,13 +68,10 @@ impl Viewport {
 
 /// Paint every node and edge of a scene through the given viewport.
 ///
-/// Layer order: grid (if enabled in settings) → nodes → edges. Edges paint
-/// after nodes so connectors appear on top — matches the visual convention of
-/// every block-diagram tool.
-pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport, screen_clip: Rect) {
-    if scene.settings.show_grid {
-        paint_grid(painter, viewport, &scene.settings, screen_clip);
-    }
+/// Layer order: nodes → edges → ports → waypoints. Edges paint after
+/// nodes so connectors appear on top. The grid is painted separately by
+/// the caller — CPU [`paint_grid`] or the GPU canvas shader.
+pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport) {
     for node in &scene.nodes {
         paint_node(painter, node, viewport);
     }

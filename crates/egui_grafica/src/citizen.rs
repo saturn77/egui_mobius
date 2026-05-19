@@ -905,22 +905,27 @@ impl CanvasCitizen {
             self.apply_context_action(action);
         }
 
-        let background = self.registry.with_scene(|s| s.settings.background);
-        // The GPU path draws the background as a fullscreen quad; the CPU
-        // path keeps the painter fill. See `gpu` module / render plan.
+        let settings = self.registry.with_scene(|s| s.settings.clone());
+        // The GPU path draws background + grid as a fullscreen quad; the
+        // CPU path fills the rect and strokes the grid. See `gpu` module.
         #[cfg(feature = "gpu")]
-        crate::gpu::paint_background(
+        crate::gpu::paint_canvas(
             &painter,
             rect,
             &self.viewport,
-            background,
+            &settings,
             ui.ctx().pixels_per_point(),
         );
         #[cfg(not(feature = "gpu"))]
-        painter.rect_filled(rect, 0.0, background_color(background));
+        {
+            painter.rect_filled(rect, 0.0, background_color(settings.background));
+            if settings.show_grid {
+                crate::render::paint_grid(&painter, &self.viewport, &settings, rect);
+            }
+        }
 
         self.registry.with_scene(|scene| {
-            paint_scene(&painter, scene, &self.viewport, rect);
+            paint_scene(&painter, scene, &self.viewport);
             paint_selected_edges(&painter, scene, &self.selection.edges, &self.viewport);
             paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
         });

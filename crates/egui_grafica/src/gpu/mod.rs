@@ -14,16 +14,16 @@
 //!   to the egui painter. Its `prepare` updates GPU buffers; its `paint`
 //!   issues draws into egui's render pass.
 //!
-//! ## Phase 0
+//! ## Status
 //!
-//! Only the canvas background fill is on the GPU — a single fullscreen
-//! quad. It stands up the whole pipeline and hosts the Phase 1 grid
-//! shader. Text, edges, selection, and nodes still go through
-//! [`crate::render`].
+//! The canvas background and the grid are drawn on the GPU — a single
+//! fullscreen quad whose fragment shader computes the grid per-pixel
+//! from the viewport transform. Text, edges, selection, and nodes still
+//! go through [`crate::render`].
 
 use egui_wgpu::{CallbackResources, CallbackTrait, RenderState, ScreenDescriptor};
 
-use crate::model::CanvasBackground;
+use crate::model::{CanvasSettings, GridStyle};
 use crate::render::{background_color, Viewport};
 
 const FLAG_SHOW_GRID: u32 = 1;
@@ -222,29 +222,47 @@ impl CallbackTrait for CanvasCallback {
     }
 }
 
-/// Paint the canvas background on the GPU, over `rect`.
+/// Paint the canvas background and grid on the GPU, over `rect`.
 ///
 /// Adds a paint callback to `painter`. If [`init`] was never called the
 /// callback finds no [`GraficaRenderer`] and silently draws nothing —
 /// callers that need a guaranteed fill should keep a CPU fallback.
-pub fn paint_background(
+pub fn paint_canvas(
     painter: &egui::Painter,
     rect: egui::Rect,
     viewport: &Viewport,
-    background: CanvasBackground,
+    settings: &CanvasSettings,
     pixels_per_point: f32,
 ) {
-    let bg: egui::Rgba = background_color(background).into();
+    let bg: egui::Rgba = background_color(settings.background).into();
+    // Grid ink contrasts with the background — light ink on dark canvases,
+    // dark ink on light ones. Mirrors `render::paint_grid`.
+    let ink: egui::Rgba = if settings.background.is_dark() {
+        egui::Color32::WHITE
+    } else {
+        egui::Color32::BLACK
+    }
+    .into();
+
+    // The grid auto-hides once lines would be closer than 4 points apart,
+    // matching the CPU renderer's noise cutoff.
+    let show_grid = settings.show_grid
+        && settings.grid_spacing > 0.0
+        && settings.grid_spacing * viewport.zoom >= 4.0;
+
     let uniform = ViewportUniform {
         origin: [viewport.origin.x, viewport.origin.y],
         zoom: viewport.zoom,
         pixels_per_point,
         bg_color: bg.to_array(),
-        grid_color: [0.0; 4],
-        grid_spacing: 0.0,
-        dot_size: 0.0,
-        grid_style: 0,
-        flags: FLAG_SHOW_GRID,
+        grid_color: ink.to_array(),
+        grid_spacing: settings.grid_spacing,
+        dot_size: settings.dot_size,
+        grid_style: match settings.grid_style {
+            GridStyle::Lines => 0,
+            GridStyle::Dots => 1,
+        },
+        flags: if show_grid { FLAG_SHOW_GRID } else { 0 },
     };
     painter.add(egui_wgpu::Callback::new_paint_callback(
         rect,
