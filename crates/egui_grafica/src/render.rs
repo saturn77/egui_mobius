@@ -414,11 +414,19 @@ fn paint_node_text(painter: &Painter, text: &TextLabel, screen_rect: Rect, viewp
 // Edge painting
 // =============================================================================
 
-/// Paint every edge of the scene. The GPU path that draws node bodies
-/// on the GPU but not yet edges calls this directly.
-pub fn paint_edges(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+/// Paint only the arrowheads of every edge. The GPU path draws edge
+/// lines on the GPU but keeps arrowheads on the egui painter.
+pub fn paint_arrowheads(painter: &Painter, scene: &Scene, viewport: &Viewport) {
     for edge in &scene.edges {
-        paint_edge(painter, edge, scene, viewport);
+        let Some(world) = edge_polyline(scene, edge) else {
+            continue;
+        };
+        if world.len() < 2 {
+            continue;
+        }
+        let screen: Vec<Pos2> = world.iter().map(|w| viewport.world_to_screen(*w)).collect();
+        let n = screen.len();
+        paint_arrowhead(painter, edge, viewport, (screen[n - 2], screen[n - 1]));
     }
 }
 

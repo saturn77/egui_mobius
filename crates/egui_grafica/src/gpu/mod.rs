@@ -17,29 +17,30 @@
 //!
 //! ## Status
 //!
-//! On the GPU: the canvas background, the procedural grid, and node
-//! bodies (rect / circle / ellipse, instanced). Edges, node text,
-//! ports, waypoints, and selection highlights still go through
-//! [`crate::render`] on the egui painter.
+//! On the GPU: the canvas background, the procedural grid, node bodies
+//! (rect / circle / ellipse, instanced), and edge segments (instanced,
+//! with dash / dot in-shader). Node text, ports, waypoints, arrowheads,
+//! and selection highlights still go through [`crate::render`] on the
+//! egui painter.
 
 use egui_wgpu::{CallbackResources, CallbackTrait, RenderState, ScreenDescriptor};
 
-use crate::model::{NodeKind, Scene};
+use crate::model::{LineStyle, NodeKind, Scene};
 use crate::render::{background_color, fill_to_color, parse_color, Viewport};
 
 const FLAG_SHOW_GRID: u32 = 1;
 const FLAG_SRGB_TARGET: u32 = 2;
 
 /// Instance-buffer slots allocated up front; grown on demand.
-const INITIAL_NODE_CAPACITY: u32 = 64;
+const INITIAL_CAPACITY: u32 = 64;
 
 // =============================================================================
 // GPU data layouts
 // =============================================================================
 
-/// View + grid parameters handed to both canvas shaders. Mirrors the
-/// `Viewport` struct in `canvas.wgsl` / `nodes.wgsl` — field order and
-/// sizes must match, and the total size must stay a multiple of 16.
+/// View + grid parameters handed to every canvas shader. Mirrors the
+/// `Viewport` struct in the `.wgsl` files — field order and sizes must
+/// match, and the total size must stay a multiple of 16.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct ViewportUniform {
@@ -66,8 +67,7 @@ struct ViewportUniform {
     canvas_size: [f32; 2],
 }
 
-/// One scene node, as uploaded to the instance buffer. Mirrors the
-/// per-instance vertex attributes of `nodes.wgsl`.
+/// One scene node, as uploaded to the node instance buffer.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct NodeInstance {
@@ -85,6 +85,21 @@ struct NodeInstance {
     kind: u32,
 }
 
+/// One polyline segment, as uploaded to the edge instance buffer.
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct EdgeInstance {
+    /// World-space segment endpoints.
+    a: [f32; 2],
+    b: [f32; 2],
+    /// Stroke color, linear premultiplied RGBA.
+    color: [f32; 4],
+    /// Stroke width, world units.
+    width: f32,
+    /// 0 = solid, 1 = dashed, 2 = dotted.
+    line_style: u32,
+}
+
 /// Per-instance vertex attributes for the node pipeline.
 const NODE_ATTRS: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
     0 => Float32x2,  // pos
@@ -93,6 +108,15 @@ const NODE_ATTRS: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
     3 => Float32x4,  // border
     4 => Float32,    // border_width
     5 => Uint32,     // kind
+];
+
+/// Per-instance vertex attributes for the edge pipeline.
+const EDGE_ATTRS: [wgpu::VertexAttribute; 5] = wgpu::vertex_attr_array![
+    0 => Float32x2,  // a
+    1 => Float32x2,  // b
+    2 => Float32x4,  // color
+    3 => Float32,    // width
+    4 => Uint32,     // line_style
 ];
 
 fn node_instance(node: &crate::model::Node) -> NodeInstance {
@@ -113,6 +137,36 @@ fn node_instance(node: &crate::model::Node) -> NodeInstance {
     }
 }
 
+/// Flatten every edge into one instance per polyline segment. The router
+/// owns the path; we only expand it to segments.
+fn collect_edge_instances(scene: &Scene) -> Vec<EdgeInstance> {
+    let mut out = Vec::new();
+    for edge in &scene.edges {
+        let Some(poly) = crate::router::edge_polyline(scene, edge) else {
+            continue;
+        };
+        if poly.len() < 2 {
+            continue;
+        }
+        let color: egui::Rgba = parse_color(&edge.overlay.color).into();
+        let line_style = match edge.overlay.line_style {
+            LineStyle::Solid => 0,
+            LineStyle::Dashed => 1,
+            LineStyle::Dotted => 2,
+        };
+        for seg in poly.windows(2) {
+            out.push(EdgeInstance {
+                a: [seg[0].0, seg[0].1],
+                b: [seg[1].0, seg[1].1],
+                color: color.to_array(),
+                width: edge.overlay.width,
+                line_style,
+            });
+        }
+    }
+    out
+}
+
 // =============================================================================
 // Renderer resources
 // =============================================================================
@@ -125,12 +179,16 @@ pub struct GraficaRenderer {
     canvas_pipeline: wgpu::RenderPipeline,
     /// Instanced node-body pipeline.
     node_pipeline: wgpu::RenderPipeline,
-    /// Shared viewport uniform, bound by both pipelines.
+    /// Instanced edge-segment pipeline.
+    edge_pipeline: wgpu::RenderPipeline,
+    /// Shared viewport uniform, bound by every pipeline.
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
-    /// Node instance buffer and its capacity, in instances.
+    /// Instance buffers and their capacities, in instances.
     node_instances: wgpu::Buffer,
     node_capacity: u32,
+    edge_instances: wgpu::Buffer,
+    edge_capacity: u32,
     /// True when the render target is an sRGB texture format — the GPU
     /// then converts linear → sRGB on store, so the shader must not.
     srgb_target: bool,
@@ -147,6 +205,43 @@ fn premultiplied_blend() -> wgpu::BlendState {
     wgpu::BlendState { color: component, alpha: component }
 }
 
+/// Build a render pipeline. `entries` is `[vertex, fragment]`; `buffers`
+/// is empty for the fullscreen canvas pipeline and one instance layout
+/// for the node / edge pipelines.
+fn make_pipeline(
+    device: &wgpu::Device,
+    label: &str,
+    layout: &wgpu::PipelineLayout,
+    shader: &wgpu::ShaderModule,
+    entries: [&str; 2],
+    target: &wgpu::ColorTargetState,
+    buffers: &[wgpu::VertexBufferLayout],
+) -> wgpu::RenderPipeline {
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some(label),
+        layout: Some(layout),
+        vertex: wgpu::VertexState {
+            module: shader,
+            entry_point: Some(entries[0]),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            buffers,
+        },
+        primitive: wgpu::PrimitiveState::default(),
+        depth_stencil: None,
+        // eframe's wgpu egui pass is single-sampled by default. If an app
+        // enables MSAA this count must follow it.
+        multisample: wgpu::MultisampleState::default(),
+        fragment: Some(wgpu::FragmentState {
+            module: shader,
+            entry_point: Some(entries[1]),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            targets: &[Some(target.clone())],
+        }),
+        multiview_mask: None,
+        cache: None,
+    })
+}
+
 impl GraficaRenderer {
     fn new(device: &wgpu::Device, target_format: wgpu::TextureFormat) -> Self {
         let canvas_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -156,6 +251,10 @@ impl GraficaRenderer {
         let node_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("grafica.nodes.shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("nodes.wgsl").into()),
+        });
+        let edge_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("grafica.edges.shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("edges.wgsl").into()),
         });
 
         let bind_group_layout =
@@ -195,91 +294,85 @@ impl GraficaRenderer {
             immediate_size: 0,
         });
 
-        let blend = premultiplied_blend();
         let target = wgpu::ColorTargetState {
             format: target_format,
-            blend: Some(blend),
+            blend: Some(premultiplied_blend()),
             write_mask: wgpu::ColorWrites::ALL,
         };
 
-        let canvas_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("grafica.canvas.pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &canvas_shader,
-                entry_point: Some("vs_main"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                buffers: &[],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            // eframe's wgpu egui pass is single-sampled by default. If an
-            // app enables MSAA this count must follow it.
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &canvas_shader,
-                entry_point: Some("fs_main"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                targets: &[Some(target.clone())],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        let node_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("grafica.nodes.pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &node_shader,
-                entry_point: Some("vs_node"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<NodeInstance>() as u64,
-                    step_mode: wgpu::VertexStepMode::Instance,
-                    attributes: &NODE_ATTRS,
-                }],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &node_shader,
-                entry_point: Some("fs_node"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                targets: &[Some(target)],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        let node_instances = new_node_buffer(device, INITIAL_NODE_CAPACITY);
+        let canvas_pipeline = make_pipeline(
+            device,
+            "grafica.canvas.pipeline",
+            &pipeline_layout,
+            &canvas_shader,
+            ["vs_main", "fs_main"],
+            &target,
+            &[],
+        );
+        let node_pipeline = make_pipeline(
+            device,
+            "grafica.nodes.pipeline",
+            &pipeline_layout,
+            &node_shader,
+            ["vs_node", "fs_node"],
+            &target,
+            &[wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<NodeInstance>() as u64,
+                step_mode: wgpu::VertexStepMode::Instance,
+                attributes: &NODE_ATTRS,
+            }],
+        );
+        let edge_pipeline = make_pipeline(
+            device,
+            "grafica.edges.pipeline",
+            &pipeline_layout,
+            &edge_shader,
+            ["vs_edge", "fs_edge"],
+            &target,
+            &[wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<EdgeInstance>() as u64,
+                step_mode: wgpu::VertexStepMode::Instance,
+                attributes: &EDGE_ATTRS,
+            }],
+        );
 
         Self {
             canvas_pipeline,
             node_pipeline,
+            edge_pipeline,
             uniform_buffer,
             bind_group,
-            node_instances,
-            node_capacity: INITIAL_NODE_CAPACITY,
+            node_instances: new_instance_buffer::<NodeInstance>(device, "nodes", INITIAL_CAPACITY),
+            node_capacity: INITIAL_CAPACITY,
+            edge_instances: new_instance_buffer::<EdgeInstance>(device, "edges", INITIAL_CAPACITY),
+            edge_capacity: INITIAL_CAPACITY,
             srgb_target: target_format.is_srgb(),
         }
     }
 
     /// Grow the node instance buffer if `needed` exceeds its capacity.
     fn reserve_nodes(&mut self, device: &wgpu::Device, needed: u32) {
-        if needed <= self.node_capacity {
-            return;
+        if needed > self.node_capacity {
+            let capacity = needed.next_power_of_two();
+            self.node_instances = new_instance_buffer::<NodeInstance>(device, "nodes", capacity);
+            self.node_capacity = capacity;
         }
-        let capacity = needed.next_power_of_two();
-        self.node_instances = new_node_buffer(device, capacity);
-        self.node_capacity = capacity;
+    }
+
+    /// Grow the edge instance buffer if `needed` exceeds its capacity.
+    fn reserve_edges(&mut self, device: &wgpu::Device, needed: u32) {
+        if needed > self.edge_capacity {
+            let capacity = needed.next_power_of_two();
+            self.edge_instances = new_instance_buffer::<EdgeInstance>(device, "edges", capacity);
+            self.edge_capacity = capacity;
+        }
     }
 }
 
-fn new_node_buffer(device: &wgpu::Device, capacity: u32) -> wgpu::Buffer {
+fn new_instance_buffer<T>(device: &wgpu::Device, kind: &str, capacity: u32) -> wgpu::Buffer {
     device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("grafica.nodes.instances"),
-        size: capacity as u64 * std::mem::size_of::<NodeInstance>() as u64,
+        label: Some(&format!("grafica.{kind}.instances")),
+        size: capacity as u64 * std::mem::size_of::<T>() as u64,
         usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     })
@@ -313,11 +406,12 @@ pub fn init(render_state: &RenderState) {
 // =============================================================================
 
 /// Per-frame paint callback for the canvas. Carries the frame's view
-/// state and node instances by value; the GPU resources live in
+/// state and instances by value; the GPU resources live in
 /// [`GraficaRenderer`].
 struct CanvasCallback {
     uniform: ViewportUniform,
     nodes: Vec<NodeInstance>,
+    edges: Vec<EdgeInstance>,
 }
 
 impl CallbackTrait for CanvasCallback {
@@ -347,6 +441,14 @@ impl CallbackTrait for CanvasCallback {
                     bytemuck::cast_slice(&self.nodes),
                 );
             }
+            if !self.edges.is_empty() {
+                renderer.reserve_edges(device, self.edges.len() as u32);
+                queue.write_buffer(
+                    &renderer.edge_instances,
+                    0,
+                    bytemuck::cast_slice(&self.edges),
+                );
+            }
         }
         Vec::new()
     }
@@ -372,18 +474,22 @@ impl CallbackTrait for CanvasCallback {
             render_pass.set_vertex_buffer(0, renderer.node_instances.slice(..));
             render_pass.draw(0..6, 0..self.nodes.len() as u32);
         }
+
+        // Edge segments on top — one instanced quad per polyline segment.
+        if !self.edges.is_empty() {
+            render_pass.set_pipeline(&renderer.edge_pipeline);
+            render_pass.set_vertex_buffer(0, renderer.edge_instances.slice(..));
+            render_pass.draw(0..6, 0..self.edges.len() as u32);
+        }
     }
 }
 
-/// Paint the canvas — background, grid, and node bodies — on the GPU,
-/// over `rect`.
+/// Paint the canvas — background, grid, node bodies, and edge segments —
+/// on the GPU, over `rect`.
 ///
 /// Adds a paint callback to `painter`. If [`init`] was never called the
 /// callback finds no [`GraficaRenderer`] and silently draws nothing —
 /// callers that need a guaranteed result keep the CPU fallback.
-///
-/// The surface size and pixels-per-point are resolved later, in the
-/// callback's `prepare`, from `egui_wgpu`'s screen descriptor.
 pub fn paint_canvas(
     painter: &egui::Painter,
     rect: egui::Rect,
@@ -426,9 +532,10 @@ pub fn paint_canvas(
     };
 
     let nodes: Vec<NodeInstance> = scene.nodes.iter().map(node_instance).collect();
+    let edges = collect_edge_instances(scene);
 
     painter.add(egui_wgpu::Callback::new_paint_callback(
         rect,
-        CanvasCallback { uniform, nodes },
+        CanvasCallback { uniform, nodes, edges },
     ));
 }

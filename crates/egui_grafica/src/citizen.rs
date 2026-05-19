@@ -910,8 +910,10 @@ impl CanvasCitizen {
         // The CPU path fills and strokes the whole scene on the painter.
         #[cfg(feature = "gpu")]
         self.registry.with_scene(|scene| {
+            // GPU: background, grid, node bodies, edge segments.
             crate::gpu::paint_canvas(&painter, rect, &self.viewport, scene);
-            crate::render::paint_edges(&painter, scene, &self.viewport);
+            // Painter: everything the GPU path leaves out.
+            crate::render::paint_arrowheads(&painter, scene, &self.viewport);
             crate::render::paint_node_labels(&painter, scene, &self.viewport);
             crate::render::paint_ports(&painter, scene, &self.viewport);
             crate::render::paint_waypoints(&painter, scene, &self.viewport);
