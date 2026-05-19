@@ -141,6 +141,31 @@ pub fn paint_selected_edges(painter: &Painter, scene: &Scene, selected: &[EdgeId
     }
 }
 
+/// Draw a highlight halo over each individually-selected wire segment —
+/// just the one run, not the whole wire.
+pub fn paint_selected_segments(
+    painter: &Painter,
+    scene: &Scene,
+    selected: &[(EdgeId, usize)],
+    viewport: &Viewport,
+) {
+    let halo = Color32::from_rgba_unmultiplied(0x25, 0x63, 0xEB, 110);
+    for (id, seg) in selected {
+        let Some(edge) = scene.edges.iter().find(|e| &e.id == id) else {
+            continue;
+        };
+        let Some(poly) = edge_polyline(scene, edge) else {
+            continue;
+        };
+        if seg + 1 >= poly.len() {
+            continue;
+        }
+        let a = viewport.world_to_screen(poly[*seg]);
+        let b = viewport.world_to_screen(poly[*seg + 1]);
+        painter.line_segment([a, b], Stroke::new(6.0, halo));
+    }
+}
+
 fn port_fill(kind: crate::model::PortKind) -> Color32 {
     use crate::model::PortKind;
     match kind {

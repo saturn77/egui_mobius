@@ -36,9 +36,9 @@ use egui::{Color32, Key, Sense, Stroke};
 use egui_phosphor::regular as ico;
 
 use crate::interact::{
-    hit_test_edge, hit_test_node, hit_test_port, hit_test_waypoint, insert_pivot,
-    nearest_perimeter_anchor, prepare_segment_drag, snap_to_grid, CanvasEvent, CanvasFsm,
-    CanvasState, HitTarget, Selection,
+    hit_test_edge, hit_test_edge_segment, hit_test_node, hit_test_port, hit_test_waypoint,
+    insert_pivot, nearest_perimeter_anchor, prepare_segment_drag, snap_to_grid, CanvasEvent,
+    CanvasFsm, CanvasState, HitTarget, Selection,
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
@@ -47,7 +47,7 @@ use crate::model::{
 };
 use crate::registry::Registry;
 use crate::render::{
-    paint_connection_preview, paint_selected_edges, paint_selection,
+    paint_connection_preview, paint_selected_edges, paint_selected_segments, paint_selection,
     scene_bounds, viewport_fit_to, Viewport,
 };
 // CPU-path-only entry points — unused when the GPU pipeline is compiled.
@@ -727,13 +727,15 @@ impl CanvasCitizen {
                 } else {
                     self.selection.select_only(id);
                 }
-            } else if let Some(eid) =
-                self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh))
+            } else if let Some((eid, seg)) =
+                self.registry.with_scene(|s| hit_test_edge_segment(s, world, edge_thresh))
             {
+                // A wire click selects the run under the pointer, not the
+                // whole wire — only that segment highlights.
                 if shift {
-                    self.selection.toggle_edge(eid);
+                    self.selection.toggle_segment(eid, seg);
                 } else {
-                    self.selection.select_only_edge(eid);
+                    self.selection.select_only_segment(eid, seg);
                 }
             } else if !shift {
                 self.selection.clear();
@@ -933,6 +935,7 @@ impl CanvasCitizen {
         // Selection highlights — painter-side on both paths.
         self.registry.with_scene(|scene| {
             paint_selected_edges(&painter, scene, &self.selection.edges, &self.viewport);
+            paint_selected_segments(&painter, scene, &self.selection.segments, &self.viewport);
             paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
         });
 
@@ -997,7 +1000,15 @@ impl CanvasCitizen {
     /// Remove every selected edge and node through the registry. Removing a
     /// node also drops its attached edges (registry handles the cascade).
     fn delete_selection(&mut self) {
-        let edges: Vec<EdgeId> = self.selection.edges.clone();
+        let mut edges: Vec<EdgeId> = self.selection.edges.clone();
+        // A segment-selected wire deletes whole — a port-to-port
+        // connection can't survive in pieces. Segment-specific delete
+        // semantics are a deliberately deferred decision.
+        for (eid, _) in &self.selection.segments {
+            if !edges.contains(eid) {
+                edges.push(eid.clone());
+            }
+        }
         let nodes: Vec<NodeId> = self.selection.nodes.clone();
         for id in &edges {
             self.registry.remove_edge(id);

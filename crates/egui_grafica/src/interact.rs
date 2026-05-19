@@ -15,16 +15,21 @@ use crate::router::{edge_polyline, port_position_on_node};
 // Selection
 // =============================================================================
 
-/// The set of currently-selected scene elements — nodes and/or edges.
+/// The set of currently-selected scene elements — nodes, whole edges,
+/// and/or individual wire segments.
 #[derive(Debug, Default, Clone)]
 pub struct Selection {
     pub nodes: Vec<NodeId>,
     pub edges: Vec<EdgeId>,
+    /// Individually-selected wire segments — `(edge id, segment index)`.
+    /// A click on a wire selects one segment; the whole edge stays in
+    /// `edges` only for marquee and drag-reroute selection.
+    pub segments: Vec<(EdgeId, usize)>,
 }
 
 impl Selection {
     pub fn is_empty(&self) -> bool {
-        self.nodes.is_empty() && self.edges.is_empty()
+        self.nodes.is_empty() && self.edges.is_empty() && self.segments.is_empty()
     }
 
     pub fn contains(&self, id: &NodeId) -> bool {
@@ -38,6 +43,7 @@ impl Selection {
     pub fn clear(&mut self) {
         self.nodes.clear();
         self.edges.clear();
+        self.segments.clear();
     }
 
     /// Replace the whole selection with exactly one node.
@@ -67,6 +73,26 @@ impl Selection {
             self.edges.remove(pos);
         } else {
             self.edges.push(id);
+        }
+    }
+
+    /// True if segment `seg` of `edge` is selected.
+    pub fn contains_segment(&self, edge: &EdgeId, seg: usize) -> bool {
+        self.segments.iter().any(|(e, s)| e == edge && *s == seg)
+    }
+
+    /// Replace the whole selection with exactly one wire segment.
+    pub fn select_only_segment(&mut self, edge: EdgeId, seg: usize) {
+        self.clear();
+        self.segments.push((edge, seg));
+    }
+
+    /// Add the segment if absent, remove it if present — shift-click behavior.
+    pub fn toggle_segment(&mut self, edge: EdgeId, seg: usize) {
+        if let Some(pos) = self.segments.iter().position(|(e, s)| e == &edge && *s == seg) {
+            self.segments.remove(pos);
+        } else {
+            self.segments.push((edge, seg));
         }
     }
 }
@@ -400,6 +426,21 @@ pub fn hit_test_edge(scene: &Scene, world: (f32, f32), threshold: f32) -> Option
     best.map(|(_, id)| id)
 }
 
+/// Like [`hit_test_edge`], but also reports which polyline segment of
+/// the wire the pointer is over — `(edge id, segment index)`. This is
+/// what segment-granular selection clicks resolve to.
+pub fn hit_test_edge_segment(
+    scene: &Scene,
+    world: (f32, f32),
+    threshold: f32,
+) -> Option<(EdgeId, usize)> {
+    let eid = hit_test_edge(scene, world, threshold)?;
+    let edge = scene.edges.iter().find(|e| e.id == eid)?;
+    let poly = edge_polyline(scene, edge)?;
+    let seg = nearest_segment_index(&poly, world)?;
+    Some((eid, seg))
+}
+
 /// Shortest distance from `p` to a polyline (min over its segments).
 fn polyline_distance(poly: &[(f32, f32)], p: (f32, f32)) -> f32 {
     poly.windows(2)
@@ -599,6 +640,65 @@ mod tests {
         assert!(!sel.contains(&NodeId("a".into())));
         sel.select_only(NodeId("c".into()));
         assert_eq!(sel.nodes, vec![NodeId("c".into())]);
+    }
+
+    #[test]
+    fn selection_segment_select_and_toggle() {
+        let mut sel = Selection::default();
+        sel.select_only_segment(EdgeId("e".into()), 1);
+        assert!(sel.contains_segment(&EdgeId("e".into()), 1));
+        assert!(!sel.contains_segment(&EdgeId("e".into()), 0));
+        // Selecting a node clears the segment selection.
+        sel.select_only(NodeId("n".into()));
+        assert!(sel.segments.is_empty());
+        // Toggle adds, then removes.
+        sel.toggle_segment(EdgeId("e".into()), 2);
+        assert!(sel.contains_segment(&EdgeId("e".into()), 2));
+        sel.toggle_segment(EdgeId("e".into()), 2);
+        assert!(!sel.contains_segment(&EdgeId("e".into()), 2));
+    }
+
+    #[test]
+    fn hit_test_edge_segment_reports_the_segment() {
+        use crate::model::{
+            Edge, EdgeId, EdgeOverlay, Port, PortAnchor, PortId, PortKind, Routing,
+        };
+        let mut a = rect_node("a", (0.0, 0.0), (100.0, 100.0));
+        a.ports.push(Port {
+            id: PortId("pa".into()),
+            name: "pa".into(),
+            kind: PortKind::Out,
+            anchor: PortAnchor::East(0.5), // world (100, 50)
+            data_type: None,
+        });
+        let mut b = rect_node("b", (200.0, 100.0), (100.0, 100.0));
+        b.ports.push(Port {
+            id: PortId("pb".into()),
+            name: "pb".into(),
+            kind: PortKind::In,
+            anchor: PortAnchor::West(0.5), // world (200, 150)
+            data_type: None,
+        });
+        let mut scene = Scene::default();
+        scene.nodes.push(a);
+        scene.nodes.push(b);
+        scene.edges.push(Edge {
+            id: EdgeId("e".into()),
+            from: (NodeId("a".into()), PortId("pa".into())),
+            to: (NodeId("b".into()), PortId("pb".into())),
+            routing: Routing::Orthogonal,
+            overlay: EdgeOverlay::default(),
+        });
+
+        // Orthogonal route turns at the midpoint:
+        // (100,50) - (150,50) - (150,150) - (200,150).
+        let e = EdgeId("e".into());
+        // First horizontal run.
+        assert_eq!(hit_test_edge_segment(&scene, (120.0, 51.0), 5.0), Some((e.clone(), 0)));
+        // Vertical run.
+        assert_eq!(hit_test_edge_segment(&scene, (151.0, 100.0), 5.0), Some((e.clone(), 1)));
+        // Second horizontal run.
+        assert_eq!(hit_test_edge_segment(&scene, (180.0, 149.0), 5.0), Some((e, 2)));
     }
 
     #[test]
