@@ -206,6 +206,10 @@ pub struct CanvasFsm {
     pub drag_waypoint: usize,
     /// `DraggingFreeEnd`: which end of `drag_edge` is being dragged.
     pub drag_free_side: Option<EdgeEndSide>,
+    /// `DraggingFreeEnd`: world position of the Free end at press time.
+    /// Preserved on release as a new waypoint so the original geometry
+    /// stays put while a new segment is appended.
+    pub drag_free_origin: Option<(f32, f32)>,
 }
 
 impl CanvasFsm {
@@ -248,6 +252,7 @@ impl CanvasFsm {
         self.drag_origin_pts.clear();
         self.drag_waypoint = 0;
         self.drag_free_side = None;
+        self.drag_free_origin = None;
     }
 }
 

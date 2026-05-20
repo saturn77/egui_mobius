@@ -290,6 +290,44 @@ impl Registry {
         });
     }
 
+    /// Extend a wire by placing a new segment from one of its endpoints,
+    /// preserving the existing endpoint as an interior waypoint. Used
+    /// when the user drags a dangling `EdgeEnd::Free` to grow the wire
+    /// onward — the cut point stays put, a new segment is added.
+    ///
+    /// Only meaningful when the side is currently `EdgeEnd::Free`. The
+    /// new end may be either a port (reconnecting the wire through the
+    /// preserved waypoint) or a fresh free point further out.
+    pub fn extend_free_end(&self, id: &EdgeId, side: EdgeEndSide, new_end: EdgeEnd) {
+        self.mutate(|scene| {
+            let Some(edge) = scene.edges.iter_mut().find(|e| &e.id == id) else {
+                return;
+            };
+            let current = match side {
+                EdgeEndSide::From => &edge.from,
+                EdgeEndSide::To => &edge.to,
+            };
+            let anchor = match current {
+                EdgeEnd::Port(_, _) => return,
+                EdgeEnd::Free(x, y) => (*x, *y),
+            };
+            // The old Free becomes the adjacent interior waypoint.
+            match &mut edge.routing {
+                Routing::Manual { waypoints } => match side {
+                    EdgeEndSide::From => waypoints.insert(0, anchor),
+                    EdgeEndSide::To => waypoints.push(anchor),
+                },
+                // Any auto-routing freezes to a Manual route with the
+                // one preserved waypoint at the cut.
+                _ => edge.routing = Routing::Manual { waypoints: vec![anchor] },
+            }
+            match side {
+                EdgeEndSide::From => edge.from = new_end,
+                EdgeEndSide::To => edge.to = new_end,
+            }
+        });
+    }
+
     /// Reattach (or move) one end of a wire — used to drag a dangling
     /// `EdgeEnd::Free` endpoint onto a port (`EdgeEnd::Port`), or to
     /// move it to a new free position during the drag.
@@ -547,6 +585,76 @@ mod tests {
         // entry stays horizontal — y followed by -50, x unchanged.
         assert!((waypoints[1].1 - 100.0).abs() < 1e-3, "w2.y = {}", waypoints[1].1);
         assert_eq!(waypoints[1].0, 150.0);
+    }
+
+    #[test]
+    fn extend_free_end_preserves_the_old_position_as_a_waypoint() {
+        // I-shaped survivor: Port(A) — Free(corner), Straight. Extend
+        // the Free end onward: the corner becomes a waypoint, the to
+        // end is the new point. Original geometry stays put.
+        let reg = Registry::new(Scene::default());
+        let mut a = node_rect("a", (0.0, 0.0), (100.0, 100.0));
+        a.ports.push(Port {
+            id: PortId("pa".into()),
+            name: "pa".into(),
+            kind: PortKind::Out,
+            anchor: PortAnchor::East(0.5),
+            data_type: None,
+        });
+        reg.add_node(a);
+        reg.add_edge(Edge {
+            id: EdgeId("e".into()),
+            from: EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+            to: EdgeEnd::Free(200.0, 50.0),
+            routing: Routing::Straight,
+            overlay: EdgeOverlay::default(),
+        });
+
+        reg.extend_free_end(
+            &EdgeId("e".into()),
+            EdgeEndSide::To,
+            EdgeEnd::Free(200.0, 200.0),
+        );
+
+        let edge = &reg.scene().edges[0];
+        let Routing::Manual { waypoints } = &edge.routing else {
+            panic!("Straight should have collapsed into Manual on extend");
+        };
+        // Old corner kept as the new waypoint, in its original position.
+        assert_eq!(waypoints, &vec![(200.0, 50.0)]);
+        // New to-end is the released point.
+        assert!(matches!(edge.to, EdgeEnd::Free(x, y) if x == 200.0 && y == 200.0));
+        // From end untouched.
+        assert!(matches!(&edge.from, EdgeEnd::Port(n, _) if n.0 == "a"));
+    }
+
+    #[test]
+    fn extending_from_a_free_end_onto_a_port_reconnects_through_the_anchor() {
+        // The Free anchor is preserved as a waypoint even when the
+        // released-on target is a port — reconnect routes *through*
+        // the cut, not over it.
+        let reg = Registry::new(Scene::default());
+        reg.add_edge(Edge {
+            id: EdgeId("e".into()),
+            from: EdgeEnd::Free(50.0, 50.0),
+            to: EdgeEnd::Free(120.0, 60.0),
+            routing: Routing::Manual { waypoints: vec![(80.0, 50.0)] },
+            overlay: EdgeOverlay::default(),
+        });
+
+        reg.extend_free_end(
+            &EdgeId("e".into()),
+            EdgeEndSide::To,
+            EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
+        );
+
+        let edge = &reg.scene().edges[0];
+        let Routing::Manual { waypoints } = &edge.routing else {
+            panic!()
+        };
+        // New waypoint appended at the previous Free-to position.
+        assert_eq!(waypoints, &vec![(80.0, 50.0), (120.0, 60.0)]);
+        assert!(matches!(&edge.to, EdgeEnd::Port(n, _) if n.0 == "b"));
     }
 
     #[test]

@@ -42,8 +42,8 @@ use crate::interact::{
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
-    CanvasBackground, Edge, EdgeEnd, EdgeId, EdgeOverlay, GridStyle, GridUnits, LineStyle, NodeId,
-    Port, PortId, PortKind, Routing, Scene,
+    CanvasBackground, Edge, EdgeEnd, EdgeEndSide, EdgeId, EdgeOverlay, GridStyle, GridUnits,
+    LineStyle, NodeId, Port, PortId, PortKind, Routing, Scene,
 };
 use crate::registry::Registry;
 use crate::render::{
@@ -543,6 +543,22 @@ impl CanvasCitizen {
                 CanvasState::DraggingFreeEnd => {
                     let (eid, side) = free_end_hit.expect("FreeEnd target implies a hit");
                     self.selection.select_only_edge(eid.clone());
+                    // Snapshot the Free position — kept as the new
+                    // waypoint when the wire is extended on release.
+                    let origin = self.registry.with_scene(|s| {
+                        s.edges.iter().find(|e| e.id == eid).and_then(|e| {
+                            let end = match side {
+                                EdgeEndSide::From => &e.from,
+                                EdgeEndSide::To => &e.to,
+                            };
+                            if let EdgeEnd::Free(x, y) = end {
+                                Some((*x, *y))
+                            } else {
+                                None
+                            }
+                        })
+                    });
+                    self.fsm.drag_free_origin = origin;
                     self.fsm.drag_edge = Some(eid);
                     self.fsm.drag_free_side = Some(side);
                 }
@@ -696,16 +712,11 @@ impl CanvasCitizen {
                     }
                 }
                 CanvasState::DraggingFreeEnd => {
-                    // Live-track the dangling end to the cursor — the rest
-                    // of the wire stays put. Snap-to-port happens on release.
-                    if let Some(eid) = self.fsm.drag_edge.clone()
-                        && let Some(side) = self.fsm.drag_free_side
-                        && let Some(screen) = response.interact_pointer_pos()
-                    {
-                        let cursor = self.viewport.screen_to_world(screen);
-                        self.fsm.cursor_world = cursor;
-                        self.registry
-                            .update_edge_end(&eid, side, EdgeEnd::Free(cursor.0, cursor.1));
+                    // Track the cursor for the rubber-band preview only.
+                    // The wire isn't mutated until release so the Free
+                    // anchor stays drawn at its original position.
+                    if let Some(screen) = response.interact_pointer_pos() {
+                        self.fsm.cursor_world = self.viewport.screen_to_world(screen);
                     }
                 }
                 CanvasState::Idle => {}
@@ -737,8 +748,9 @@ impl CanvasCitizen {
                 self.selection.nodes = nodes;
                 self.selection.edges = edges;
             }
-            // Snap a dragged free end back onto a port if released over one.
-            // Otherwise the live-tracked Free position from the drag stays.
+            // Extend the wire from its Free end. The old free position
+            // becomes a waypoint; the new end is the released point —
+            // a port if released over one, else a fresh free point.
             if self.fsm.state == CanvasState::DraggingFreeEnd
                 && let Some(eid) = self.fsm.drag_edge.clone()
                 && let Some(side) = self.fsm.drag_free_side
@@ -747,10 +759,11 @@ impl CanvasCitizen {
                 let snap = self
                     .registry
                     .with_scene(|s| hit_test_port(s, self.fsm.cursor_world, port_radius));
-                if let Some((nid, pid)) = snap {
-                    self.registry
-                        .update_edge_end(&eid, side, EdgeEnd::Port(nid, pid));
-                }
+                let new_end = match snap {
+                    Some((nid, pid)) => EdgeEnd::Port(nid, pid),
+                    None => EdgeEnd::Free(self.fsm.cursor_world.0, self.fsm.cursor_world.1),
+                };
+                self.registry.extend_free_end(&eid, side, new_end);
             }
             self.fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
         }
@@ -988,6 +1001,13 @@ impl CanvasCitizen {
                 self.registry.with_scene(|s| port_world_position(s, &from.0, &from.1))
         {
             paint_connection_preview(&painter, from_world, self.fsm.cursor_world, &self.viewport);
+        }
+
+        // Rubber-band preview while extending a wire from a dangling end.
+        if self.fsm.state == CanvasState::DraggingFreeEnd
+            && let Some(origin) = self.fsm.drag_free_origin
+        {
+            paint_connection_preview(&painter, origin, self.fsm.cursor_world, &self.viewport);
         }
 
         // Rubber-band rectangle while marquee-selecting.
