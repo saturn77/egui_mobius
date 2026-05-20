@@ -154,14 +154,14 @@ impl Registry {
                 })
                 .collect();
 
-            // Pre-move snapshot of each Manual edge's port positions —
+            // Pre-move snapshot of every edge's endpoint world positions —
             // needed to decide segment orientation, taken before we
-            // start mutating.
+            // start mutating. Covers Straight wires with Free ends too,
+            // not just Manual.
             type PortSnap = (EdgeId, Option<(f32, f32)>, Option<(f32, f32)>);
             let port_snapshots: Vec<PortSnap> = scene
                 .edges
                 .iter()
-                .filter(|e| matches!(e.routing, Routing::Manual { .. }))
                 .map(|e| {
                     (
                         e.id.clone(),
@@ -171,15 +171,13 @@ impl Registry {
                 })
                 .collect();
 
-            // Translate Manual-wire waypoints so the segments touching
-            // a moved port follow the port.
+            // Translate the in-wire point adjacent to each moved port.
+            // For Manual routing that's the first / last interior
+            // waypoint. For Straight (or any other routing without
+            // interior waypoints), the adjacent point is the OTHER
+            // endpoint — translated only if it's a Free dangling point,
+            // so orphaned segments keep their orientation.
             for edge in scene.edges.iter_mut() {
-                let Routing::Manual { waypoints } = &mut edge.routing else {
-                    continue;
-                };
-                if waypoints.is_empty() {
-                    continue;
-                }
                 let from_delta = edge.from.node_id().and_then(|n| {
                     deltas.iter().find(|(id, _)| id == n).map(|(_, d)| *d)
                 });
@@ -189,16 +187,18 @@ impl Registry {
                 if from_delta.is_none() && to_delta.is_none() {
                     continue;
                 }
-                // A self-loop on a single moved node: translate every
+                // Self-loop on a single moved node: translate every
                 // waypoint by the (shared) delta — the whole wire moves.
                 let same_node = matches!(
                     (&edge.from, &edge.to),
                     (EdgeEnd::Port(a, _), EdgeEnd::Port(b, _)) if a == b,
                 );
                 if same_node && let Some((dx, dy)) = from_delta {
-                    for w in waypoints.iter_mut() {
-                        w.0 += dx;
-                        w.1 += dy;
+                    if let Routing::Manual { waypoints } = &mut edge.routing {
+                        for w in waypoints.iter_mut() {
+                            w.0 += dx;
+                            w.1 += dy;
+                        }
                     }
                     continue;
                 }
@@ -212,13 +212,32 @@ impl Registry {
                 if let Some(delta) = from_delta
                     && let Some(port) = from_port
                 {
-                    translate_adjacent(&mut waypoints[0], port, delta);
+                    let moved_waypoint = if let Routing::Manual { waypoints } = &mut edge.routing
+                        && let Some(first) = waypoints.first_mut()
+                    {
+                        translate_adjacent(first, port, delta);
+                        true
+                    } else {
+                        false
+                    };
+                    if !moved_waypoint {
+                        try_translate_free(&mut edge.to, port, delta);
+                    }
                 }
                 if let Some(delta) = to_delta
                     && let Some(port) = to_port
                 {
-                    let last = waypoints.len() - 1;
-                    translate_adjacent(&mut waypoints[last], port, delta);
+                    let moved_waypoint = if let Routing::Manual { waypoints } = &mut edge.routing
+                        && let Some(last) = waypoints.last_mut()
+                    {
+                        translate_adjacent(last, port, delta);
+                        true
+                    } else {
+                        false
+                    };
+                    if !moved_waypoint {
+                        try_translate_free(&mut edge.from, port, delta);
+                    }
                 }
             }
 
@@ -381,6 +400,18 @@ impl Registry {
 // Helpers
 // =============================================================================
 
+/// Translate a wire's [`EdgeEnd::Free`] dangling endpoint with the
+/// same axis-preserving rule [`translate_adjacent`] applies to
+/// waypoints. A no-op when the end is anchored to a port.
+fn try_translate_free(end: &mut EdgeEnd, port: (f32, f32), delta: (f32, f32)) {
+    if let EdgeEnd::Free(x, y) = end {
+        let mut wp = (*x, *y);
+        translate_adjacent(&mut wp, port, delta);
+        *x = wp.0;
+        *y = wp.1;
+    }
+}
+
 /// Translate a Manual waypoint by `delta`, but only along the axis that
 /// keeps the segment `port → waypoint` perpendicular to whichever
 /// cardinal axis it was on. A horizontal segment tracks the port's
@@ -516,5 +547,42 @@ mod tests {
         // entry stays horizontal — y followed by -50, x unchanged.
         assert!((waypoints[1].1 - 100.0).abs() < 1e-3, "w2.y = {}", waypoints[1].1);
         assert_eq!(waypoints[1].0, 150.0);
+    }
+
+    #[test]
+    fn moving_a_node_drags_the_orphan_segments_free_end_along() {
+        // An orphaned wire-segment survivor: Routing::Straight from a
+        // Free dangling point to a port, with no waypoints. The Free
+        // end must follow the port to keep the segment's orientation.
+        let reg = Registry::new(Scene::default());
+        let mut b = node_rect("b", (200.0, 100.0), (100.0, 100.0));
+        b.ports.push(Port {
+            id: PortId("pb".into()),
+            name: "pb".into(),
+            kind: PortKind::In,
+            anchor: PortAnchor::West(0.5), // world (200, 150)
+            data_type: None,
+        });
+        reg.add_node(b);
+        reg.add_edge(Edge {
+            id: EdgeId("orphan".into()),
+            from: EdgeEnd::Free(120.0, 150.0), // horizontal entry into B
+            to: EdgeEnd::Port(NodeId("b".into()), PortId("pb".into())),
+            routing: Routing::Straight,
+            overlay: EdgeOverlay::default(),
+        });
+
+        // Move B up so its port goes from (200, 150) to (200, 100).
+        reg.move_node(&NodeId("b".into()), (200.0, 50.0));
+
+        let scene = reg.scene();
+        let from = &scene.edges[0].from;
+        let EdgeEnd::Free(fx, fy) = from else {
+            panic!("from should still be Free");
+        };
+        // The horizontal segment must keep its orientation: x stays,
+        // y follows the port (-50).
+        assert_eq!(*fx, 120.0, "free x must not drift on a vertical drag");
+        assert!((fy - 100.0).abs() < 1e-3, "free y = {} expected 100", fy);
     }
 }
