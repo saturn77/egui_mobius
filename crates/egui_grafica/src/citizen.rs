@@ -1026,26 +1026,42 @@ impl CanvasCitizen {
         }
     }
 
-    /// Finish a connection drag: if the pointer was released near a port,
-    /// add an edge from the source port to it.
+    /// Finish a connection drag: if the pointer was released near a
+    /// port — or onto an existing wire's dangling [`EdgeEnd::Free`]
+    /// end — add an edge from the source port to that drop target.
+    ///
+    /// A free-end drop matches the existing free's exact coordinate,
+    /// so the new wire visually meets the original at the cut point.
     fn finish_connection(&mut self, from: (NodeId, PortId), cursor_world: (f32, f32)) {
         let port_radius = PORT_GRAB_PX / self.viewport.zoom;
-        let Some(to) = self
-            .registry
-            .with_scene(|s| hit_test_port(s, cursor_world, port_radius))
-        else {
+        let to_end = self.registry.with_scene(|s| -> Option<EdgeEnd> {
+            if let Some((nid, pid)) = hit_test_port(s, cursor_world, port_radius) {
+                if (nid.clone(), pid.clone()) != from {
+                    return Some(EdgeEnd::Port(nid, pid));
+                }
+            }
+            if let Some((eid, side)) = hit_test_free_end(s, cursor_world, port_radius) {
+                let edge = s.edges.iter().find(|e| e.id == eid)?;
+                let target = match side {
+                    EdgeEndSide::From => &edge.from,
+                    EdgeEndSide::To => &edge.to,
+                };
+                if let EdgeEnd::Free(x, y) = target {
+                    return Some(EdgeEnd::Free(*x, *y));
+                }
+            }
+            None
+        });
+        let Some(to_end) = to_end else {
             return;
         };
-        if to == from {
-            return;
-        }
         let (id, routing) = self
             .registry
             .with_scene(|s| (fresh_edge_id(s), s.settings.default_routing.clone()));
         self.registry.add_edge(Edge {
             id,
             from: EdgeEnd::Port(from.0, from.1),
-            to: EdgeEnd::Port(to.0, to.1),
+            to: to_end,
             routing,
             overlay: EdgeOverlay::default(),
         });
