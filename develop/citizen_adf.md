@@ -104,6 +104,44 @@ on eframe alone is the empirical answer to "when must the ADF own the
 loop." Build breakaway first; let it tell you whether the loop has to
 move.
 
+## Reference point — pane_ui
+
+`pane_ui` (https://github.com/Avon662/pane_ui) is a useful existence
+proof for the bottom of this stack. It is a solo, ground-up
+immediate-mode UI library built directly on **winit 0.30 + wgpu 29 +
+glyphon** for text — no egui, no masonry underneath. UI is defined in
+RON files and redrawn each frame.
+
+What it tells us:
+
+- **The floor is one-person-buildable.** Owning winit + wgpu + text is
+  not a moonshot, and it sits on the same wgpu 29 / winit 0.30 substrate
+  `egui_grafica` already targets. `glyphon` — cosmic-text on wgpu — is
+  the concrete answer to the text problem the moment you stop renting
+  egui's glyph atlas.
+- **It took the path this doc argues against.** pane_ui owns the loop
+  *and* builds its own widgets — fourteen widget types, a styling
+  system, RON layout. That is precisely the cost Condition 2 warns of:
+  once you are down at winit+wgpu, the pull is to also own widgets, and
+  then you have built a whole toolkit. The citizen-ADF bet is the
+  opposite — own the loop, **rent** native widgets per citizen. pane_ui
+  is the alternative we are choosing not to take; it illustrates the
+  temptation the bet is designed to resist, not a confirmation of it.
+
+Two pieces transfer:
+
+- **Its integration modes name our decision.** *Standalone* owns the
+  window and loop; *Overlay* renders into a caller-owned wgpu surface
+  while the caller keeps the loop; *Headless* has neither. Overlay is
+  the same seam `egui_grafica` uses to inject wgpu paint callbacks
+  today — the Standalone-vs-Overlay split *is* "own the loop vs. ride
+  eframe's loop."
+- **RON-defined UI with hot-reload** rhymes with grafica's `.canvas`
+  DSL — data-driven interface, reload without recompile.
+
+What it does not do: any docking, detachable / floating panels, or
+multi-viewport. It is orthogonal to the breakaway work — no help there.
+
 ## Summary
 
 - Agree with the destination: citizen-ADF owning the loop, renting
