@@ -42,8 +42,9 @@ use crate::interact::{
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
-    CanvasBackground, Edge, EdgeEnd, EdgeEndSide, EdgeId, EdgeOverlay, GridStyle, GridUnits,
-    LineStyle, NodeId, Port, PortId, PortKind, Routing, Scene,
+    Border, CanvasBackground, Edge, EdgeEnd, EdgeEndSide, EdgeId, EdgeOverlay, Fill, GridStyle,
+    GridUnits, LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortId, PortKind, Routing, Scene,
+    TextAnchor, TextLabel, Transform,
 };
 use crate::registry::Registry;
 use crate::render::{
@@ -78,6 +79,21 @@ pub enum RibbonSide {
     Right,
 }
 
+/// The active shape-placement tool. `Select` is the default rest state —
+/// normal selection / drag / pan. Any other tool turns a canvas click
+/// into placing that primitive; the tool is sticky until you switch back
+/// to `Select` or press `Escape`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ShapeTool {
+    #[default]
+    Select,
+    Rect,
+    Square,
+    Circle,
+    Ellipse,
+    Text,
+}
+
 /// The canvas citizen widget.
 pub struct CanvasCitizen {
     pub registry: Registry,
@@ -85,6 +101,10 @@ pub struct CanvasCitizen {
     pub fit_padding: f32,
     pub routing_picker_applies_to_all: bool,
     pub ribbon_side: RibbonSide,
+    /// Which side the shape-tool palette docks to.
+    pub tool_ribbon_side: RibbonSide,
+    /// The active shape-placement tool.
+    pub active_tool: ShapeTool,
     /// Currently-selected nodes.
     pub selection: Selection,
     /// Canvas interaction state machine (pan / move / connect / re-route).
@@ -143,6 +163,8 @@ impl CanvasCitizen {
             fit_padding: 40.0,
             routing_picker_applies_to_all: true,
             ribbon_side: RibbonSide::Top,
+            tool_ribbon_side: RibbonSide::Left,
+            active_tool: ShapeTool::default(),
             selection: Selection::default(),
             fsm: CanvasFsm::new(),
             pending_fit: false,
@@ -163,7 +185,84 @@ impl CanvasCitizen {
         };
         let vertical = matches!(self.ribbon_side, RibbonSide::Left | RibbonSide::Right);
         panel.resizable(false).show_inside(ui, |ui| self.show_ribbon(ui, vertical));
+
+        // Shape-tool palette — a second, independently-dockable ribbon.
+        let tool_id = ui.id().with("grafica_tool_ribbon");
+        let tool_panel = match self.tool_ribbon_side {
+            RibbonSide::Top => egui::Panel::top(tool_id),
+            RibbonSide::Bottom => egui::Panel::bottom(tool_id),
+            RibbonSide::Left => egui::Panel::left(tool_id),
+            RibbonSide::Right => egui::Panel::right(tool_id),
+        };
+        let tool_vertical = matches!(self.tool_ribbon_side, RibbonSide::Left | RibbonSide::Right);
+        tool_panel
+            .resizable(false)
+            .show_inside(ui, |ui| self.show_tool_ribbon(ui, tool_vertical));
+
         egui::CentralPanel::default().show_inside(ui, |ui| self.show_canvas(ui));
+    }
+
+    /// The shape-tool palette: a select cursor plus one button per
+    /// placeable primitive. Sticky — the chosen tool stays active for
+    /// repeated placement until `Select` is re-chosen or `Escape` pressed.
+    fn show_tool_ribbon(&mut self, ui: &mut egui::Ui, vertical: bool) {
+        let lay = |ui: &mut egui::Ui, body: &mut dyn FnMut(&mut egui::Ui)| {
+            if vertical {
+                ui.vertical(body);
+            } else {
+                ui.horizontal_wrapped(body);
+            }
+        };
+        let mut tool = self.active_tool;
+        let mut dock_to: Option<RibbonSide> = None;
+
+        lay(ui, &mut |ui| {
+            ui.label(egui::RichText::new(format!("{} Tools", ico::CURSOR)).strong());
+            sep(ui, vertical);
+
+            let mut btn = |ui: &mut egui::Ui, t: ShapeTool, icon: &str, tip: &str| {
+                if ui
+                    .selectable_label(tool == t, icon)
+                    .on_hover_text(tip)
+                    .clicked()
+                {
+                    tool = t;
+                }
+            };
+            btn(ui, ShapeTool::Select, ico::CURSOR, "Select / move");
+            btn(ui, ShapeTool::Rect, ico::RECTANGLE, "Rectangle");
+            btn(ui, ShapeTool::Square, ico::SQUARE, "Square");
+            btn(ui, ShapeTool::Circle, ico::CIRCLE, "Circle");
+            // Phosphor has no oval glyph; the circle glyph stands in,
+            // disambiguated by the tooltip.
+            btn(ui, ShapeTool::Ellipse, ico::CIRCLE, "Ellipse");
+            btn(ui, ShapeTool::Text, ico::TEXT_T, "Text");
+
+            sep(ui, vertical);
+            ui.menu_button(format!("{} Dock", ico::RECTANGLE_DASHED), |ui| {
+                if ui.button("Top").clicked() {
+                    dock_to = Some(RibbonSide::Top);
+                    ui.close();
+                }
+                if ui.button("Bottom").clicked() {
+                    dock_to = Some(RibbonSide::Bottom);
+                    ui.close();
+                }
+                if ui.button("Left").clicked() {
+                    dock_to = Some(RibbonSide::Left);
+                    ui.close();
+                }
+                if ui.button("Right").clicked() {
+                    dock_to = Some(RibbonSide::Right);
+                    ui.close();
+                }
+            });
+        });
+
+        self.active_tool = tool;
+        if let Some(side) = dock_to {
+            self.tool_ribbon_side = side;
+        }
     }
 
     fn show_ribbon(&mut self, ui: &mut egui::Ui, vertical: bool) {
@@ -460,7 +559,8 @@ impl CanvasCitizen {
         // Hit-test at the true press origin, not `interact_pointer_pos` —
         // egui only reports a drag once the pointer has moved a few pixels,
         // and testing that drifted point misses thin wires and small ports.
-        if response.drag_started_by(egui::PointerButton::Primary)
+        if self.active_tool == ShapeTool::Select
+            && response.drag_started_by(egui::PointerButton::Primary)
             && let Some(screen) = ui.input(|i| i.pointer.press_origin())
         {
             let world = self.viewport.screen_to_world(screen);
@@ -773,25 +873,31 @@ impl CanvasCitizen {
             && let Some(screen) = response.interact_pointer_pos()
         {
             let world = self.viewport.screen_to_world(screen);
-            let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
-            if let Some(id) = self.registry.with_scene(|s| hit_test_node(s, world)) {
-                if shift {
-                    self.selection.toggle(id);
-                } else {
-                    self.selection.select_only(id);
+            if self.active_tool != ShapeTool::Select {
+                // A tool is armed: the click places a primitive instead
+                // of selecting.
+                self.place_shape(world);
+            } else {
+                let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
+                if let Some(id) = self.registry.with_scene(|s| hit_test_node(s, world)) {
+                    if shift {
+                        self.selection.toggle(id);
+                    } else {
+                        self.selection.select_only(id);
+                    }
+                } else if let Some((eid, seg)) =
+                    self.registry.with_scene(|s| hit_test_edge_segment(s, world, edge_thresh))
+                {
+                    // A wire click selects the run under the pointer, not
+                    // the whole wire — only that segment highlights.
+                    if shift {
+                        self.selection.toggle_segment(eid, seg);
+                    } else {
+                        self.selection.select_only_segment(eid, seg);
+                    }
+                } else if !shift {
+                    self.selection.clear();
                 }
-            } else if let Some((eid, seg)) =
-                self.registry.with_scene(|s| hit_test_edge_segment(s, world, edge_thresh))
-            {
-                // A wire click selects the run under the pointer, not the
-                // whole wire — only that segment highlights.
-                if shift {
-                    self.selection.toggle_segment(eid, seg);
-                } else {
-                    self.selection.select_only_segment(eid, seg);
-                }
-            } else if !shift {
-                self.selection.clear();
             }
         }
 
@@ -833,6 +939,10 @@ impl CanvasCitizen {
 
             if ui.input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
                 self.delete_selection();
+            }
+            // Escape disarms the active shape tool back to Select.
+            if ui.input(|i| i.key_pressed(Key::Escape)) {
+                self.active_tool = ShapeTool::Select;
             }
         }
 
@@ -1226,6 +1336,22 @@ impl CanvasCitizen {
             self.registry.update_edge_routing(&id, routing.clone());
         }
     }
+
+    /// Place a new primitive of the active tool, centered on `world`
+    /// (grid-snapped when snapping is on), and select it so it can be
+    /// moved or styled immediately.
+    fn place_shape(&mut self, world: (f32, f32)) {
+        if self.active_tool == ShapeTool::Select {
+            return;
+        }
+        let (snap, spacing) =
+            self.registry.with_scene(|s| (s.settings.snap_to_grid, s.settings.grid_spacing));
+        let center = if snap { snap_to_grid(world, spacing) } else { world };
+        let id = self.registry.with_scene(fresh_node_id);
+        let node = make_shape_node(self.active_tool, id.clone(), center);
+        self.registry.add_node(node);
+        self.selection.select_only(id);
+    }
 }
 
 const HOTKEY_TABLE: &[(&str, &str)] = &[
@@ -1245,6 +1371,61 @@ fn fresh_edge_id(scene: &Scene) -> EdgeId {
             return candidate;
         }
         n += 1;
+    }
+}
+
+fn fresh_node_id(scene: &Scene) -> NodeId {
+    let mut n = scene.nodes.len();
+    loop {
+        let candidate = NodeId(format!("node{n}"));
+        if !scene.nodes.iter().any(|nd| nd.id == candidate) {
+            return candidate;
+        }
+        n += 1;
+    }
+}
+
+/// Build a default node for a shape tool, centered on `center`. `Square`
+/// is a `Rect` with equal sides; `Text` is an unframed label.
+fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
+    let (kind, size) = match tool {
+        ShapeTool::Rect => (NodeKind::Rect, (80.0, 50.0)),
+        ShapeTool::Square => (NodeKind::Rect, (60.0, 60.0)),
+        ShapeTool::Circle => (NodeKind::Circle, (60.0, 60.0)),
+        ShapeTool::Ellipse => (NodeKind::Ellipse, (80.0, 50.0)),
+        ShapeTool::Text => (NodeKind::Rect, (80.0, 30.0)),
+        // Select never places a node — fall back to a rect defensively.
+        ShapeTool::Select => (NodeKind::Rect, (80.0, 50.0)),
+    };
+    let position = (center.0 - size.0 * 0.5, center.1 - size.1 * 0.5);
+    let overlay = if tool == ShapeTool::Text {
+        // Unframed: transparent fill and border, just the label.
+        Overlay {
+            border: Border { color: "#00000000".into(), width: 0.0, style: LineStyle::Solid },
+            fill: Fill { color: "#00000000".into(), alpha: 0.0 },
+            text: Some(TextLabel {
+                value: "Text".into(),
+                anchor: TextAnchor::Center,
+                font_family: String::new(),
+                font_size: 14.0,
+                bold: false,
+                italic: false,
+                color: "#111827".into(),
+            }),
+        }
+    } else {
+        Overlay {
+            border: Border { color: "#1F2937".into(), width: 2.0, style: LineStyle::Solid },
+            fill: Fill { color: "#DBEAFE".into(), alpha: 0.90 },
+            text: None,
+        }
+    };
+    Node {
+        id,
+        kind,
+        transform: Transform { position, size, rotation: 0.0 },
+        overlay,
+        ports: vec![],
     }
 }
 

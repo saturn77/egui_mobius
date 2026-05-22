@@ -41,7 +41,7 @@ pub use model::{
     CanvasBackground, CanvasSettings, GridStyle, GridUnits, TextLabel, Transform,
 };
 pub use registry::Registry;
-pub use citizen::CanvasCitizen;
+pub use citizen::{CanvasCitizen, RibbonSide, ShapeTool};
 pub use render::Viewport;
 pub use interact::{hit_test_node, snap_to_grid, Selection};
 

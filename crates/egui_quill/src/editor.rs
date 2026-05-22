@@ -49,6 +49,13 @@ fn build_syntax_set() -> SyntaxSet {
             eprintln!("egui_quill: bundled OpenSCAD.sublime-syntax failed to parse: {e}");
         }
     }
+    let toml_yaml = include_str!("../syntaxes/TOML.sublime-syntax");
+    match SyntaxDefinition::load_from_str(toml_yaml, true, Some("TOML")) {
+        Ok(def) => builder.add(def),
+        Err(e) => {
+            eprintln!("egui_quill: bundled TOML.sublime-syntax failed to parse: {e}");
+        }
+    }
     builder.build()
 }
 
