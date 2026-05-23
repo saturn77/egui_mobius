@@ -1016,12 +1016,13 @@ impl CanvasCitizen {
 
             // Hotkeys — gated on canvas hover so text widgets elsewhere
             // aren't silently swallowed.
-            let (g, x, y, r) = ui.input(|i| {
+            let (g, x, y, r, a) = ui.input(|i| {
                 (
                     i.key_pressed(Key::G),
                     i.key_pressed(Key::X),
                     i.key_pressed(Key::Y),
                     i.key_pressed(Key::R),
+                    i.key_pressed(Key::A),
                 )
             });
             if g {
@@ -1035,6 +1036,13 @@ impl CanvasCitizen {
             }
             if r {
                 self.registry.rotate_scene_90_cw();
+            }
+            // A — snap every selected node to the nearest grid
+            // intersection. Adjacent Manual-wire waypoints follow via
+            // the move_nodes path so wires don't tear off.
+            if a && !self.selection.nodes.is_empty() {
+                let ids = self.selection.nodes.clone();
+                self.registry.align_selection_to_grid(&ids);
             }
 
             if ui.input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
@@ -1608,7 +1616,9 @@ const HOTKEY_TABLE: &[(&str, &str)] = &[
     ("X", "Mirror about X axis"),
     ("Y", "Mirror about Y axis"),
     ("R", "Rotate 90° clockwise"),
+    ("A", "Align selection to grid"),
     ("Del", "Delete selection"),
+    ("Esc", "Disarm shape tool"),
 ];
 
 /// A `edge{n}` id not already used by any edge in the scene.

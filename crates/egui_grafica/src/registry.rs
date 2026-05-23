@@ -263,6 +263,37 @@ impl Registry {
         });
     }
 
+    /// Snap every node in `ids` to the nearest grid intersection.
+    /// Routes through [`Self::move_nodes`] so the adjacent-waypoint
+    /// follow logic stays consistent — wires connected to moved nodes
+    /// drag their elbows with them. No-op when `grid_spacing <= 0`.
+    pub fn align_selection_to_grid(&self, ids: &[NodeId]) {
+        let spacing = self.with_scene(|s| s.settings.grid_spacing);
+        if spacing <= 0.0 || ids.is_empty() {
+            return;
+        }
+        let moves: Vec<(NodeId, (f32, f32))> = self.with_scene(|s| {
+            ids.iter()
+                .filter_map(|id| {
+                    let node = s.nodes.iter().find(|n| &n.id == id)?;
+                    let (x, y) = node.transform.position;
+                    let snapped = (
+                        (x / spacing).round() * spacing,
+                        (y / spacing).round() * spacing,
+                    );
+                    if snapped == (x, y) {
+                        None
+                    } else {
+                        Some((id.clone(), snapped))
+                    }
+                })
+                .collect()
+        });
+        if !moves.is_empty() {
+            self.move_nodes(&moves);
+        }
+    }
+
     pub fn resize_node(&self, id: &NodeId, size: (f32, f32)) {
         self.mutate(|scene| {
             if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {
