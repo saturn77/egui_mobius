@@ -36,9 +36,10 @@ use egui::{Color32, Key, Sense, Stroke};
 use egui_phosphor::regular as ico;
 
 use crate::interact::{
-    hit_test_edge, hit_test_edge_segment, hit_test_free_end, hit_test_node, hit_test_port,
-    hit_test_waypoint, insert_pivot, nearest_perimeter_anchor, prepare_segment_drag,
-    snap_to_grid, CanvasEvent, CanvasFsm, CanvasState, HitTarget, Selection,
+    apply_resize_delta, hit_test_edge, hit_test_edge_segment, hit_test_free_end, hit_test_node,
+    hit_test_port, hit_test_resize_handle, hit_test_waypoint, insert_pivot,
+    nearest_perimeter_anchor, prepare_segment_drag, snap_to_grid, CanvasEvent, CanvasFsm,
+    CanvasState, HitTarget, Selection,
 };
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
@@ -48,7 +49,8 @@ use crate::model::{
 };
 use crate::registry::Registry;
 use crate::render::{
-    paint_connection_preview, paint_selected_edges, paint_selected_segments, paint_selection,
+    paint_connection_preview, paint_resize_handles, paint_selected_edges,
+    paint_selected_segments, paint_selection,
     scene_bounds, viewport_fit_to, Viewport,
 };
 // CPU-path-only entry points — unused when the GPU pipeline is compiled.
@@ -570,13 +572,17 @@ impl CanvasCitizen {
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
             let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
 
-            // Priority: pivot vertex > free end > port > node body > wire > empty.
-            // Free ends are draggable handles for reattachment, so they
-            // win over a port that happens to sit at the same point.
+            // Priority: pivot vertex > free end > resize handle > port
+            // > node body > wire > empty. Resize handles only exist on
+            // *selected* nodes — that's why they win over a coincident
+            // port: the selection said "I'm editing this node."
             let waypoint_hit =
                 self.registry.with_scene(|s| hit_test_waypoint(s, world, port_radius));
             let free_end_hit =
                 self.registry.with_scene(|s| hit_test_free_end(s, world, port_radius));
+            let resize_hit = self.registry.with_scene(|s| {
+                hit_test_resize_handle(s, &self.selection.nodes, world, port_radius)
+            });
             let port_hit = self.registry.with_scene(|s| hit_test_port(s, world, port_radius));
             let node_hit = self.registry.with_scene(|s| hit_test_node(s, world));
             let edge_hit = self.registry.with_scene(|s| hit_test_edge(s, world, edge_thresh));
@@ -584,6 +590,8 @@ impl CanvasCitizen {
                 HitTarget::Waypoint
             } else if free_end_hit.is_some() {
                 HitTarget::FreeEnd
+            } else if resize_hit.is_some() {
+                HitTarget::ResizeHandle
             } else if port_hit.is_some() {
                 HitTarget::Port
             } else if node_hit.is_some() {
@@ -693,6 +701,23 @@ impl CanvasCitizen {
                         self.fsm.drag_axis_horizontal = sd.horizontal;
                         self.fsm.drag_origin_pts = sd.points;
                     }
+                }
+                CanvasState::ResizingNode => {
+                    let (eid, handle) =
+                        resize_hit.expect("ResizeHandle target implies a resize-handle hit");
+                    let (pos, size) = self
+                        .registry
+                        .with_scene(|s| {
+                            s.nodes
+                                .iter()
+                                .find(|n| n.id == eid)
+                                .map(|n| (n.transform.position, n.transform.size))
+                        })
+                        .unwrap_or_default();
+                    self.fsm.resize_node = Some(eid);
+                    self.fsm.resize_handle = Some(handle);
+                    self.fsm.resize_origin_pos = pos;
+                    self.fsm.resize_origin_size = size;
                 }
                 _ => {}
             }
@@ -820,6 +845,31 @@ impl CanvasCitizen {
                     // anchor stays drawn at its original position.
                     if let Some(screen) = response.interact_pointer_pos() {
                         self.fsm.cursor_world = self.viewport.screen_to_world(screen);
+                    }
+                }
+                CanvasState::ResizingNode => {
+                    if let Some(eid) = self.fsm.resize_node.clone()
+                        && let Some(handle) = self.fsm.resize_handle
+                        && let Some(screen) = response.interact_pointer_pos()
+                    {
+                        let cursor = self.viewport.screen_to_world(screen);
+                        let delta = (
+                            cursor.0 - self.fsm.grab_world.0,
+                            cursor.1 - self.fsm.grab_world.1,
+                        );
+                        let (snap, spacing) = self.registry.with_scene(|s| {
+                            (s.settings.snap_to_grid, s.settings.grid_spacing)
+                        });
+                        const MIN_SIZE: f32 = 10.0;
+                        let (pos, size) = apply_resize_delta(
+                            handle,
+                            self.fsm.resize_origin_pos,
+                            self.fsm.resize_origin_size,
+                            delta,
+                            MIN_SIZE,
+                            if snap { spacing } else { 0.0 },
+                        );
+                        self.registry.set_node_transform(&eid, pos, size);
                     }
                 }
                 CanvasState::Idle => {}
@@ -1183,6 +1233,7 @@ impl CanvasCitizen {
             paint_selected_edges(&painter, scene, &self.selection.edges, &self.viewport);
             paint_selected_segments(&painter, scene, &self.selection.segments, &self.viewport);
             paint_selection(&painter, scene, &self.selection.nodes, &self.viewport);
+            paint_resize_handles(&painter, scene, &self.selection.nodes, &self.viewport);
         });
 
         // Rubber-band preview while a connection is being drawn.

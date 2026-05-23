@@ -130,6 +130,8 @@ pub enum CanvasState {
     /// Dragging a wire's dangling free endpoint, possibly to snap it
     /// back onto a port.
     DraggingFreeEnd,
+    /// Dragging a resize handle of a selected node.
+    ResizingNode,
 }
 
 /// What the pointer pressed on — decides which gesture a press begins.
@@ -143,6 +145,70 @@ pub enum HitTarget {
     Waypoint,
     /// A dangling, non-port endpoint of a wire.
     FreeEnd,
+    /// A resize handle on a selected node.
+    ResizeHandle,
+}
+
+/// One of the eight resize handles around a node — four corners and
+/// four edge midpoints. Each handle's `(x_role, y_role)` decides how
+/// dragging it moves the node's position vs. growing its size.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResizeHandle {
+    TopLeft,
+    Top,
+    TopRight,
+    Right,
+    BottomRight,
+    Bottom,
+    BottomLeft,
+    Left,
+}
+
+impl ResizeHandle {
+    pub const ALL: [Self; 8] = [
+        Self::TopLeft,
+        Self::Top,
+        Self::TopRight,
+        Self::Right,
+        Self::BottomRight,
+        Self::Bottom,
+        Self::BottomLeft,
+        Self::Left,
+    ];
+
+    /// Parametric position of this handle on the node's bounding box.
+    /// `(0,0)` is top-left, `(1,1)` is bottom-right.
+    pub fn uv(self) -> (f32, f32) {
+        match self {
+            Self::TopLeft => (0.0, 0.0),
+            Self::Top => (0.5, 0.0),
+            Self::TopRight => (1.0, 0.0),
+            Self::Right => (1.0, 0.5),
+            Self::BottomRight => (1.0, 1.0),
+            Self::Bottom => (0.5, 1.0),
+            Self::BottomLeft => (0.0, 1.0),
+            Self::Left => (0.0, 0.5),
+        }
+    }
+
+    /// `-1` if dragging this handle moves the left edge, `+1` if it
+    /// moves the right edge, `0` if x is unaffected.
+    pub fn x_edge(self) -> i32 {
+        match self {
+            Self::TopLeft | Self::Left | Self::BottomLeft => -1,
+            Self::TopRight | Self::Right | Self::BottomRight => 1,
+            Self::Top | Self::Bottom => 0,
+        }
+    }
+
+    /// Same idea, vertical.
+    pub fn y_edge(self) -> i32 {
+        match self {
+            Self::TopLeft | Self::Top | Self::TopRight => -1,
+            Self::BottomLeft | Self::Bottom | Self::BottomRight => 1,
+            Self::Left | Self::Right => 0,
+        }
+    }
 }
 
 /// Events that drive FSM transitions.
@@ -166,6 +232,7 @@ fn next_state(state: CanvasState, event: CanvasEvent, target: HitTarget) -> Opti
         (Idle, Press, Port) => Some(Connecting),
         (Idle, Press, Waypoint) => Some(DraggingWaypoint),
         (Idle, Press, FreeEnd) => Some(DraggingFreeEnd),
+        (Idle, Press, ResizeHandle) => Some(ResizingNode),
         (Idle, Press, WireSegment) => Some(DraggingSegment),
         // Any active gesture ends on release or cancel.
         (s, Release, _) | (s, Cancel, _) if s != Idle => Some(Idle),
@@ -210,6 +277,15 @@ pub struct CanvasFsm {
     /// Preserved on release as a new waypoint so the original geometry
     /// stays put while a new segment is appended.
     pub drag_free_origin: Option<(f32, f32)>,
+    /// `ResizingNode`: which node is being resized.
+    pub resize_node: Option<NodeId>,
+    /// `ResizingNode`: which of the eight handles is being dragged.
+    pub resize_handle: Option<ResizeHandle>,
+    /// `ResizingNode`: the node's position at grab time — the origin
+    /// against which the live drag delta is added.
+    pub resize_origin_pos: (f32, f32),
+    /// `ResizingNode`: the node's size at grab time.
+    pub resize_origin_size: (f32, f32),
 }
 
 impl CanvasFsm {
@@ -253,6 +329,10 @@ impl CanvasFsm {
         self.drag_waypoint = 0;
         self.drag_free_side = None;
         self.drag_free_origin = None;
+        self.resize_node = None;
+        self.resize_handle = None;
+        self.resize_origin_pos = (0.0, 0.0);
+        self.resize_origin_size = (0.0, 0.0);
     }
 }
 
@@ -277,6 +357,102 @@ pub fn hit_test_waypoint(scene: &Scene, world: (f32, f32), radius: f32) -> Optio
         }
     }
     best.map(|(_, id, i)| (id, i))
+}
+
+/// World-space center of a resize handle on `node`.
+pub fn resize_handle_world(node: &Node, handle: ResizeHandle) -> (f32, f32) {
+    let (x, y) = node.transform.position;
+    let (w, h) = node.transform.size;
+    let (u, v) = handle.uv();
+    (x + w * u, y + h * v)
+}
+
+/// Resize handle nearest `world`, within `radius`, considering only
+/// nodes in `selected`. Handles are draggable only on selected nodes —
+/// otherwise they'd clutter every node body and steal port clicks.
+pub fn hit_test_resize_handle(
+    scene: &Scene,
+    selected: &[NodeId],
+    world: (f32, f32),
+    radius: f32,
+) -> Option<(NodeId, ResizeHandle)> {
+    let r2 = radius * radius;
+    let mut best: Option<(f32, NodeId, ResizeHandle)> = None;
+    for node in scene.nodes.iter().filter(|n| selected.iter().any(|s| s == &n.id)) {
+        for handle in ResizeHandle::ALL {
+            let (hx, hy) = resize_handle_world(node, handle);
+            let d2 = (hx - world.0).powi(2) + (hy - world.1).powi(2);
+            if d2 <= r2 && best.as_ref().is_none_or(|(bd, _, _)| d2 < *bd) {
+                best = Some((d2, node.id.clone(), handle));
+            }
+        }
+    }
+    best.map(|(_, id, h)| (id, h))
+}
+
+/// Apply a drag delta to a node being resized. Returns the new
+/// (position, size). Honours `min_size` and snap-to-grid: the dragged
+/// corner snaps to `snap_spacing` when it's positive; the opposite
+/// edge stays fixed so the resize feels anchored. Returns the original
+/// transform unchanged if the resize would clamp below `min_size`.
+pub fn apply_resize_delta(
+    handle: ResizeHandle,
+    origin_pos: (f32, f32),
+    origin_size: (f32, f32),
+    delta: (f32, f32),
+    min_size: f32,
+    snap_spacing: f32,
+) -> ((f32, f32), (f32, f32)) {
+    // Opposite-corner anchor stays fixed across the drag — only the
+    // dragged-left case shifts the anchor to the right edge; everything
+    // else anchors at the original top-left.
+    let anchor_x = if handle.x_edge() == -1 {
+        origin_pos.0 + origin_size.0
+    } else {
+        origin_pos.0
+    };
+    let anchor_y = if handle.y_edge() == -1 {
+        origin_pos.1 + origin_size.1
+    } else {
+        origin_pos.1
+    };
+
+    // Live world position of the dragged edge / corner.
+    let mut drag_x = match handle.x_edge() {
+        -1 => origin_pos.0 + delta.0,
+        1 => origin_pos.0 + origin_size.0 + delta.0,
+        _ => origin_pos.0, // pinned (top/bottom edge handles)
+    };
+    let mut drag_y = match handle.y_edge() {
+        -1 => origin_pos.1 + delta.1,
+        1 => origin_pos.1 + origin_size.1 + delta.1,
+        _ => origin_pos.1,
+    };
+
+    // Snap to grid if active. Only the dragged dimensions snap — the
+    // anchor stays put exactly.
+    if snap_spacing > 0.0 {
+        if handle.x_edge() != 0 {
+            drag_x = (drag_x / snap_spacing).round() * snap_spacing;
+        }
+        if handle.y_edge() != 0 {
+            drag_y = (drag_y / snap_spacing).round() * snap_spacing;
+        }
+    }
+
+    // Compute candidate position / size based on handle role.
+    let (new_x, new_w) = match handle.x_edge() {
+        -1 => (drag_x.min(anchor_x - min_size), (anchor_x - drag_x).max(min_size)),
+        1 => (anchor_x, (drag_x - anchor_x).max(min_size)),
+        _ => (origin_pos.0, origin_size.0),
+    };
+    let (new_y, new_h) = match handle.y_edge() {
+        -1 => (drag_y.min(anchor_y - min_size), (anchor_y - drag_y).max(min_size)),
+        1 => (anchor_y, (drag_y - anchor_y).max(min_size)),
+        _ => (origin_pos.1, origin_size.1),
+    };
+
+    ((new_x, new_y), (new_w, new_h))
 }
 
 /// The wire free endpoint nearest `world`, within `radius`. Used to
@@ -899,6 +1075,81 @@ mod tests {
         assert!(matches!(s[0].to, EdgeEnd::Free(x, y) if x == 10.0 && y == 0.0));
         assert!(matches!(s[1].from, EdgeEnd::Free(x, y) if x == 20.0 && y == 0.0));
         assert_eq!(s[1].to, edge.to);
+    }
+
+    #[test]
+    fn resize_bottom_right_grows_size_only() {
+        // Origin (10,20) size (100,50). Drag BR by (+30,+15) → size grows.
+        let ((px, py), (sx, sy)) = apply_resize_delta(
+            ResizeHandle::BottomRight,
+            (10.0, 20.0),
+            (100.0, 50.0),
+            (30.0, 15.0),
+            10.0,
+            0.0,
+        );
+        assert_eq!((px, py), (10.0, 20.0));
+        assert_eq!((sx, sy), (130.0, 65.0));
+    }
+
+    #[test]
+    fn resize_top_left_moves_position_and_shrinks_size() {
+        // Drag TL by (+20,+10) — top-left moves, bottom-right pinned.
+        let ((px, py), (sx, sy)) = apply_resize_delta(
+            ResizeHandle::TopLeft,
+            (10.0, 20.0),
+            (100.0, 50.0),
+            (20.0, 10.0),
+            10.0,
+            0.0,
+        );
+        assert_eq!((px, py), (30.0, 30.0));
+        assert_eq!((sx, sy), (80.0, 40.0));
+    }
+
+    #[test]
+    fn resize_right_edge_only_changes_width() {
+        let ((px, py), (sx, sy)) = apply_resize_delta(
+            ResizeHandle::Right,
+            (10.0, 20.0),
+            (100.0, 50.0),
+            (40.0, 100.0),
+            10.0,
+            0.0,
+        );
+        assert_eq!((px, py), (10.0, 20.0));
+        assert_eq!((sx, sy), (140.0, 50.0));
+    }
+
+    #[test]
+    fn resize_clamps_to_min_size() {
+        // BR dragged far enough left to invert — clamp at min size,
+        // anchor stays fixed at (10, 20).
+        let ((px, py), (sx, sy)) = apply_resize_delta(
+            ResizeHandle::BottomRight,
+            (10.0, 20.0),
+            (100.0, 50.0),
+            (-200.0, -200.0),
+            10.0,
+            0.0,
+        );
+        assert_eq!((px, py), (10.0, 20.0));
+        assert_eq!((sx, sy), (10.0, 10.0));
+    }
+
+    #[test]
+    fn resize_snaps_dragged_edge_to_grid() {
+        // BR drag with grid=20: drag end (10+100+13, 20+50+5)=(123, 75)
+        // snaps to (120, 80) → size = (110, 60).
+        let ((_, _), (sx, sy)) = apply_resize_delta(
+            ResizeHandle::BottomRight,
+            (10.0, 20.0),
+            (100.0, 50.0),
+            (13.0, 5.0),
+            10.0,
+            20.0,
+        );
+        assert_eq!((sx, sy), (110.0, 60.0));
     }
 
     #[test]

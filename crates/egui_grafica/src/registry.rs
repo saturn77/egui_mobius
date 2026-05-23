@@ -250,6 +250,19 @@ impl Registry {
         });
     }
 
+    /// Set a node's position *and* size in one mutation. The resize
+    /// drag uses this to avoid the two extra generation bumps (and
+    /// GPU re-uploads) that calling `move_node` + `resize_node`
+    /// separately would produce per drag frame.
+    pub fn set_node_transform(&self, id: &NodeId, position: (f32, f32), size: (f32, f32)) {
+        self.mutate(|scene| {
+            if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {
+                node.transform.position = position;
+                node.transform.size = size;
+            }
+        });
+    }
+
     pub fn resize_node(&self, id: &NodeId, size: (f32, f32)) {
         self.mutate(|scene| {
             if let Some(node) = scene.nodes.iter_mut().find(|n| &n.id == id) {

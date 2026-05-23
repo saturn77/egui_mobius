@@ -299,6 +299,35 @@ pub fn viewport_fit_to(world_bounds: Rect, screen_rect: Rect, padding_world: f32
     Viewport { origin, zoom }
 }
 
+/// Draw the eight resize handles for every selected node — four
+/// corners and four edge midpoints — at a constant screen size so
+/// they stay grabbable at any zoom.
+pub fn paint_resize_handles(
+    painter: &Painter,
+    scene: &Scene,
+    selected: &[NodeId],
+    viewport: &Viewport,
+) {
+    const HANDLE_HALF: f32 = 4.0; // screen-px half-extent
+    let accent = Color32::from_rgb(0x25, 0x63, 0xEB);
+    let fill = Color32::WHITE;
+    let stroke = Stroke::new(1.5, accent);
+    for id in selected {
+        let Some(node) = scene.nodes.iter().find(|n| &n.id == id) else {
+            continue;
+        };
+        for handle in crate::interact::ResizeHandle::ALL {
+            let world = crate::interact::resize_handle_world(node, handle);
+            let center = viewport.world_to_screen(world);
+            let rect = Rect::from_center_size(
+                center,
+                egui::Vec2::splat(HANDLE_HALF * 2.0),
+            );
+            painter.rect(rect, CornerRadius::ZERO, fill, stroke, StrokeKind::Outside);
+        }
+    }
+}
+
 /// Draw a highlight outline around each selected node. Painted after
 /// [`paint_scene`] so the highlight sits on top of node fills and edges.
 pub fn paint_selection(painter: &Painter, scene: &Scene, selected: &[NodeId], viewport: &Viewport) {
