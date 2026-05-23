@@ -304,6 +304,16 @@ impl CanvasCitizen {
             if vertical {
                 ui.vertical(body);
             } else {
+                // Tighten widths *before* the wrapped row begins so each
+                // child widget reports a small min-size — the wrap
+                // algorithm only breaks when the next item plus the
+                // current row exceeds the available width, and the
+                // default 100 px slider + 100 px combo defaults blow
+                // past any narrow dock-tab in one shot otherwise.
+                ui.spacing_mut().slider_width = 90.0;
+                ui.spacing_mut().combo_width = 92.0;
+                ui.spacing_mut().interact_size.x = 28.0;
+                ui.spacing_mut().item_spacing.x = 4.0;
                 // Wrap onto extra rows when the controls don't fit one line.
                 ui.horizontal_wrapped(body);
             }
@@ -345,6 +355,7 @@ impl CanvasCitizen {
 
             let before_style = settings.grid_style;
             egui::ComboBox::from_id_salt("grafica_grid_style")
+                .width(80.0)
                 .selected_text(grid_style_label(settings.grid_style))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut settings.grid_style, GridStyle::Lines, "Lines");
@@ -388,6 +399,7 @@ impl CanvasCitizen {
             ui.label("units");
             let before_units = settings.grid_units;
             egui::ComboBox::from_id_salt("grafica_grid_units")
+                .width(96.0)
                 .selected_text(settings.grid_units.label())
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut settings.grid_units, GridUnits::Pixels, "Pixels");
@@ -402,6 +414,7 @@ impl CanvasCitizen {
             ui.label(format!("{} Bg", ico::PALETTE));
             let before_bg = settings.background;
             egui::ComboBox::from_id_salt("grafica_background")
+                .width(92.0)
                 .selected_text(settings.background.label())
                 .show_ui(ui, |ui| {
                     use CanvasBackground::*;
@@ -418,6 +431,7 @@ impl CanvasCitizen {
             ui.label(format!("{} Routing", ico::LINE_SEGMENTS));
             let before_routing = settings.default_routing.clone();
             egui::ComboBox::from_id_salt("grafica_routing_picker")
+                .width(100.0)
                 .selected_text(routing_label(&settings.default_routing))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut settings.default_routing, Routing::Orthogonal, "Orthogonal");
