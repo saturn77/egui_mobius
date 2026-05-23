@@ -123,6 +123,14 @@ pub struct CanvasCitizen {
     status: String,
     /// World position of the last right-click — what the context menu acts on.
     context_world: Option<(f32, f32)>,
+    /// `Some(id)` when the named node is in inline text-edit mode —
+    /// a TextEdit is overlaid on the node's centre and other canvas
+    /// gestures are suppressed until edit ends.
+    editing_node: Option<NodeId>,
+    /// Live buffer for the inline text edit. Pushed to the node's
+    /// overlay.text every frame so the canvas reflects keystrokes
+    /// without a confirm step.
+    edit_buffer: String,
 }
 
 /// An action chosen from the right-click context menu, applied after the
@@ -144,6 +152,25 @@ fn hex_to_rgb(hex: &str) -> [u8; 3] {
 
 fn rgb_to_hex(rgb: [u8; 3]) -> String {
     format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2])
+}
+
+/// Compact inline RGB editor — three drag-value spinners plus a colour
+/// swatch preview. Self-contained: no popups, so it composes inside
+/// nested menus without fighting auto-close behaviour.
+fn inline_color_editor(ui: &mut egui::Ui, rgb: &mut [u8; 3]) {
+    ui.horizontal(|ui| {
+        ui.label("Color");
+        ui.add(egui::DragValue::new(&mut rgb[0]).range(0..=255).speed(1.0).prefix("R "));
+        ui.add(egui::DragValue::new(&mut rgb[1]).range(0..=255).speed(1.0).prefix("G "));
+        ui.add(egui::DragValue::new(&mut rgb[2]).range(0..=255).speed(1.0).prefix("B "));
+        let (swatch, _) =
+            ui.allocate_exact_size(egui::vec2(22.0, 18.0), egui::Sense::hover());
+        ui.painter().rect_filled(
+            swatch,
+            2.0,
+            egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2]),
+        );
+    });
 }
 
 fn line_style_label(s: crate::model::LineStyle) -> &'static str {
@@ -176,6 +203,8 @@ impl CanvasCitizen {
             loaded_comments: Vec::new(),
             status: String::new(),
             context_world: None,
+            editing_node: None,
+            edit_buffer: String::new(),
         }
     }
 
@@ -555,6 +584,12 @@ impl CanvasCitizen {
 
         let shift = ui.input(|i| i.modifiers.shift);
 
+        // Inline text-edit mode swallows all canvas gestures and
+        // hotkeys until the editor loses focus. The TextEdit overlay
+        // is rendered at the end of this function and owns the
+        // keyboard while editing.
+        let editing = self.editing_node.is_some();
+
         // ── Press: classify what was hit and drive the FSM ──
         //
         // Gated to the PRIMARY button — `Sense::click_and_drag()` reports
@@ -564,7 +599,8 @@ impl CanvasCitizen {
         // Hit-test at the true press origin, not `interact_pointer_pos` —
         // egui only reports a drag once the pointer has moved a few pixels,
         // and testing that drifted point misses thin wires and small ports.
-        if self.active_tool == ShapeTool::Select
+        if !editing
+            && self.active_tool == ShapeTool::Select
             && response.drag_started_by(egui::PointerButton::Primary)
             && let Some(screen) = ui.input(|i| i.pointer.press_origin())
         {
@@ -724,7 +760,7 @@ impl CanvasCitizen {
         }
 
         // ── Drag: act on the FSM's current state (primary button only) ──
-        if response.dragged_by(egui::PointerButton::Primary) {
+        if !editing && response.dragged_by(egui::PointerButton::Primary) {
             match self.fsm.state {
                 CanvasState::Marquee => {
                     if let Some(screen) = response.interact_pointer_pos() {
@@ -884,8 +920,9 @@ impl CanvasCitizen {
         // `context_menu` triggers on release-without-drag, so a Ctrl-RMB
         // drag never resolves to a menu open.
         let ctrl = ui.input(|i| i.modifiers.ctrl);
-        let pan = (ctrl && response.dragged_by(egui::PointerButton::Secondary))
-            || response.dragged_by(egui::PointerButton::Middle);
+        let pan = !editing
+            && ((ctrl && response.dragged_by(egui::PointerButton::Secondary))
+                || response.dragged_by(egui::PointerButton::Middle));
         if pan {
             let delta = response.drag_delta();
             self.viewport.origin.x += delta.x;
@@ -893,7 +930,7 @@ impl CanvasCitizen {
         }
 
         // ── Release: finalise the gesture, return the FSM to Idle ──
-        if response.drag_stopped_by(egui::PointerButton::Primary) {
+        if !editing && response.drag_stopped_by(egui::PointerButton::Primary) {
             // Only a latched (left-the-node) gesture creates an edge; an
             // unlatched one was a port reposition, already committed live.
             if self.fsm.state == CanvasState::Connecting
@@ -931,7 +968,8 @@ impl CanvasCitizen {
         }
 
         // Click (press + release, no movement): select node, else wire, else clear.
-        if response.clicked()
+        if !editing
+            && response.clicked()
             && let Some(screen) = response.interact_pointer_pos()
         {
             let world = self.viewport.screen_to_world(screen);
@@ -963,7 +1001,7 @@ impl CanvasCitizen {
             }
         }
 
-        if response.hovered() {
+        if !editing && response.hovered() {
             let scroll = ui.input(|i| i.smooth_scroll_delta.y);
             if scroll.abs() > 0.01
                 && let Some(hover) = response.hover_pos()
@@ -1010,14 +1048,37 @@ impl CanvasCitizen {
 
         // Double-click: on a pivot vertex it deletes that pivot; on a wire it
         // inserts a pivot; on empty space it zooms to fit.
-        if response.double_clicked()
+        if !editing
+            && response.double_clicked()
             && let Some(screen) = response.interact_pointer_pos()
         {
             let world = self.viewport.screen_to_world(screen);
             let port_radius = PORT_GRAB_PX / self.viewport.zoom;
             let edge_thresh = EDGE_GRAB_PX / self.viewport.zoom;
 
-            if let Some((eid, idx)) =
+            if let Some(nid) = self.registry.with_scene(|s| hit_test_node(s, world)) {
+                // Double-click a node body → enter inline text-edit
+                // mode. Centred TextEdit overlays the node; type to
+                // change the label, Enter / Escape / click-outside
+                // exits.
+                let current_text = self
+                    .registry
+                    .with_scene(|s| {
+                        s.nodes
+                            .iter()
+                            .find(|n| n.id == nid)
+                            .and_then(|n| n.overlay.text.as_ref().map(|t| t.value.clone()))
+                    })
+                    .unwrap_or_default();
+                // Treat the "Text" placeholder as empty on entry so a
+                // newly-placed shape lets the user type a fresh label.
+                self.edit_buffer = if current_text == "Text" {
+                    String::new()
+                } else {
+                    current_text
+                };
+                self.editing_node = Some(nid);
+            } else if let Some((eid, idx)) =
                 self.registry.with_scene(|s| hit_test_waypoint(s, world, port_radius))
             {
                 // Delete the pivot — the two segments on either side merge.
@@ -1057,7 +1118,8 @@ impl CanvasCitizen {
         }
 
         // ── Right-click context menu ──
-        if response.secondary_clicked()
+        if !editing
+            && response.secondary_clicked()
             && let Some(p) = response.interact_pointer_pos()
         {
             self.context_world = Some(self.viewport.screen_to_world(p));
@@ -1085,121 +1147,89 @@ impl CanvasCitizen {
         });
         let mut action: Option<ContextAction> = None;
         // Priority: pivot > node > edge > empty. Right-clicking inside
-        // a node body should reach the node menu even when a wire
-        // passes through the click — clicks land *on the shape*. Wire
-        // editing is still available by right-clicking the wire outside
-        // any node body.
-        response.context_menu(|ui| {
-            if let Some((eid, idx)) = &hit_wp {
-                if ui.button("Delete pivot").clicked() {
-                    action = Some(ContextAction::DeletePivot(eid.clone(), *idx));
-                    ui.close();
-                }
-            } else if let Some(nid) = &hit_node {
-                if let Some(overlay) = &node_overlay {
-                    ui.menu_button("Edit text", |ui| {
-                        let mut next = overlay.clone();
-                        let current = next
-                            .text
-                            .as_ref()
-                            .map(|t| t.value.clone())
-                            .unwrap_or_default();
-                        let mut value = current.clone();
-                        let resp = ui.add(
-                            egui::TextEdit::singleline(&mut value)
-                                .desired_width(200.0)
-                                .hint_text("Label…"),
-                        );
-                        if resp.changed() {
-                            if value.is_empty() {
-                                next.text = None;
-                            } else if let Some(t) = next.text.as_mut() {
-                                t.value = value;
-                            } else {
-                                next.text = Some(TextLabel {
-                                    value,
-                                    anchor: TextAnchor::Center,
-                                    font_family: String::new(),
-                                    font_size: 12.0,
-                                    bold: false,
-                                    italic: false,
-                                    color: "#111827".into(),
-                                });
+        // a node body reaches the node menu even when a wire passes
+        // through the click — clicks land *on the shape*. Wire editing
+        // is still available by right-clicking the wire outside any
+        // node body. The whole menu is suppressed during inline text
+        // editing.
+        if !editing {
+            response.context_menu(|ui| {
+                if let Some((eid, idx)) = &hit_wp {
+                    if ui.button("Delete pivot").clicked() {
+                        action = Some(ContextAction::DeletePivot(eid.clone(), *idx));
+                        ui.close();
+                    }
+                } else if let Some(nid) = &hit_node {
+                    // Label editing isn't on the context menu — it
+                    // lives on double-click of the node body. The menu
+                    // only carries the style + structural edits.
+                    if let Some(overlay) = &node_overlay {
+                        ui.menu_button("Border", |ui| {
+                            let mut next = overlay.clone();
+                            let mut rgb = hex_to_rgb(&next.border.color);
+                            inline_color_editor(ui, &mut rgb);
+                            next.border.color = rgb_to_hex(rgb);
+                            ui.add(
+                                egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("Width"),
+                            );
+                            // Dashed / dotted not rendered yet — the
+                            // selector returns when the perimeter dash
+                            // pattern lands in the node shader.
+                            if next != *overlay {
+                                action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
                             }
-                        }
-                        if ui.button("Clear text").clicked() {
-                            next.text = None;
-                            ui.close();
-                        }
-                        if next != *overlay {
-                            action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
-                        }
-                    });
-
-                    ui.menu_button("Border", |ui| {
-                        let mut next = overlay.clone();
-                        let mut rgb = hex_to_rgb(&next.border.color);
-                        ui.horizontal(|ui| {
-                            ui.label("Color");
-                            ui.color_edit_button_srgb(&mut rgb);
                         });
-                        next.border.color = rgb_to_hex(rgb);
-                        ui.add(
-                            egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("Width"),
-                        );
-                        // Dashed / dotted borders aren't rendered yet
-                        // (neither CPU rect-stroke nor GPU node SDF
-                        // supports a perimeter dash pattern), so the
-                        // selector is hidden until the renderer lands.
-                        if next != *overlay {
-                            action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
-                        }
-                    });
-                    ui.separator();
-                }
-                if ui.button("Add connection").clicked() {
-                    action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
-                    ui.close();
-                }
-            } else if let Some(eid) = &hit_edge {
-                if ui.button("Delete segment").clicked() {
-                    action = Some(ContextAction::DeleteSegment(eid.clone(), ctx.unwrap_or_default()));
-                    ui.close();
-                }
-                if ui.button("Delete wire").clicked() {
-                    action = Some(ContextAction::DeleteEdge(eid.clone()));
-                    ui.close();
-                }
-                if let Some(overlay) = &edge_overlay {
-                    ui.menu_button("Wire style", |ui| {
-                        let mut next = overlay.clone();
-                        let mut rgb = hex_to_rgb(&next.color);
-                        ui.horizontal(|ui| {
-                            ui.label("Color");
-                            ui.color_edit_button_srgb(&mut rgb);
-                        });
-                        next.color = rgb_to_hex(rgb);
-                        ui.add(egui::Slider::new(&mut next.width, 0.5..=6.0).text("Width"));
                         ui.separator();
-                        for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
-                            if ui
-                                .selectable_label(next.line_style == style, line_style_label(style))
-                                .clicked()
-                            {
-                                next.line_style = style;
+                    }
+                    if ui.button("Add connection").clicked() {
+                        action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
+                        ui.close();
+                    }
+                } else if let Some(eid) = &hit_edge {
+                    if ui.button("Delete segment").clicked() {
+                        action = Some(ContextAction::DeleteSegment(
+                            eid.clone(),
+                            ctx.unwrap_or_default(),
+                        ));
+                        ui.close();
+                    }
+                    if ui.button("Delete wire").clicked() {
+                        action = Some(ContextAction::DeleteEdge(eid.clone()));
+                        ui.close();
+                    }
+                    if let Some(overlay) = &edge_overlay {
+                        ui.menu_button("Wire style", |ui| {
+                            let mut next = overlay.clone();
+                            let mut rgb = hex_to_rgb(&next.color);
+                            inline_color_editor(ui, &mut rgb);
+                            next.color = rgb_to_hex(rgb);
+                            ui.add(
+                                egui::Slider::new(&mut next.width, 0.5..=6.0).text("Width"),
+                            );
+                            ui.separator();
+                            for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
+                                if ui
+                                    .selectable_label(
+                                        next.line_style == style,
+                                        line_style_label(style),
+                                    )
+                                    .clicked()
+                                {
+                                    next.line_style = style;
+                                }
                             }
-                        }
-                        if next != *overlay {
-                            action = Some(ContextAction::SetEdgeOverlay(eid.clone(), next));
-                        }
-                    });
+                            if next != *overlay {
+                                action = Some(ContextAction::SetEdgeOverlay(eid.clone(), next));
+                            }
+                        });
+                    }
+                } else {
+                    ui.label(egui::RichText::new("Nothing here").weak());
                 }
-            } else {
-                ui.label(egui::RichText::new("Nothing here").weak());
+            });
+            if let Some(action) = action {
+                self.apply_context_action(action);
             }
-        });
-        if let Some(action) = action {
-            self.apply_context_action(action);
         }
 
         // Background, grid, and — on the GPU path — node bodies are drawn
@@ -1267,6 +1297,89 @@ impl CanvasCitizen {
                 egui::StrokeKind::Inside,
             );
         }
+
+        // ── Inline text-edit overlay ──
+        //
+        // Sits on top of the canvas paint, takes keyboard focus, and
+        // pushes the buffer into the node's overlay.text each frame so
+        // the canvas reflects keystrokes live. Enter, Escape, or
+        // clicking outside the editor commits and exits.
+        if self.editing_node.is_some()
+            && let Some(resp) = self.render_inline_edit(ui)
+        {
+            let escape = ui.input(|i| i.key_pressed(Key::Escape));
+            if resp.lost_focus() || escape {
+                self.editing_node = None;
+                self.edit_buffer.clear();
+            }
+        }
+    }
+
+    /// Render the inline TextEdit overlay for the currently-editing
+    /// node. Returns the egui response if a TextEdit was drawn, so the
+    /// caller can detect Enter / Escape / click-outside via
+    /// `.lost_focus()`. Returns `None` if `editing_node` is `None` or
+    /// the node has been deleted out from under us.
+    fn render_inline_edit(&mut self, ui: &mut egui::Ui) -> Option<egui::Response> {
+        let nid = self.editing_node.clone()?;
+        let (pos, size) = self.registry.with_scene(|s| {
+            s.nodes
+                .iter()
+                .find(|n| n.id == nid)
+                .map(|n| (n.transform.position, n.transform.size))
+        })?;
+
+        // Centre the editor on the node's centroid, width clamped so
+        // the field stays grabbable on tiny nodes and not absurd on
+        // huge ones.
+        let center_world = (pos.0 + size.0 * 0.5, pos.1 + size.1 * 0.5);
+        let center_screen = self.viewport.world_to_screen(center_world);
+        let edit_w = (size.0 * self.viewport.zoom * 0.85).clamp(80.0, 240.0);
+        let edit_h = 22.0;
+        let rect = egui::Rect::from_center_size(center_screen, egui::vec2(edit_w, edit_h));
+
+        let id = ui.make_persistent_id(("grafica_inline_edit", nid.0.clone()));
+        let text_edit = egui::TextEdit::singleline(&mut self.edit_buffer)
+            .id(id)
+            .horizontal_align(egui::Align::Center)
+            .hint_text("Label…")
+            .desired_width(edit_w - 8.0);
+        let resp = ui.put(rect, text_edit);
+
+        // Keep focus on the editor until it explicitly loses it.
+        if !resp.has_focus() && !resp.lost_focus() {
+            resp.request_focus();
+        }
+
+        // Push the live buffer to the node's text every frame the
+        // value changes. Empty buffer clears the label.
+        let buf = self.edit_buffer.clone();
+        let overlay_opt = self
+            .registry
+            .with_scene(|s| s.nodes.iter().find(|n| n.id == nid).map(|n| n.overlay.clone()));
+        if let Some(mut overlay) = overlay_opt {
+            let current = overlay.text.as_ref().map(|t| t.value.clone()).unwrap_or_default();
+            if current != buf {
+                if buf.is_empty() {
+                    overlay.text = None;
+                } else if let Some(t) = overlay.text.as_mut() {
+                    t.value = buf;
+                } else {
+                    overlay.text = Some(TextLabel {
+                        value: buf,
+                        anchor: TextAnchor::Center,
+                        font_family: String::new(),
+                        font_size: 12.0,
+                        bold: false,
+                        italic: false,
+                        color: "#111827".into(),
+                    });
+                }
+                self.registry.update_node_overlay(&nid, overlay);
+            }
+        }
+
+        Some(resp)
     }
 
     /// Finish a connection drag: if the pointer was released near a
@@ -1535,26 +1648,30 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
         ShapeTool::Select => (NodeKind::Rect, (80.0, 50.0)),
     };
     let position = (center.0 - size.0 * 0.5, center.1 - size.1 * 0.5);
+    // Every placed shape gets a centred "Text" placeholder label so it
+    // reads as editable on sight — double-click the node body to
+    // change it inline. The Text tool is the un-framed variant; the
+    // rest carry the standard fill + border.
+    let text_label = TextLabel {
+        value: "Text".into(),
+        anchor: TextAnchor::Center,
+        font_family: String::new(),
+        font_size: if tool == ShapeTool::Text { 14.0 } else { 12.0 },
+        bold: false,
+        italic: false,
+        color: "#111827".into(),
+    };
     let overlay = if tool == ShapeTool::Text {
-        // Unframed: transparent fill and border, just the label.
         Overlay {
             border: Border { color: "#00000000".into(), width: 0.0, style: LineStyle::Solid },
             fill: Fill { color: "#00000000".into(), alpha: 0.0 },
-            text: Some(TextLabel {
-                value: "Text".into(),
-                anchor: TextAnchor::Center,
-                font_family: String::new(),
-                font_size: 14.0,
-                bold: false,
-                italic: false,
-                color: "#111827".into(),
-            }),
+            text: Some(text_label),
         }
     } else {
         Overlay {
             border: Border { color: "#1F2937".into(), width: 2.0, style: LineStyle::Solid },
             fill: Fill { color: "#DBEAFE".into(), alpha: 0.90 },
-            text: None,
+            text: Some(text_label),
         }
     };
     Node {
