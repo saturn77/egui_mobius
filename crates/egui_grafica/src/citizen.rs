@@ -44,8 +44,8 @@ use crate::interact::{
 use crate::lang::{self, CommentBlock, ParsedDocument};
 use crate::model::{
     Border, CanvasBackground, Edge, EdgeEnd, EdgeEndSide, EdgeId, EdgeOverlay, Fill, GridStyle,
-    GridUnits, LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortId, PortKind, Routing, Scene,
-    TextAnchor, TextLabel, Transform,
+    GridUnits, LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortAnchor, PortId, PortKind,
+    Routing, Scene, TextAnchor, TextLabel, Transform,
 };
 use crate::registry::Registry;
 use crate::render::{
@@ -95,6 +95,10 @@ pub enum ShapeTool {
     Ellipse,
     Parallelogram,
     Text,
+    /// Node-graph widget: a Rect pre-populated with two input ports on
+    /// the West face and two output ports on the East face. Drops on
+    /// the canvas the same way as the other primitives.
+    NodeGraph,
 }
 
 /// The canvas citizen widget.
@@ -271,6 +275,12 @@ impl CanvasCitizen {
             btn(ui, ShapeTool::Ellipse, ico::CIRCLE, "Ellipse");
             btn(ui, ShapeTool::Parallelogram, ico::PARALLELOGRAM, "Parallelogram");
             btn(ui, ShapeTool::Text, ico::TEXT_T, "Text");
+            btn(
+                ui,
+                ShapeTool::NodeGraph,
+                ico::TREE_STRUCTURE,
+                "Node-graph widget — 2 in / 2 out",
+            );
 
             sep(ui, vertical);
             ui.menu_button(format!("{} Dock", ico::RECTANGLE_DASHED), |ui| {
@@ -1717,6 +1727,9 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
         ShapeTool::Ellipse => (NodeKind::Ellipse, (80.0, 50.0)),
         ShapeTool::Parallelogram => (NodeKind::Parallelogram, (80.0, 50.0)),
         ShapeTool::Text => (NodeKind::Rect, (80.0, 30.0)),
+        // Node-graph widget: a slightly taller rect so the four ports
+        // distribute cleanly without crowding the label.
+        ShapeTool::NodeGraph => (NodeKind::Rect, (120.0, 80.0)),
         // Select never places a node — fall back to a rect defensively.
         ShapeTool::Select => (NodeKind::Rect, (80.0, 50.0)),
     };
@@ -1726,7 +1739,7 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
     // change it inline. The Text tool is the un-framed variant; the
     // rest carry the standard fill + border.
     let text_label = TextLabel {
-        value: "Text".into(),
+        value: default_label_for(tool).into(),
         anchor: TextAnchor::Center,
         font_family: String::new(),
         font_size: if tool == ShapeTool::Text { 14.0 } else { 12.0 },
@@ -1752,7 +1765,55 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
         kind,
         transform: Transform { position, size, rotation: 0.0 },
         overlay,
-        ports: vec![],
+        ports: default_ports_for(tool),
+    }
+}
+
+/// Placeholder text for a freshly-placed shape. NodeGraph widgets get
+/// a more descriptive default so the role is obvious at a glance.
+fn default_label_for(tool: ShapeTool) -> &'static str {
+    match tool {
+        ShapeTool::NodeGraph => "Node",
+        _ => "Text",
+    }
+}
+
+/// Pre-populated ports for a freshly-placed shape. Only NodeGraph
+/// has any — block-diagram primitives stay portless until the user
+/// wires from a body face.
+fn default_ports_for(tool: ShapeTool) -> Vec<Port> {
+    match tool {
+        ShapeTool::NodeGraph => vec![
+            Port {
+                id: PortId("in0".into()),
+                name: "in0".into(),
+                kind: PortKind::In,
+                anchor: PortAnchor::West(0.30),
+                data_type: None,
+            },
+            Port {
+                id: PortId("in1".into()),
+                name: "in1".into(),
+                kind: PortKind::In,
+                anchor: PortAnchor::West(0.70),
+                data_type: None,
+            },
+            Port {
+                id: PortId("out0".into()),
+                name: "out0".into(),
+                kind: PortKind::Out,
+                anchor: PortAnchor::East(0.30),
+                data_type: None,
+            },
+            Port {
+                id: PortId("out1".into()),
+                name: "out1".into(),
+                kind: PortKind::Out,
+                anchor: PortAnchor::East(0.70),
+                data_type: None,
+            },
+        ],
+        _ => vec![],
     }
 }
 
@@ -1794,5 +1855,43 @@ pub fn fit_viewport_to_scene(scene: &Scene, screen_rect: egui::Rect, padding: f3
     match scene_bounds(scene) {
         Some(bounds) => viewport_fit_to(bounds, screen_rect, padding),
         None => Viewport::default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn node_graph_tool_places_a_widget_with_two_in_and_two_out_ports() {
+        let node =
+            make_shape_node(ShapeTool::NodeGraph, NodeId("n".into()), (0.0, 0.0));
+        assert_eq!(node.ports.len(), 4);
+        let ins: Vec<_> = node.ports.iter().filter(|p| p.kind == PortKind::In).collect();
+        let outs: Vec<_> = node.ports.iter().filter(|p| p.kind == PortKind::Out).collect();
+        assert_eq!(ins.len(), 2);
+        assert_eq!(outs.len(), 2);
+        assert!(matches!(ins[0].anchor, PortAnchor::West(_)));
+        assert!(matches!(outs[0].anchor, PortAnchor::East(_)));
+        // Visibly larger than the base rect so four ports distribute cleanly.
+        assert!(node.transform.size.0 >= 100.0);
+        assert!(node.transform.size.1 >= 60.0);
+        // More descriptive default label than the generic "Text".
+        assert_eq!(node.overlay.text.as_ref().unwrap().value, "Node");
+    }
+
+    #[test]
+    fn other_shape_tools_remain_portless() {
+        for tool in [
+            ShapeTool::Rect,
+            ShapeTool::Square,
+            ShapeTool::Circle,
+            ShapeTool::Ellipse,
+            ShapeTool::Parallelogram,
+            ShapeTool::Text,
+        ] {
+            let node = make_shape_node(tool, NodeId("x".into()), (0.0, 0.0));
+            assert!(node.ports.is_empty(), "{tool:?} should not seed ports");
+        }
     }
 }
