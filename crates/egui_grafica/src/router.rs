@@ -89,6 +89,11 @@ pub fn edge_polyline(scene: &Scene, edge: &Edge) -> Option<Vec<(f32, f32)>> {
             let to_anchor = edge_end_anchor(scene, &edge.to);
             Some(orthogonal_with_anchors(from, to, from_anchor, to_anchor))
         }
+        Routing::Bezier => {
+            let from_anchor = edge_end_anchor(scene, &edge.from);
+            let to_anchor = edge_end_anchor(scene, &edge.to);
+            Some(bezier_with_anchors(from, to, from_anchor, to_anchor))
+        }
         other => Some(route(from, to, other)),
     }
 }
@@ -198,6 +203,42 @@ fn bezier(from: (f32, f32), to: (f32, f32)) -> Vec<(f32, f32)> {
     let handle = (to.0 - from.0).abs().max(40.0) * 0.5;
     let c1 = (from.0 + handle, from.1);
     let c2 = (to.0 - handle, to.1);
+    flatten_cubic(from, c1, c2, to).unwrap_or_else(|| sampled_cubic(from, c1, c2, to))
+}
+
+/// Port-direction-aware bezier route. The control handle at each end
+/// is offset along that port's exit direction so the curve leaves
+/// perpendicular to the port's face — a south-facing port enters from
+/// below, an east-facing port exits to the right. The handle length
+/// scales with the straight-line distance between endpoints, clamped
+/// so short edges still curve and long edges don't swing wildly.
+///
+/// Falls back to a horizontal default when an endpoint is `Free` (no
+/// face). Same flattening path as [`bezier`] — hypercurve's certified
+/// flattener with the fixed-step sampler as fallback.
+fn bezier_with_anchors(
+    from: (f32, f32),
+    to: (f32, f32),
+    from_anchor: Option<PortAnchor>,
+    to_anchor: Option<PortAnchor>,
+) -> Vec<(f32, f32)> {
+    let dx = to.0 - from.0;
+    let dy = to.1 - from.1;
+    let dist = (dx * dx + dy * dy).sqrt();
+    // 40% of straight-line distance, clamped: short edges still curve
+    // visibly, long edges don't fling control points off the canvas.
+    let handle = (dist * 0.4).clamp(20.0, 200.0);
+
+    // Default to horizontal-out / horizontal-in when an endpoint
+    // has no face (Free dangle).
+    let f_dir = from_anchor.and_then(exit_dir).unwrap_or((1.0, 0.0));
+    // The to-side handle sits on the OUTSIDE of the to port — along
+    // its exit direction — so the curve enters perpendicular to the
+    // port's face.
+    let t_dir = to_anchor.and_then(exit_dir).unwrap_or((-1.0, 0.0));
+
+    let c1 = (from.0 + f_dir.0 * handle, from.1 + f_dir.1 * handle);
+    let c2 = (to.0 + t_dir.0 * handle, to.1 + t_dir.1 * handle);
     flatten_cubic(from, c1, c2, to).unwrap_or_else(|| sampled_cubic(from, c1, c2, to))
 }
 
@@ -343,6 +384,32 @@ mod tests {
             &Routing::Manual { waypoints: vec![(80.0, 0.0), (80.0, 40.0)] },
         );
         assert_eq!(p, vec![(0.0, 0.0), (80.0, 0.0), (80.0, 40.0), (100.0, 40.0)]);
+    }
+
+    #[test]
+    fn bezier_with_anchors_exits_perpendicular_to_each_port_face() {
+        // West-exit start, south-exit end: the first-step direction
+        // should head in -x; the last-step direction (looking back
+        // from `to`) should come from +y.
+        let from = (200.0, 100.0);
+        let to = (400.0, 400.0);
+        let poly = bezier_with_anchors(
+            from,
+            to,
+            Some(PortAnchor::West(0.5)),
+            Some(PortAnchor::South(0.5)),
+        );
+        assert_eq!(poly.first().copied(), Some(from));
+        assert_eq!(poly.last().copied(), Some(to));
+        // Sample direction immediately leaving `from` — must have a
+        // negative x component (west exit) and small y component.
+        let second = poly[1];
+        let leave = (second.0 - from.0, second.1 - from.1);
+        assert!(leave.0 < 0.0, "west exit must move -x, got {leave:?}");
+        // Direction approaching `to` — must come from +y side.
+        let penult = poly[poly.len() - 2];
+        let approach = (to.0 - penult.0, to.1 - penult.1);
+        assert!(approach.1 < 0.0, "south entry must approach with -y delta, got {approach:?}");
     }
 
     #[test]
