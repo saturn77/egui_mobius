@@ -131,6 +131,7 @@ enum ContextAction {
     DeletePivot(EdgeId, usize),
     AddPort(NodeId, (f32, f32)),
     SetEdgeOverlay(EdgeId, EdgeOverlay),
+    SetNodeOverlay(NodeId, Overlay),
 }
 
 fn hex_to_rgb(hex: &str) -> [u8; 3] {
@@ -1028,6 +1029,10 @@ impl CanvasCitizen {
             self.registry
                 .with_scene(|s| s.edges.iter().find(|e| &e.id == eid).map(|e| e.overlay.clone()))
         });
+        let node_overlay = hit_node.as_ref().and_then(|nid| {
+            self.registry
+                .with_scene(|s| s.nodes.iter().find(|n| &n.id == nid).map(|n| n.overlay.clone()))
+        });
         let mut action: Option<ContextAction> = None;
         response.context_menu(|ui| {
             if let Some((eid, idx)) = &hit_wp {
@@ -1069,6 +1074,72 @@ impl CanvasCitizen {
                     });
                 }
             } else if let Some(nid) = &hit_node {
+                if let Some(overlay) = &node_overlay {
+                    ui.menu_button("Edit text", |ui| {
+                        let mut next = overlay.clone();
+                        let current = next
+                            .text
+                            .as_ref()
+                            .map(|t| t.value.clone())
+                            .unwrap_or_default();
+                        let mut value = current.clone();
+                        let resp = ui.add(
+                            egui::TextEdit::singleline(&mut value)
+                                .desired_width(200.0)
+                                .hint_text("Label…"),
+                        );
+                        if resp.changed() {
+                            if value.is_empty() {
+                                next.text = None;
+                            } else if let Some(t) = next.text.as_mut() {
+                                t.value = value;
+                            } else {
+                                next.text = Some(TextLabel {
+                                    value,
+                                    anchor: TextAnchor::Center,
+                                    font_family: String::new(),
+                                    font_size: 12.0,
+                                    bold: false,
+                                    italic: false,
+                                    color: "#111827".into(),
+                                });
+                            }
+                        }
+                        if ui.button("Clear text").clicked() {
+                            next.text = None;
+                            ui.close();
+                        }
+                        if next != *overlay {
+                            action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
+                        }
+                    });
+
+                    ui.menu_button("Border", |ui| {
+                        let mut next = overlay.clone();
+                        let mut rgb = hex_to_rgb(&next.border.color);
+                        ui.horizontal(|ui| {
+                            ui.label("Color");
+                            ui.color_edit_button_srgb(&mut rgb);
+                        });
+                        next.border.color = rgb_to_hex(rgb);
+                        ui.add(
+                            egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("Width"),
+                        );
+                        ui.separator();
+                        for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
+                            if ui
+                                .selectable_label(next.border.style == style, line_style_label(style))
+                                .clicked()
+                            {
+                                next.border.style = style;
+                            }
+                        }
+                        if next != *overlay {
+                            action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
+                        }
+                    });
+                    ui.separator();
+                }
                 if ui.button("Add connection").clicked() {
                     action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
                     ui.close();
@@ -1337,6 +1408,9 @@ impl CanvasCitizen {
             }
             ContextAction::SetEdgeOverlay(eid, overlay) => {
                 self.registry.update_edge_overlay(&eid, overlay);
+            }
+            ContextAction::SetNodeOverlay(nid, overlay) => {
+                self.registry.update_node_overlay(&nid, overlay);
             }
         }
     }
