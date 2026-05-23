@@ -58,19 +58,48 @@ pub fn edge_end_position(scene: &Scene, end: &EdgeEnd) -> Option<(f32, f32)> {
     }
 }
 
+/// The anchor of a port end — `None` for `EdgeEnd::Free` or for a port
+/// that has been deleted.
+pub fn edge_end_anchor(scene: &Scene, end: &EdgeEnd) -> Option<PortAnchor> {
+    match end {
+        EdgeEnd::Port(n, p) => scene
+            .nodes
+            .iter()
+            .find(|nd| &nd.id == n)
+            .and_then(|nd| nd.ports.iter().find(|pt| &pt.id == p))
+            .map(|pt| pt.anchor),
+        EdgeEnd::Free(..) => None,
+    }
+}
+
 /// The routed path of an edge as a world-space polyline. `None` if a
 /// port endpoint references a missing port.
+///
+/// Orthogonal routes use the port-direction-aware variant when both
+/// endpoints are ports: wires exit perpendicular to each port's face
+/// (N/S → vertical, E/W → horizontal), so they don't run co-linear
+/// with the shape's side. Free endpoints fall back to the mid-X
+/// H-V-H route since there's no port face to be perpendicular to.
 pub fn edge_polyline(scene: &Scene, edge: &Edge) -> Option<Vec<(f32, f32)>> {
     let from = edge_end_position(scene, &edge.from)?;
     let to = edge_end_position(scene, &edge.to)?;
-    Some(route(from, to, &edge.routing))
+    match &edge.routing {
+        Routing::Orthogonal => {
+            let from_anchor = edge_end_anchor(scene, &edge.from);
+            let to_anchor = edge_end_anchor(scene, &edge.to);
+            Some(orthogonal_with_anchors(from, to, from_anchor, to_anchor))
+        }
+        other => Some(route(from, to, other)),
+    }
 }
 
-/// Route between two world points under a routing strategy.
+/// Route between two world points under a routing strategy, with no
+/// knowledge of port direction. Callers that *do* have anchors should
+/// reach [`edge_polyline`] instead.
 pub fn route(from: (f32, f32), to: (f32, f32), routing: &Routing) -> Vec<(f32, f32)> {
     match routing {
         Routing::Straight => vec![from, to],
-        Routing::Orthogonal => orthogonal(from, to),
+        Routing::Orthogonal => orthogonal_mid_x(from, to),
         Routing::Manual { waypoints } => {
             let mut pts = Vec::with_capacity(waypoints.len() + 2);
             pts.push(from);
@@ -82,8 +111,76 @@ pub fn route(from: (f32, f32), to: (f32, f32), routing: &Routing) -> Vec<(f32, f
     }
 }
 
+/// Length of the stub segment emitted perpendicular to each port's
+/// face before the route turns. World units. Sized so a stub is clearly
+/// visible even for short routes without dominating long ones.
+const PORT_STUB: f32 = 20.0;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ExitAxis {
+    Horizontal, // East / West ports — wire exits along X
+    Vertical,   // North / South ports — wire exits along Y
+}
+
+/// Unit-vector exit direction for a port anchor. `None` for
+/// [`PortAnchor::Free`] — its placement doesn't define a face.
+fn exit_dir(anchor: PortAnchor) -> Option<(f32, f32)> {
+    match anchor {
+        PortAnchor::North(_) => Some((0.0, -1.0)),
+        PortAnchor::South(_) => Some((0.0, 1.0)),
+        PortAnchor::East(_) => Some((1.0, 0.0)),
+        PortAnchor::West(_) => Some((-1.0, 0.0)),
+        PortAnchor::Free(..) => None,
+    }
+}
+
+fn exit_axis(anchor: PortAnchor) -> Option<ExitAxis> {
+    match anchor {
+        PortAnchor::North(_) | PortAnchor::South(_) => Some(ExitAxis::Vertical),
+        PortAnchor::East(_) | PortAnchor::West(_) => Some(ExitAxis::Horizontal),
+        PortAnchor::Free(..) => None,
+    }
+}
+
+/// Port-direction-aware orthogonal route. Both ends emit a stub
+/// perpendicular to their port face; the stubs are joined by an
+/// axis-aligned bend at a corner whose orientation matches the
+/// from-end's exit axis. Falls back to [`orthogonal_mid_x`] when
+/// either endpoint lacks a defined exit direction (Free / unknown).
+fn orthogonal_with_anchors(
+    from: (f32, f32),
+    to: (f32, f32),
+    from_anchor: Option<PortAnchor>,
+    to_anchor: Option<PortAnchor>,
+) -> Vec<(f32, f32)> {
+    let (Some(fa), Some(ta)) = (from_anchor, to_anchor) else {
+        return orthogonal_mid_x(from, to);
+    };
+    let (Some(f_dir), Some(t_dir)) = (exit_dir(fa), exit_dir(ta)) else {
+        return orthogonal_mid_x(from, to);
+    };
+    let p1 = (from.0 + f_dir.0 * PORT_STUB, from.1 + f_dir.1 * PORT_STUB);
+    let p2 = (to.0 + t_dir.0 * PORT_STUB, to.1 + t_dir.1 * PORT_STUB);
+
+    // The corner that joins the two stubs sits where the from-stub's
+    // axis meets the to-stub's axis — placement depends on whichever
+    // axis the from-end exits along.
+    let corner = match exit_axis(fa) {
+        Some(ExitAxis::Horizontal) => (p1.0, p2.1),
+        Some(ExitAxis::Vertical) => (p2.0, p1.1),
+        None => return orthogonal_mid_x(from, to),
+    };
+
+    // Construct the polyline; dedup catches degenerate cases where
+    // the corner coincides with one of the stub ends (aligned ports).
+    let mut pts = vec![from, p1, corner, p2, to];
+    pts.dedup();
+    pts
+}
+
 /// Three-segment H-V-H orthogonal route through the horizontal midpoint.
-fn orthogonal(from: (f32, f32), to: (f32, f32)) -> Vec<(f32, f32)> {
+/// The fallback used when port direction is unknown.
+fn orthogonal_mid_x(from: (f32, f32), to: (f32, f32)) -> Vec<(f32, f32)> {
     let mid_x = (from.0 + to.0) * 0.5;
     vec![from, (mid_x, from.1), (mid_x, to.1), to]
 }
@@ -167,6 +264,74 @@ mod tests {
     #[test]
     fn orthogonal_route_turns_at_the_midpoint() {
         let p = route((0.0, 0.0), (100.0, 40.0), &Routing::Orthogonal);
+        assert_eq!(p, vec![(0.0, 0.0), (50.0, 0.0), (50.0, 40.0), (100.0, 40.0)]);
+    }
+
+    #[test]
+    fn east_to_west_ports_exit_horizontally() {
+        // Both endpoints on the same y. Stubs collapse the corner.
+        let p = orthogonal_with_anchors(
+            (0.0, 50.0),
+            (200.0, 50.0),
+            Some(PortAnchor::East(0.5)),
+            Some(PortAnchor::West(0.5)),
+        );
+        assert_eq!(
+            p,
+            vec![(0.0, 50.0), (20.0, 50.0), (180.0, 50.0), (200.0, 50.0)]
+        );
+    }
+
+    #[test]
+    fn north_to_south_ports_exit_vertically() {
+        // Same x — the wire is a clean vertical run with stubs.
+        let p = orthogonal_with_anchors(
+            (50.0, 0.0),
+            (50.0, 200.0),
+            Some(PortAnchor::North(0.5)),
+            Some(PortAnchor::South(0.5)),
+        );
+        assert_eq!(
+            p,
+            vec![(50.0, 0.0), (50.0, -20.0), (50.0, 220.0), (50.0, 200.0)]
+        );
+    }
+
+    #[test]
+    fn east_then_south_mixes_via_one_corner() {
+        // East exit + South exit — single L-bend at (p1.x, p2.y).
+        let p = orthogonal_with_anchors(
+            (0.0, 50.0),
+            (50.0, 200.0),
+            Some(PortAnchor::East(0.5)),
+            Some(PortAnchor::South(0.5)),
+        );
+        assert_eq!(
+            p,
+            vec![
+                (0.0, 50.0),
+                (20.0, 50.0),
+                (20.0, 220.0),
+                (50.0, 220.0),
+                (50.0, 200.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn missing_anchor_falls_back_to_mid_x() {
+        let p = orthogonal_with_anchors((0.0, 0.0), (100.0, 40.0), None, None);
+        assert_eq!(p, vec![(0.0, 0.0), (50.0, 0.0), (50.0, 40.0), (100.0, 40.0)]);
+    }
+
+    #[test]
+    fn free_anchor_falls_back_to_mid_x() {
+        let p = orthogonal_with_anchors(
+            (0.0, 0.0),
+            (100.0, 40.0),
+            Some(PortAnchor::Free(0.5, 0.5)),
+            Some(PortAnchor::West(0.5)),
+        );
         assert_eq!(p, vec![(0.0, 0.0), (50.0, 0.0), (50.0, 40.0), (100.0, 40.0)]);
     }
 

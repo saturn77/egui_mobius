@@ -796,15 +796,20 @@ mod tests {
             overlay: EdgeOverlay::default(),
         });
 
-        // Orthogonal route turns at the midpoint:
-        // (100,50) - (150,50) - (150,150) - (200,150).
+        // Port-direction-aware orthogonal route: East-exit stub +
+        // vertical bend + middle horizontal + West-entry stub.
+        //   (100,50) - (120,50) - (120,150) - (180,150) - (200,150)
+        // The 20-point stub on each end is the PORT_STUB constant in
+        // router.rs.
         let e = EdgeId("e".into());
-        // First horizontal run.
-        assert_eq!(hit_test_edge_segment(&scene, (120.0, 51.0), 5.0), Some((e.clone(), 0)));
-        // Vertical run.
-        assert_eq!(hit_test_edge_segment(&scene, (151.0, 100.0), 5.0), Some((e.clone(), 1)));
-        // Second horizontal run.
-        assert_eq!(hit_test_edge_segment(&scene, (180.0, 149.0), 5.0), Some((e, 2)));
+        // First horizontal stub.
+        assert_eq!(hit_test_edge_segment(&scene, (110.0, 51.0), 5.0), Some((e.clone(), 0)));
+        // Vertical bend.
+        assert_eq!(hit_test_edge_segment(&scene, (121.0, 100.0), 5.0), Some((e.clone(), 1)));
+        // Middle horizontal run.
+        assert_eq!(hit_test_edge_segment(&scene, (150.0, 151.0), 5.0), Some((e.clone(), 2)));
+        // Final horizontal stub.
+        assert_eq!(hit_test_edge_segment(&scene, (190.0, 151.0), 5.0), Some((e, 3)));
     }
 
     #[test]
