@@ -135,6 +135,7 @@ fn node_instance(node: &crate::model::Node) -> NodeInstance {
         kind: match node.kind {
             NodeKind::Circle => 1,
             NodeKind::Ellipse => 2,
+            NodeKind::Parallelogram => 3,
             // Path / Group fall back to a rectangle, as the CPU renderer does.
             NodeKind::Rect | NodeKind::Path(_) | NodeKind::Group(_) => 0,
         },

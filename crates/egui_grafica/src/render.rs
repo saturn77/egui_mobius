@@ -381,6 +381,17 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
             let ry = screen_rect.height() * 0.5;
             paint_ellipse(painter, center, rx, ry, fill, stroke);
         }
+        NodeKind::Parallelogram => {
+            // Skew in world units, projected to screen via world_to_screen.
+            let skew = h * crate::geometry::PARALLELOGRAM_SKEW_RATIO;
+            let pts = vec![
+                viewport.world_to_screen((x + skew, y)),
+                viewport.world_to_screen((x + w, y)),
+                viewport.world_to_screen((x + w - skew, y + h)),
+                viewport.world_to_screen((x, y + h)),
+            ];
+            painter.add(egui::Shape::convex_polygon(pts, fill, stroke));
+        }
         NodeKind::Path(_) | NodeKind::Group(_) => {
             // Not yet implemented — placeholder rect so the node is visible
             painter.rect(screen_rect, CornerRadius::ZERO, fill, stroke, StrokeKind::Inside);

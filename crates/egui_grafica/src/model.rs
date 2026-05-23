@@ -170,6 +170,10 @@ pub enum NodeKind {
     Rect,
     Circle,
     Ellipse,
+    /// Right-leaning parallelogram inscribed in the node's bounding box.
+    /// The horizontal skew is a fixed proportion of the node's height —
+    /// see `geometry::PARALLELOGRAM_SKEW_RATIO`.
+    Parallelogram,
     /// A free-form path defined by a list of segments.
     Path(Vec<PathSegment>),
     /// A node that is itself a sub-scene (hierarchical canvas).

@@ -52,21 +52,46 @@ pub fn line_seg(a: (f32, f32), b: (f32, f32)) -> Option<LineSeg2> {
 /// hypercurve contours hold lines and circular arcs, not ellipse arcs.
 const ELLIPSE_SEGMENTS: usize = 64;
 
+/// Horizontal skew of a [`NodeKind::Parallelogram`] as a proportion of
+/// the node's height. The top edge shifts right by `skew = h * RATIO`;
+/// the bottom shifts left by the same amount, so the shape fits inside
+/// its bounding box. Shared between the CPU painter, the GPU shader,
+/// and the exact-contour hit-test so all three agree.
+pub const PARALLELOGRAM_SKEW_RATIO: f32 = 0.25;
+
 /// A node's outline as a hypercurve [`Contour2`] — the exact shape geometry
 /// the kernel reasons about (containment, intersection, area).
 ///
 /// `Rect` is four line segments; `Circle` is two semicircular arcs (exact,
 /// via bulge vertices); `Ellipse` is a polygon approximation since a
-/// hypercurve contour has no ellipse-arc segment. `Path`/`Group` fall back
-/// to the bounding rectangle, matching how the renderer draws them.
+/// hypercurve contour has no ellipse-arc segment. `Parallelogram` is four
+/// line segments inscribed in the bounding box, sheared per
+/// [`PARALLELOGRAM_SKEW_RATIO`]. `Path`/`Group` fall back to the bounding
+/// rectangle, matching how the renderer draws them.
 pub fn node_contour(node: &Node) -> Option<Contour2> {
     let (x, y) = node.transform.position;
     let (w, h) = node.transform.size;
     match node.kind {
         NodeKind::Circle => circle_contour(x, y, w, h),
         NodeKind::Ellipse => ellipse_contour(x, y, w, h),
+        NodeKind::Parallelogram => parallelogram_contour(x, y, w, h),
         NodeKind::Rect | NodeKind::Path(_) | NodeKind::Group(_) => rect_contour(x, y, w, h),
     }
+}
+
+fn parallelogram_contour(x: f32, y: f32, w: f32, h: f32) -> Option<Contour2> {
+    let skew = h * PARALLELOGRAM_SKEW_RATIO;
+    let corners = [
+        (x + skew, y),
+        (x + w, y),
+        (x + w - skew, y + h),
+        (x, y + h),
+    ];
+    let mut segments = Vec::with_capacity(4);
+    for i in 0..4 {
+        segments.push(Segment2::Line(line_seg(corners[i], corners[(i + 1) % 4])?));
+    }
+    Contour2::try_new(segments).ok()
 }
 
 fn rect_contour(x: f32, y: f32, w: f32, h: f32) -> Option<Contour2> {
@@ -149,5 +174,30 @@ mod tests {
     fn line_seg_rejects_zero_length() {
         assert!(line_seg((1.0, 1.0), (1.0, 1.0)).is_none());
         assert!(line_seg((0.0, 0.0), (10.0, 0.0)).is_some());
+    }
+
+    #[test]
+    fn parallelogram_excludes_the_bounding_box_corners() {
+        // Bounding box (0,0)–(100,100), skew = 25. Corners at (25,0),
+        // (100,0), (75,100), (0,100). The top-left and bottom-right
+        // bbox corners are *outside* the parallelogram.
+        use crate::model::{Node, NodeKind, Overlay, Transform};
+        let node = Node {
+            id: crate::model::NodeId("p".into()),
+            kind: NodeKind::Parallelogram,
+            transform: Transform { position: (0.0, 0.0), size: (100.0, 100.0), rotation: 0.0 },
+            overlay: Overlay::default(),
+            ports: vec![],
+        };
+        // Interior of the parallelogram.
+        assert!(contour_contains(&node, (50.0, 50.0)));
+        // Top-left bbox corner — outside the lean.
+        assert!(!contour_contains(&node, (5.0, 5.0)));
+        // Bottom-right bbox corner — outside the lean on the other side.
+        assert!(!contour_contains(&node, (95.0, 95.0)));
+        // Top-right and bottom-left bbox corners are *on* / inside the
+        // shape's corners.
+        assert!(contour_contains(&node, (99.0, 1.0)));
+        assert!(contour_contains(&node, (1.0, 99.0)));
     }
 }

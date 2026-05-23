@@ -91,6 +91,7 @@ pub enum ShapeTool {
     Square,
     Circle,
     Ellipse,
+    Parallelogram,
     Text,
 }
 
@@ -236,6 +237,7 @@ impl CanvasCitizen {
             // Phosphor has no oval glyph; the circle glyph stands in,
             // disambiguated by the tooltip.
             btn(ui, ShapeTool::Ellipse, ico::CIRCLE, "Ellipse");
+            btn(ui, ShapeTool::Parallelogram, ico::PARALLELOGRAM, "Parallelogram");
             btn(ui, ShapeTool::Text, ico::TEXT_T, "Text");
 
             sep(ui, vertical);
@@ -1393,6 +1395,7 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
         ShapeTool::Square => (NodeKind::Rect, (60.0, 60.0)),
         ShapeTool::Circle => (NodeKind::Circle, (60.0, 60.0)),
         ShapeTool::Ellipse => (NodeKind::Ellipse, (80.0, 50.0)),
+        ShapeTool::Parallelogram => (NodeKind::Parallelogram, (80.0, 50.0)),
         ShapeTool::Text => (NodeKind::Rect, (80.0, 30.0)),
         // Select never places a node — fall back to a rect defensively.
         ShapeTool::Select => (NodeKind::Rect, (80.0, 50.0)),

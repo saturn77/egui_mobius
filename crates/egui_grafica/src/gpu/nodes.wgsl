@@ -27,7 +27,11 @@ struct Viewport {
 const KIND_RECT: u32 = 0u;
 const KIND_CIRCLE: u32 = 1u;
 const KIND_ELLIPSE: u32 = 2u;
+const KIND_PARALLELOGRAM: u32 = 3u;
 const FLAG_SRGB_TARGET: u32 = 2u;
+
+// Must match `geometry::PARALLELOGRAM_SKEW_RATIO` on the Rust side.
+const PARALLELOGRAM_SKEW_RATIO: f32 = 0.25;
 
 struct VsOut {
     @builtin(position) clip: vec4<f32>,
@@ -104,16 +108,32 @@ fn fs_node(in: VsOut) -> @location(0) vec4<f32> {
         return emit(mix(in.border, in.fill, t));
     }
 
-    // Circle / ellipse: signed distance to the contour, in points.
-    // Negative inside, zero on the edge.
+    // Circle / ellipse / parallelogram: signed distance to the contour,
+    // in points. Negative inside, zero on the edge.
     let p = (in.local - vec2<f32>(0.5)) * in.size;       // world offset from center
     var sd: f32;
     if (in.kind == KIND_CIRCLE) {
         let r = min(in.size.x, in.size.y) * 0.5;
         sd = (length(p) - r) * vp.zoom;
-    } else {
+    } else if (in.kind == KIND_ELLIPSE) {
         let r = in.size * 0.5;
         sd = (length(p / r) - 1.0) * min(r.x, r.y) * vp.zoom;
+    } else {
+        // Parallelogram inscribed in the bounding box. Inside distance
+        // to each of the four edges in world units; the minimum is the
+        // unsigned inside distance, negated for "inside is negative".
+        let w = in.size.x;
+        let h = in.size.y;
+        let skew = h * PARALLELOGRAM_SKEW_RATIO;
+        let px = in.local.x * w;
+        let py = in.local.y * h;
+        let norm = sqrt(h * h + skew * skew);
+        let d_top = py;
+        let d_bot = h - py;
+        let d_left = (px * h + py * skew - h * skew) / norm;
+        let d_right = (w * h - px * h - skew * py) / norm;
+        let inside = min(min(d_top, d_bot), min(d_left, d_right));
+        sd = -inside * vp.zoom;
     }
 
     // Antialiased coverage at the outer edge.

@@ -557,7 +557,10 @@ impl Parser {
             "rect" => Ok(NodeKind::Rect),
             "circle" => Ok(NodeKind::Circle),
             "ellipse" => Ok(NodeKind::Ellipse),
-            other => self.err(format!("unknown node kind '{other}' (expected rect/circle/ellipse)")),
+            "parallelogram" => Ok(NodeKind::Parallelogram),
+            other => self.err(format!(
+                "unknown node kind '{other}' (expected rect/circle/ellipse/parallelogram)"
+            )),
         }
     }
 
@@ -980,6 +983,7 @@ fn node_kind_kw(k: &NodeKind) -> &'static str {
         NodeKind::Rect => "rect",
         NodeKind::Circle => "circle",
         NodeKind::Ellipse => "ellipse",
+        NodeKind::Parallelogram => "parallelogram",
         // v1: Path/Group are not yet expressible — printed lossily as rect.
         NodeKind::Path(_) | NodeKind::Group(_) => "rect",
     }
