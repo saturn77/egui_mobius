@@ -825,8 +825,17 @@ impl CanvasCitizen {
             }
         }
 
-        // ── Middle-button drag pans the viewport (independent of the FSM). ──
-        if response.dragged_by(egui::PointerButton::Middle) {
+        // ── Pan the viewport — independent of the FSM. ──
+        //
+        // Ctrl + right-mouse-drag is the primary path; middle-button
+        // drag is kept as a fallback for trackpad / no-modifier setups.
+        // A right-click *without* Ctrl still opens the context menu —
+        // `context_menu` triggers on release-without-drag, so a Ctrl-RMB
+        // drag never resolves to a menu open.
+        let ctrl = ui.input(|i| i.modifiers.ctrl);
+        let pan = (ctrl && response.dragged_by(egui::PointerButton::Secondary))
+            || response.dragged_by(egui::PointerButton::Middle);
+        if pan {
             let delta = response.drag_delta();
             self.viewport.origin.x += delta.x;
             self.viewport.origin.y += delta.y;
