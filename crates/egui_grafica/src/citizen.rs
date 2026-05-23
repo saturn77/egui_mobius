@@ -642,6 +642,18 @@ impl CanvasCitizen {
             self.fsm.grab_world = world;
             self.fsm.cursor_world = world;
 
+            // Frame-by-frame drags would otherwise flood the undo
+            // stack — collapse the whole gesture into one undoable
+            // step by opening a batch on press and closing on release.
+            // Marquee is the lone exception: it doesn't mutate the
+            // scene at all, so a batch would just leave a no-op
+            // snapshot behind.
+            if self.fsm.state != CanvasState::Idle
+                && self.fsm.state != CanvasState::Marquee
+            {
+                self.registry.begin_undo_batch();
+            }
+
             match self.fsm.state {
                 CanvasState::MovingNodes => {
                     let id = node_hit.expect("NodeBody target implies a node hit");
@@ -964,7 +976,14 @@ impl CanvasCitizen {
                 };
                 self.registry.extend_free_end(&eid, side, new_end);
             }
+            // Close the undo batch opened on press if the gesture
+            // had one (everything except Marquee).
+            let had_batch = self.fsm.state != CanvasState::Idle
+                && self.fsm.state != CanvasState::Marquee;
             self.fsm.dispatch(CanvasEvent::Release, HitTarget::Empty);
+            if had_batch {
+                self.registry.end_undo_batch();
+            }
         }
 
         // Click (press + release, no movement): select node, else wire, else clear.
@@ -1016,33 +1035,55 @@ impl CanvasCitizen {
 
             // Hotkeys — gated on canvas hover so text widgets elsewhere
             // aren't silently swallowed.
-            let (g, x, y, r, a) = ui.input(|i| {
+            // Plain-letter hotkeys ignore Ctrl so Ctrl+Z / Ctrl+Y don't
+            // also fire 'Z' / 'Y' actions (e.g. the Y-axis mirror).
+            let mods = ui.input(|i| i.modifiers);
+            let plain = !mods.ctrl && !mods.alt;
+            let (g, x, y, r, a, z, yk) = ui.input(|i| {
                 (
                     i.key_pressed(Key::G),
                     i.key_pressed(Key::X),
                     i.key_pressed(Key::Y),
                     i.key_pressed(Key::R),
                     i.key_pressed(Key::A),
+                    i.key_pressed(Key::Z),
+                    i.key_pressed(Key::Y),
                 )
             });
-            if g {
-                self.registry.toggle_grid();
+            if plain {
+                if g {
+                    self.registry.toggle_grid();
+                }
+                if x {
+                    self.registry.mirror_scene_about_x();
+                }
+                if y {
+                    self.registry.mirror_scene_about_y();
+                }
+                if r {
+                    self.registry.rotate_scene_90_cw();
+                }
+                // A — snap every selected node to the nearest grid
+                // intersection. Adjacent Manual-wire waypoints follow
+                // via the move_nodes path so wires don't tear off.
+                if a && !self.selection.nodes.is_empty() {
+                    let ids = self.selection.nodes.clone();
+                    self.registry.align_selection_to_grid(&ids);
+                }
             }
-            if x {
-                self.registry.mirror_scene_about_x();
+            // Undo / redo. Ctrl+Z undoes; Ctrl+Shift+Z and Ctrl+Y both
+            // redo. Drags and inline text edits batch through
+            // Registry::begin_undo_batch so each gesture is one
+            // undoable step rather than per-frame or per-keystroke.
+            if mods.ctrl && z {
+                if mods.shift {
+                    self.registry.redo();
+                } else {
+                    self.registry.undo();
+                }
             }
-            if y {
-                self.registry.mirror_scene_about_y();
-            }
-            if r {
-                self.registry.rotate_scene_90_cw();
-            }
-            // A — snap every selected node to the nearest grid
-            // intersection. Adjacent Manual-wire waypoints follow via
-            // the move_nodes path so wires don't tear off.
-            if a && !self.selection.nodes.is_empty() {
-                let ids = self.selection.nodes.clone();
-                self.registry.align_selection_to_grid(&ids);
+            if mods.ctrl && !mods.shift && yk {
+                self.registry.redo();
             }
 
             if ui.input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
@@ -1086,6 +1127,10 @@ impl CanvasCitizen {
                     current_text
                 };
                 self.editing_node = Some(nid);
+                // Collapse the whole edit session into one undo step
+                // — every keystroke would otherwise push its own
+                // snapshot through update_node_overlay.
+                self.registry.begin_undo_batch();
             } else if let Some((eid, idx)) =
                 self.registry.with_scene(|s| hit_test_waypoint(s, world, port_radius))
             {
@@ -1319,6 +1364,7 @@ impl CanvasCitizen {
             if resp.lost_focus() || escape {
                 self.editing_node = None;
                 self.edit_buffer.clear();
+                self.registry.end_undo_batch();
             }
         }
     }
@@ -1619,6 +1665,9 @@ const HOTKEY_TABLE: &[(&str, &str)] = &[
     ("A", "Align selection to grid"),
     ("Del", "Delete selection"),
     ("Esc", "Disarm shape tool"),
+    ("Ctrl+Z", "Undo"),
+    ("Ctrl+Shift+Z", "Redo"),
+    ("Ctrl+Y", "Redo (alt)"),
 ];
 
 /// A `edge{n}` id not already used by any edge in the scene.

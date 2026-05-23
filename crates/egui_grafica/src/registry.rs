@@ -25,8 +25,8 @@
 //! `Registry::scene_dynamic()` returns the underlying `Dynamic<Scene>`;
 //! callers can `.on_change(...)` to receive notifications.
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, MutexGuard};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use egui_mobius_reactive::Dynamic;
 
@@ -35,23 +35,113 @@ use crate::model::{
     PortAnchor, PortId, Routing, Scene,
 };
 
+/// Maximum number of undo snapshots retained. Older snapshots are
+/// dropped from the front when the stack would grow past this.
+const UNDO_CAP: usize = 100;
+
 /// Owns the [`Scene`] and is the only legitimate place to mutate it.
 #[derive(Clone)]
 pub struct Registry {
     scene: Dynamic<Scene>,
     /// Bumped on every mutation. `Arc` so clones share one counter.
     generation: Arc<AtomicU64>,
+    /// Pre-mutation snapshots, newest at the back. Cleared on every
+    /// new mutation so the redo chain only survives until the user
+    /// edits past the undo point.
+    undo_stack: Arc<Mutex<Vec<Scene>>>,
+    /// Snapshots popped off `undo_stack` by `undo()` — popped back on
+    /// `redo()`. Cleared when a fresh mutation lands.
+    redo_stack: Arc<Mutex<Vec<Scene>>>,
+    /// While > 0, `mutate` doesn't push new undo snapshots — used to
+    /// collapse keystroke-by-keystroke text edits and frame-by-frame
+    /// drags into a single undoable step. The first call to
+    /// `begin_undo_batch` takes one snapshot; nested calls just bump
+    /// the depth.
+    batch_depth: Arc<AtomicU32>,
 }
 
 impl Registry {
     /// Wrap a freshly-constructed scene.
     pub fn new(scene: Scene) -> Self {
-        Self { scene: Dynamic::new(scene), generation: Arc::new(AtomicU64::new(0)) }
+        Self {
+            scene: Dynamic::new(scene),
+            generation: Arc::new(AtomicU64::new(0)),
+            undo_stack: Arc::new(Mutex::new(Vec::new())),
+            redo_stack: Arc::new(Mutex::new(Vec::new())),
+            batch_depth: Arc::new(AtomicU32::new(0)),
+        }
     }
 
     /// Wrap an already-reactive scene (e.g. one shared across citizens).
     pub fn from_dynamic(scene: Dynamic<Scene>) -> Self {
-        Self { scene, generation: Arc::new(AtomicU64::new(0)) }
+        Self {
+            scene,
+            generation: Arc::new(AtomicU64::new(0)),
+            undo_stack: Arc::new(Mutex::new(Vec::new())),
+            redo_stack: Arc::new(Mutex::new(Vec::new())),
+            batch_depth: Arc::new(AtomicU32::new(0)),
+        }
+    }
+
+    // ─── Undo / redo ──────────────────────────────────────────────────────
+
+    pub fn can_undo(&self) -> bool {
+        !self.undo_stack.lock().unwrap().is_empty()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        !self.redo_stack.lock().unwrap().is_empty()
+    }
+
+    /// Restore the most recent pre-mutation snapshot. Pushes the
+    /// current scene onto the redo stack so the user can replay
+    /// forward.
+    pub fn undo(&self) {
+        let prev = self.undo_stack.lock().unwrap().pop();
+        if let Some(prev) = prev {
+            let current = self.scene.get();
+            self.redo_stack.lock().unwrap().push(current);
+            self.scene.set(prev);
+            self.generation.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Replay the most recent undone snapshot. Pushes the current
+    /// scene back onto the undo stack so a fresh undo retreats again.
+    pub fn redo(&self) {
+        let next = self.redo_stack.lock().unwrap().pop();
+        if let Some(next) = next {
+            let current = self.scene.get();
+            self.undo_stack.lock().unwrap().push(current);
+            self.scene.set(next);
+            self.generation.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Open an undo batch. The first call (depth 0 → 1) snapshots the
+    /// current scene; intervening `mutate` calls don't add new
+    /// snapshots. Nested calls just deepen — only the outermost
+    /// `end_undo_batch` re-enables snapshotting. Used to collapse
+    /// text-edit keystrokes and drag frames into one undoable step.
+    pub fn begin_undo_batch(&self) {
+        let prev = self.batch_depth.fetch_add(1, Ordering::Relaxed);
+        if prev == 0 {
+            let snap = self.scene.get();
+            let mut undo = self.undo_stack.lock().unwrap();
+            undo.push(snap);
+            if undo.len() > UNDO_CAP {
+                undo.remove(0);
+            }
+            self.redo_stack.lock().unwrap().clear();
+        }
+    }
+
+    /// Close an undo batch opened by [`Self::begin_undo_batch`].
+    pub fn end_undo_batch(&self) {
+        let prev = self.batch_depth.load(Ordering::Relaxed);
+        if prev > 0 {
+            self.batch_depth.fetch_sub(1, Ordering::Relaxed);
+        }
     }
 
     /// Monotonic counter, bumped on every mutation. Consumers cache
@@ -468,11 +558,28 @@ impl Registry {
     /// targeted notification path (per-node Dynamic), which is a later
     /// refactor.
     fn mutate(&self, f: impl FnOnce(&mut Scene)) {
+        // Pre-mutation snapshot, captured outside the lock so we hold
+        // the scene lock as briefly as possible.
+        let before = if self.batch_depth.load(Ordering::Relaxed) == 0 {
+            Some(self.scene.get())
+        } else {
+            None
+        };
         let new_scene = {
             let mut guard: MutexGuard<'_, Scene> = self.scene.lock();
             f(&mut guard);
             guard.clone()
         };
+        if let Some(before) = before {
+            let mut undo = self.undo_stack.lock().unwrap();
+            undo.push(before);
+            if undo.len() > UNDO_CAP {
+                undo.remove(0);
+            }
+            // Any fresh mutation invalidates the redo branch — the
+            // user has stepped off the previous timeline.
+            self.redo_stack.lock().unwrap().clear();
+        }
         self.scene.set(new_scene);
         self.generation.fetch_add(1, Ordering::Relaxed);
     }
@@ -736,5 +843,60 @@ mod tests {
         // y follows the port (-50).
         assert_eq!(*fx, 120.0, "free x must not drift on a vertical drag");
         assert!((fy - 100.0).abs() < 1e-3, "free y = {} expected 100", fy);
+    }
+
+    #[test]
+    fn undo_redo_round_trip_on_node_move() {
+        let reg = Registry::new(Scene::default());
+        reg.add_node(node_rect("a", (10.0, 20.0), (40.0, 40.0)));
+        assert!(reg.can_undo(), "the add_node mutation should be undoable");
+        assert!(!reg.can_redo());
+
+        reg.move_node(&NodeId("a".into()), (100.0, 200.0));
+        assert_eq!(reg.scene().nodes[0].transform.position, (100.0, 200.0));
+
+        reg.undo();
+        assert_eq!(reg.scene().nodes[0].transform.position, (10.0, 20.0));
+        assert!(reg.can_redo());
+
+        reg.redo();
+        assert_eq!(reg.scene().nodes[0].transform.position, (100.0, 200.0));
+    }
+
+    #[test]
+    fn undo_batch_collapses_many_mutations_into_one_step() {
+        // Simulates a drag: many move_node calls inside one
+        // begin/end_undo_batch pair should be a single undo step,
+        // reverting all the way to the position before the drag.
+        let reg = Registry::new(Scene::default());
+        reg.add_node(node_rect("a", (0.0, 0.0), (40.0, 40.0)));
+
+        reg.begin_undo_batch();
+        for i in 1..=10 {
+            reg.move_node(&NodeId("a".into()), (i as f32 * 10.0, 0.0));
+        }
+        reg.end_undo_batch();
+
+        assert_eq!(reg.scene().nodes[0].transform.position, (100.0, 0.0));
+
+        reg.undo();
+        assert_eq!(
+            reg.scene().nodes[0].transform.position,
+            (0.0, 0.0),
+            "a single undo should rewind the entire batch",
+        );
+    }
+
+    #[test]
+    fn fresh_mutation_invalidates_the_redo_branch() {
+        let reg = Registry::new(Scene::default());
+        reg.add_node(node_rect("a", (0.0, 0.0), (40.0, 40.0)));
+        reg.move_node(&NodeId("a".into()), (50.0, 0.0));
+        reg.undo();
+        assert!(reg.can_redo());
+
+        // Branching mutation: redo branch must drop.
+        reg.move_node(&NodeId("a".into()), (5.0, 5.0));
+        assert!(!reg.can_redo());
     }
 }
