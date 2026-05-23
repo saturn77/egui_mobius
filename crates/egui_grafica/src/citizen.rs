@@ -1084,44 +1084,16 @@ impl CanvasCitizen {
                 .with_scene(|s| s.nodes.iter().find(|n| &n.id == nid).map(|n| n.overlay.clone()))
         });
         let mut action: Option<ContextAction> = None;
+        // Priority: pivot > node > edge > empty. Right-clicking inside
+        // a node body should reach the node menu even when a wire
+        // passes through the click — clicks land *on the shape*. Wire
+        // editing is still available by right-clicking the wire outside
+        // any node body.
         response.context_menu(|ui| {
             if let Some((eid, idx)) = &hit_wp {
                 if ui.button("Delete pivot").clicked() {
                     action = Some(ContextAction::DeletePivot(eid.clone(), *idx));
                     ui.close();
-                }
-            } else if let Some(eid) = &hit_edge {
-                if ui.button("Delete segment").clicked() {
-                    action = Some(ContextAction::DeleteSegment(eid.clone(), ctx.unwrap_or_default()));
-                    ui.close();
-                }
-                if ui.button("Delete wire").clicked() {
-                    action = Some(ContextAction::DeleteEdge(eid.clone()));
-                    ui.close();
-                }
-                if let Some(overlay) = &edge_overlay {
-                    ui.menu_button("Wire style", |ui| {
-                        let mut next = overlay.clone();
-                        let mut rgb = hex_to_rgb(&next.color);
-                        ui.horizontal(|ui| {
-                            ui.label("Color");
-                            ui.color_edit_button_srgb(&mut rgb);
-                        });
-                        next.color = rgb_to_hex(rgb);
-                        ui.add(egui::Slider::new(&mut next.width, 0.5..=6.0).text("Width"));
-                        ui.separator();
-                        for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
-                            if ui
-                                .selectable_label(next.line_style == style, line_style_label(style))
-                                .clicked()
-                            {
-                                next.line_style = style;
-                            }
-                        }
-                        if next != *overlay {
-                            action = Some(ContextAction::SetEdgeOverlay(eid.clone(), next));
-                        }
-                    });
                 }
             } else if let Some(nid) = &hit_node {
                 if let Some(overlay) = &node_overlay {
@@ -1175,15 +1147,10 @@ impl CanvasCitizen {
                         ui.add(
                             egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("Width"),
                         );
-                        ui.separator();
-                        for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
-                            if ui
-                                .selectable_label(next.border.style == style, line_style_label(style))
-                                .clicked()
-                            {
-                                next.border.style = style;
-                            }
-                        }
+                        // Dashed / dotted borders aren't rendered yet
+                        // (neither CPU rect-stroke nor GPU node SDF
+                        // supports a perimeter dash pattern), so the
+                        // selector is hidden until the renderer lands.
                         if next != *overlay {
                             action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
                         }
@@ -1193,6 +1160,39 @@ impl CanvasCitizen {
                 if ui.button("Add connection").clicked() {
                     action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
                     ui.close();
+                }
+            } else if let Some(eid) = &hit_edge {
+                if ui.button("Delete segment").clicked() {
+                    action = Some(ContextAction::DeleteSegment(eid.clone(), ctx.unwrap_or_default()));
+                    ui.close();
+                }
+                if ui.button("Delete wire").clicked() {
+                    action = Some(ContextAction::DeleteEdge(eid.clone()));
+                    ui.close();
+                }
+                if let Some(overlay) = &edge_overlay {
+                    ui.menu_button("Wire style", |ui| {
+                        let mut next = overlay.clone();
+                        let mut rgb = hex_to_rgb(&next.color);
+                        ui.horizontal(|ui| {
+                            ui.label("Color");
+                            ui.color_edit_button_srgb(&mut rgb);
+                        });
+                        next.color = rgb_to_hex(rgb);
+                        ui.add(egui::Slider::new(&mut next.width, 0.5..=6.0).text("Width"));
+                        ui.separator();
+                        for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
+                            if ui
+                                .selectable_label(next.line_style == style, line_style_label(style))
+                                .clicked()
+                            {
+                                next.line_style = style;
+                            }
+                        }
+                        if next != *overlay {
+                            action = Some(ContextAction::SetEdgeOverlay(eid.clone(), next));
+                        }
+                    });
                 }
             } else {
                 ui.label(egui::RichText::new("Nothing here").weak());
