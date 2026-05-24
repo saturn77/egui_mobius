@@ -139,16 +139,18 @@ pub fn page_geometry(settings: &CanvasSettings) -> Option<PageGeometry> {
     })
 }
 
-/// Paint the page board: sheet fill + drop shadow, drawing border
-/// with zone markers, and the title block when visible. No-op if
-/// no paper size is configured.
+/// Paint the page board: drawing border with zone markers and the
+/// title block when visible. The sheet outline is drawn but **not**
+/// filled, so content underneath remains visible — the engineering
+/// frame sits *on top* of the wires and nodes, not behind them.
+/// No-op if no paper size is configured.
 pub fn paint_page(painter: &Painter, viewport: &Viewport, settings: &CanvasSettings) {
     let Some(geom) = page_geometry(settings) else {
         return;
     };
     let dark = settings.background.is_dark();
 
-    paint_sheet(painter, viewport, &geom, dark);
+    paint_sheet_outline(painter, viewport, &geom, dark);
     paint_border_and_zones(painter, viewport, &geom, dark);
 
     if let Some(tb) = settings.title_block.as_ref()
@@ -158,22 +160,15 @@ pub fn paint_page(painter: &Painter, viewport: &Viewport, settings: &CanvasSetti
     }
 }
 
-fn paint_sheet(painter: &Painter, viewport: &Viewport, geom: &PageGeometry, dark: bool) {
+/// Sheet outline only — a thin grey rectangle at the paper edge so
+/// the user knows where the page is, with no fill so nodes/wires
+/// drawn earlier stay visible.
+fn paint_sheet_outline(painter: &Painter, viewport: &Viewport, geom: &PageGeometry, dark: bool) {
     let (sx, sy, sw, sh) = geom.sheet();
     let tl = viewport.world_to_screen((sx, sy));
     let br = viewport.world_to_screen((sx + sw, sy + sh));
     let rect = Rect::from_two_pos(tl, br);
 
-    // Drop shadow — offset down-right to give the paper visible
-    // depth against the canvas background.
-    let shadow_offset = (4.0, 4.0);
-    let shadow = rect.translate(egui::vec2(shadow_offset.0, shadow_offset.1));
-    painter.rect_filled(shadow, 0.0, Color32::from_black_alpha(60));
-
-    // Sheet body. Stays paper-white in both light and dark themes
-    // so the printed look is consistent.
-    painter.rect_filled(rect, 0.0, Color32::from_rgb(0xFF, 0xFF, 0xFF));
-    // Thin paper edge.
     let edge = if dark {
         Color32::from_rgb(0x60, 0x60, 0x60)
     } else {
@@ -295,7 +290,9 @@ fn paint_title_block(
     let br = viewport.world_to_screen((tb_x + tb_w, tb_y + tb_h));
     let rect = Rect::from_two_pos(tl, br);
 
-    painter.rect_filled(rect, 0.0, Color32::from_rgb(0xFB, 0xFB, 0xFB));
+    // Semi-transparent backdrop so the title-block text stays readable
+    // when it sits over wires / nodes, without fully hiding them.
+    painter.rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(0xFB, 0xFB, 0xFB, 230));
     painter.rect_stroke(
         rect,
         0.0,

@@ -70,6 +70,13 @@ enum FileAction {
     Open,
     Save,
     SaveAs,
+    ExportSvg,
+    #[cfg(feature = "export-raster")]
+    ExportPng,
+    #[cfg(feature = "export-raster")]
+    ExportJpg,
+    #[cfg(feature = "export-pdf")]
+    ExportPdf,
 }
 
 /// Which side of the citizen the ribbon docks to.
@@ -135,6 +142,9 @@ pub struct CanvasCitizen {
     /// overlay.text every frame so the canvas reflects keystrokes
     /// without a confirm step.
     edit_buffer: String,
+    /// Page setup modal — open / closed flag persisted across frames
+    /// so the window stays put and the text-edits keep their state.
+    show_page_modal: bool,
 }
 
 /// An action chosen from the right-click context menu, applied after the
@@ -209,6 +219,7 @@ impl CanvasCitizen {
             context_world: None,
             editing_node: None,
             edit_buffer: String::new(),
+            show_page_modal: false,
         }
     }
 
@@ -237,6 +248,44 @@ impl CanvasCitizen {
             .show_inside(ui, |ui| self.show_tool_ribbon(ui, tool_vertical));
 
         egui::CentralPanel::default().show_inside(ui, |ui| self.show_canvas(ui));
+
+        // Page setup modal — rendered last so it floats on top of the
+        // panels. Stays open across frames; closes only via the X or
+        // the Close button inside the window.
+        self.show_page_setup_window(ui.ctx());
+    }
+
+    /// Free-floating Page setup dialog. Reads / writes settings
+    /// through the registry, with the modal's open / closed state
+    /// kept on `self` so re-renders don't lose user focus or values.
+    fn show_page_setup_window(&mut self, ctx: &egui::Context) {
+        if !self.show_page_modal {
+            return;
+        }
+        let mut open = true;
+        let mut settings = self.registry.with_scene(|s| s.settings.clone());
+        let mut changed = false;
+        let mut close_clicked = false;
+
+        egui::Window::new("Page setup")
+            .open(&mut open)
+            .resizable(false)
+            .collapsible(false)
+            .default_width(360.0)
+            .show(ctx, |ui| {
+                changed = page_setup_body(ui, &mut settings);
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Close").clicked() {
+                        close_clicked = true;
+                    }
+                });
+            });
+
+        self.show_page_modal = open && !close_clicked;
+        if changed {
+            self.registry.update_settings(settings);
+        }
     }
 
     /// The shape-tool palette: a select cursor plus one button per
@@ -353,6 +402,29 @@ impl CanvasCitizen {
                     file_action = Some(FileAction::SaveAs);
                     ui.close();
                 }
+                ui.separator();
+                if ui.button(format!("{} Export SVG…", ico::FILE)).clicked() {
+                    file_action = Some(FileAction::ExportSvg);
+                    ui.close();
+                }
+                #[cfg(feature = "export-raster")]
+                {
+                    if ui.button(format!("{} Export PNG…", ico::FILE)).clicked() {
+                        file_action = Some(FileAction::ExportPng);
+                        ui.close();
+                    }
+                    if ui.button(format!("{} Export JPG…", ico::FILE)).clicked() {
+                        file_action = Some(FileAction::ExportJpg);
+                        ui.close();
+                    }
+                }
+                #[cfg(feature = "export-pdf")]
+                {
+                    if ui.button(format!("{} Export PDF…", ico::FILE)).clicked() {
+                        file_action = Some(FileAction::ExportPdf);
+                        ui.close();
+                    }
+                }
             });
             sep(ui, vertical);
 
@@ -455,13 +527,13 @@ impl CanvasCitizen {
 
             sep(ui, vertical);
 
-            // Page menu: paper size, orientation, and title-block fields.
-            ui.menu_button(format!("{} Page", ico::FILE), |ui| {
-                ui.set_min_width(260.0);
-                if page_menu(ui, &mut settings) {
-                    settings_changed = true;
-                }
-            });
+            // Page setup lives in a modal — clicking opens / closes
+            // a Window that persists across frames, so text-edits keep
+            // focus and the dialog doesn't auto-close on every gesture
+            // the way an inline menu_button does.
+            if ui.button(format!("{} Page…", ico::FILE)).clicked() {
+                self.show_page_modal = !self.show_page_modal;
+            }
 
             sep(ui, vertical);
 
@@ -556,7 +628,67 @@ impl CanvasCitizen {
                 }
             }
             FileAction::SaveAs => self.save_as(),
+            FileAction::ExportSvg => self.export_canvas("svg"),
+            #[cfg(feature = "export-raster")]
+            FileAction::ExportPng => self.export_canvas("png"),
+            #[cfg(feature = "export-raster")]
+            FileAction::ExportJpg => self.export_canvas("jpg"),
+            #[cfg(feature = "export-pdf")]
+            FileAction::ExportPdf => self.export_canvas("pdf"),
         }
+    }
+
+    /// Pop an rfd save dialog and write the scene out in the
+    /// requested format. Dispatches to the right exporter — the
+    /// raster + pdf paths are feature-gated.
+    fn export_canvas(&mut self, ext: &str) {
+        let default_name = self
+            .current_path
+            .as_ref()
+            .and_then(|p| p.file_stem().and_then(|s| s.to_str()))
+            .unwrap_or("canvas")
+            .to_string();
+        let label = ext.to_ascii_uppercase();
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter(&label, &[ext])
+            .set_file_name(format!("{default_name}.{ext}"))
+            .save_file()
+        else {
+            return;
+        };
+        let region = if self
+            .registry
+            .with_scene(|s| s.settings.paper_size.is_some())
+        {
+            crate::export::Region::Page
+        } else {
+            crate::export::Region::Content { padding_world: 24.0 }
+        };
+        let opts = crate::export::ExportOptions {
+            region,
+            background: None,
+            include_grid: false,
+            include_ports: true,
+        };
+        let result = self.registry.with_scene(|scene| -> std::io::Result<()> {
+            match ext {
+                "svg" => crate::export::export_svg(scene, &opts, &path),
+                #[cfg(feature = "export-raster")]
+                "png" => crate::export::export_png(scene, &opts, &path, 150.0),
+                #[cfg(feature = "export-raster")]
+                "jpg" => crate::export::export_jpg(scene, &opts, &path, 150.0),
+                #[cfg(feature = "export-pdf")]
+                "pdf" => crate::export::export_pdf(scene, &opts, &path),
+                _ => Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("unsupported export format: {ext}"),
+                )),
+            }
+        });
+        self.status = match result {
+            Ok(()) => format!("Exported {} → {}", label, file_name(&path)),
+            Err(e) => format!("Export failed: {e}"),
+        };
     }
 
     fn open_file(&mut self) {
@@ -1328,10 +1460,10 @@ impl CanvasCitizen {
         self.registry.with_scene(|scene| {
             // GPU: background, grid, node bodies, edge segments.
             crate::gpu::paint_canvas(&painter, rect, &self.viewport, scene, generation);
-            // Page board (sheet + border + title block) sits under
-            // the nodes so wires draw on top of it.
-            let settings = self.registry.with_scene(|s| s.settings.clone());
-            crate::page::paint_page(&painter, &self.viewport, &settings);
+            // Page board on the painter — frame + title block sits on
+            // top of the GPU-rendered nodes. The scene lock is already
+            // held, so read settings from `scene` (don't re-lock).
+            crate::page::paint_page(&painter, &self.viewport, &scene.settings);
             // Painter: everything the GPU path leaves out.
             crate::render::paint_arrowheads(&painter, scene, &self.viewport);
             crate::render::paint_node_labels(&painter, scene, &self.viewport);
@@ -1849,48 +1981,49 @@ fn sep(ui: &mut egui::Ui, vertical: bool) {
     }
 }
 
-/// Page-menu body: paper size, orientation, and title-block fields.
-/// Returns `true` whenever the user changed anything — caller pushes
-/// the mutated settings back into the registry.
-fn page_menu(ui: &mut egui::Ui, settings: &mut crate::model::CanvasSettings) -> bool {
+/// Page-setup modal body: paper size, orientation, and title-block
+/// fields. Returns `true` whenever the user changed anything — caller
+/// pushes the mutated settings back into the registry.
+fn page_setup_body(ui: &mut egui::Ui, settings: &mut crate::model::CanvasSettings) -> bool {
     use crate::page::PAPER_SIZES_INCHES;
     let mut changed = false;
 
-    ui.label(egui::RichText::new("Page").strong());
-
-    // Paper size — "None" leaves the canvas as an unbounded sheet.
-    let selected_paper = settings.paper_size.clone().unwrap_or_else(|| "None".into());
-    egui::ComboBox::from_id_salt("grafica_paper_size")
-        .selected_text(&selected_paper)
-        .width(140.0)
-        .show_ui(ui, |ui| {
-            if ui
-                .selectable_label(settings.paper_size.is_none(), "None")
-                .clicked()
-            {
-                settings.paper_size = None;
-                changed = true;
-            }
-            for (name, _) in PAPER_SIZES_INCHES {
+    ui.label(egui::RichText::new("Paper").strong());
+    ui.horizontal(|ui| {
+        ui.label("Size");
+        let selected_paper = settings.paper_size.clone().unwrap_or_else(|| "None".into());
+        egui::ComboBox::from_id_salt("grafica_paper_size")
+            .selected_text(&selected_paper)
+            .width(160.0)
+            .show_ui(ui, |ui| {
                 if ui
-                    .selectable_label(
-                        settings.paper_size.as_deref() == Some(*name),
-                        *name,
-                    )
+                    .selectable_label(settings.paper_size.is_none(), "None")
                     .clicked()
                 {
-                    settings.paper_size = Some((*name).into());
+                    settings.paper_size = None;
                     changed = true;
                 }
-            }
-        });
+                for (name, _) in PAPER_SIZES_INCHES {
+                    if ui
+                        .selectable_label(
+                            settings.paper_size.as_deref() == Some(*name),
+                            *name,
+                        )
+                        .clicked()
+                    {
+                        settings.paper_size = Some((*name).into());
+                        changed = true;
+                    }
+                }
+            });
+    });
 
-    // Orientation — meaningful only when a paper is selected.
     let mut is_landscape = matches!(
         settings.paper_orientation.as_deref(),
         Some(o) if o.eq_ignore_ascii_case("landscape")
     );
     ui.horizontal(|ui| {
+        ui.label("Orientation");
         if ui.radio(!is_landscape, "Portrait").clicked() {
             is_landscape = false;
             settings.paper_orientation = Some("portrait".into());
@@ -1903,9 +2036,10 @@ fn page_menu(ui: &mut egui::Ui, settings: &mut crate::model::CanvasSettings) -> 
         }
     });
 
+    ui.add_space(8.0);
     ui.separator();
+    ui.label(egui::RichText::new("Title block").strong());
 
-    // Title block — toggle + per-field editors.
     let mut tb = settings.title_block.clone().unwrap_or_default();
     let mut tb_present = settings.title_block.is_some();
     if ui.checkbox(&mut tb_present, "Show title block").changed() {
@@ -1913,32 +2047,31 @@ fn page_menu(ui: &mut egui::Ui, settings: &mut crate::model::CanvasSettings) -> 
         changed = true;
     }
     if tb_present {
-        let mut field = |ui: &mut egui::Ui, label: &str, value: &mut String| {
-            ui.horizontal(|ui| {
-                ui.label(egui::RichText::new(label).small().monospace());
-                if ui
-                    .add(egui::TextEdit::singleline(value).desired_width(180.0))
-                    .changed()
-                {
-                    changed = true;
-                }
+        egui::Grid::new("grafica_title_block_grid")
+            .num_columns(2)
+            .spacing([8.0, 4.0])
+            .show(ui, |ui| {
+                let mut field = |ui: &mut egui::Ui, label: &str, value: &mut String| {
+                    ui.label(egui::RichText::new(label).monospace().small());
+                    if ui
+                        .add(egui::TextEdit::singleline(value).desired_width(240.0))
+                        .changed()
+                    {
+                        changed = true;
+                    }
+                    ui.end_row();
+                };
+                field(ui, "TITLE", &mut tb.title);
+                field(ui, "COMPANY", &mut tb.company);
+                field(ui, "DWG NO", &mut tb.drawing_no);
+                field(ui, "REV", &mut tb.revision);
+                field(ui, "DATE", &mut tb.date);
+                field(ui, "DRAWN BY", &mut tb.drawn_by);
+                field(ui, "SHEET", &mut tb.sheet);
             });
-        };
-        field(ui, "TITLE   ", &mut tb.title);
-        field(ui, "COMPANY ", &mut tb.company);
-        field(ui, "DWG NO  ", &mut tb.drawing_no);
-        field(ui, "REV     ", &mut tb.revision);
-        field(ui, "DATE    ", &mut tb.date);
-        field(ui, "DRAWN BY", &mut tb.drawn_by);
-        field(ui, "SHEET   ", &mut tb.sheet);
-        // Push the edited block back when something changed.
         if changed {
             settings.title_block = Some(tb);
         }
-    } else {
-        // Hold on to the field values so toggling the block off and
-        // back on doesn't wipe what the user typed.
-        let _ = tb;
     }
 
     changed

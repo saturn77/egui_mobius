@@ -17,6 +17,15 @@ default = []
 # Retained wgpu rendering pipeline. Off by default so the crate still
 # builds for the glow / web backends, where `render.rs` is the path.
 gpu = ["dep:egui-wgpu", "dep:wgpu", "dep:bytemuck"]
+# Scene → PNG / JPG raster export. resvg pulls in fontdb + tiny-skia
+# transitively; the image crate handles JPEG encoding from the
+# rasterised pixmap.
+export-raster = ["dep:resvg", "dep:image"]
+# Scene → vector PDF via svg2pdf. Shares the usvg parser with the
+# raster path when both features are on.
+export-pdf = ["dep:svg2pdf"]
+# Convenience meta-feature: every available export format.
+export-all = ["export-raster", "export-pdf"]
 
 [dependencies]
 egui                 = { workspace = true }
@@ -28,3 +37,7 @@ serde                = { workspace = true }
 egui-wgpu            = { workspace = true, optional = true }
 wgpu                 = { workspace = true, optional = true }
 bytemuck             = { workspace = true, optional = true }
+# Export backends — feature-gated so the base crate stays lean.
+resvg                = { version = "0.44", optional = true, default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+image                = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png"] }
+svg2pdf              = { version = "0.12", optional = true }
