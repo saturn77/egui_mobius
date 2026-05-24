@@ -29,6 +29,7 @@ pub mod render;
 pub mod interact;
 pub mod citizen;
 pub mod export;
+pub mod inspector;
 pub mod page;
 pub mod registry;
 
