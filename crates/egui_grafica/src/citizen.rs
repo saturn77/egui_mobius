@@ -455,6 +455,16 @@ impl CanvasCitizen {
 
             sep(ui, vertical);
 
+            // Page menu: paper size, orientation, and title-block fields.
+            ui.menu_button(format!("{} Page", ico::FILE), |ui| {
+                ui.set_min_width(260.0);
+                if page_menu(ui, &mut settings) {
+                    settings_changed = true;
+                }
+            });
+
+            sep(ui, vertical);
+
             if ui.button(format!("{} Fit", ico::FRAME_CORNERS)).clicked() {
                 self.pending_fit = true;
             }
@@ -1837,6 +1847,101 @@ fn sep(ui: &mut egui::Ui, vertical: bool) {
     } else {
         ui.separator();
     }
+}
+
+/// Page-menu body: paper size, orientation, and title-block fields.
+/// Returns `true` whenever the user changed anything — caller pushes
+/// the mutated settings back into the registry.
+fn page_menu(ui: &mut egui::Ui, settings: &mut crate::model::CanvasSettings) -> bool {
+    use crate::page::PAPER_SIZES_INCHES;
+    let mut changed = false;
+
+    ui.label(egui::RichText::new("Page").strong());
+
+    // Paper size — "None" leaves the canvas as an unbounded sheet.
+    let selected_paper = settings.paper_size.clone().unwrap_or_else(|| "None".into());
+    egui::ComboBox::from_id_salt("grafica_paper_size")
+        .selected_text(&selected_paper)
+        .width(140.0)
+        .show_ui(ui, |ui| {
+            if ui
+                .selectable_label(settings.paper_size.is_none(), "None")
+                .clicked()
+            {
+                settings.paper_size = None;
+                changed = true;
+            }
+            for (name, _) in PAPER_SIZES_INCHES {
+                if ui
+                    .selectable_label(
+                        settings.paper_size.as_deref() == Some(*name),
+                        *name,
+                    )
+                    .clicked()
+                {
+                    settings.paper_size = Some((*name).into());
+                    changed = true;
+                }
+            }
+        });
+
+    // Orientation — meaningful only when a paper is selected.
+    let mut is_landscape = matches!(
+        settings.paper_orientation.as_deref(),
+        Some(o) if o.eq_ignore_ascii_case("landscape")
+    );
+    ui.horizontal(|ui| {
+        if ui.radio(!is_landscape, "Portrait").clicked() {
+            is_landscape = false;
+            settings.paper_orientation = Some("portrait".into());
+            changed = true;
+        }
+        if ui.radio(is_landscape, "Landscape").clicked() {
+            is_landscape = true;
+            settings.paper_orientation = Some("landscape".into());
+            changed = true;
+        }
+    });
+
+    ui.separator();
+
+    // Title block — toggle + per-field editors.
+    let mut tb = settings.title_block.clone().unwrap_or_default();
+    let mut tb_present = settings.title_block.is_some();
+    if ui.checkbox(&mut tb_present, "Show title block").changed() {
+        settings.title_block = if tb_present { Some(tb.clone()) } else { None };
+        changed = true;
+    }
+    if tb_present {
+        let mut field = |ui: &mut egui::Ui, label: &str, value: &mut String| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(label).small().monospace());
+                if ui
+                    .add(egui::TextEdit::singleline(value).desired_width(180.0))
+                    .changed()
+                {
+                    changed = true;
+                }
+            });
+        };
+        field(ui, "TITLE   ", &mut tb.title);
+        field(ui, "COMPANY ", &mut tb.company);
+        field(ui, "DWG NO  ", &mut tb.drawing_no);
+        field(ui, "REV     ", &mut tb.revision);
+        field(ui, "DATE    ", &mut tb.date);
+        field(ui, "DRAWN BY", &mut tb.drawn_by);
+        field(ui, "SHEET   ", &mut tb.sheet);
+        // Push the edited block back when something changed.
+        if changed {
+            settings.title_block = Some(tb);
+        }
+    } else {
+        // Hold on to the field values so toggling the block off and
+        // back on doesn't wipe what the user typed.
+        let _ = tb;
+    }
+
+    changed
 }
 
 fn routing_label(r: &Routing) -> &'static str {
