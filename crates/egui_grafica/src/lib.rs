@@ -28,6 +28,7 @@ pub mod router;
 pub mod render;
 pub mod interact;
 pub mod citizen;
+pub mod page;
 pub mod registry;
 
 /// Retained wgpu rendering pipeline. Present only with the `gpu` feature;

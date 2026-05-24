@@ -1092,6 +1092,7 @@ mod tests {
                 paper_orientation: Some("portrait".to_string()),
                 default_routing: Routing::Bezier,
                 background: CanvasBackground::Slate,
+                title_block: None,
             },
             nodes: vec![
                 Node {

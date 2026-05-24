@@ -1318,6 +1318,10 @@ impl CanvasCitizen {
         self.registry.with_scene(|scene| {
             // GPU: background, grid, node bodies, edge segments.
             crate::gpu::paint_canvas(&painter, rect, &self.viewport, scene, generation);
+            // Page board (sheet + border + title block) sits under
+            // the nodes so wires draw on top of it.
+            let settings = self.registry.with_scene(|s| s.settings.clone());
+            crate::page::paint_page(&painter, &self.viewport, &settings);
             // Painter: everything the GPU path leaves out.
             crate::render::paint_arrowheads(&painter, scene, &self.viewport);
             crate::render::paint_node_labels(&painter, scene, &self.viewport);
@@ -1332,6 +1336,9 @@ impl CanvasCitizen {
             if settings.show_grid {
                 crate::render::paint_grid(&painter, &self.viewport, &settings, rect);
             }
+            // Page board on top of the grid so the sheet covers it
+            // wherever the paper sits — same visual model simcore uses.
+            crate::page::paint_page(&painter, &self.viewport, &settings);
             self.registry.with_scene(|scene| paint_scene(&painter, scene, &self.viewport));
         }
 

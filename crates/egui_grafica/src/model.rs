@@ -61,6 +61,11 @@ pub struct CanvasSettings {
     pub default_routing: Routing,
     /// Canvas background tone.
     pub background: CanvasBackground,
+    /// Engineering-drawing title block — bottom-right of the page
+    /// when a `paper_size` is configured. `None` means "no title
+    /// block", which is the default for new documents.
+    #[serde(default)]
+    pub title_block: Option<crate::page::TitleBlock>,
 }
 
 impl Default for CanvasSettings {
@@ -76,6 +81,7 @@ impl Default for CanvasSettings {
             paper_orientation: None,
             default_routing: Routing::Orthogonal,
             background: CanvasBackground::Light,
+            title_block: None,
         }
     }
 }
