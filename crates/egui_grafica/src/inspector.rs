@@ -505,9 +505,10 @@ fn rgb_to_hex(rgb: [u8; 3]) -> String {
     format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2])
 }
 
-/// One-row RGB editor: three drag-spinners with a swatch preview.
-/// Pure inline widgets — no popups, so it composes inside any
-/// panel without fighting menu auto-close.
+/// One-row RGB editor: three drag-spinners *and* a clickable
+/// swatch that opens egui's HSV / hex picker popup. The popup is
+/// safe to use here because the Inspector sits in a regular panel,
+/// not inside an auto-closing menu.
 fn rgb_editor(ui: &mut egui::Ui, label: &str, rgb: &mut [u8; 3]) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -530,12 +531,12 @@ fn rgb_editor(ui: &mut egui::Ui, label: &str, rgb: &mut [u8; 3]) -> bool {
         {
             changed = true;
         }
-        let (swatch, _) = ui.allocate_exact_size(egui::vec2(22.0, 18.0), egui::Sense::hover());
-        ui.painter().rect_filled(
-            swatch,
-            2.0,
-            Color32::from_rgb(rgb[0], rgb[1], rgb[2]),
-        );
+        // Clickable color picker — opens a popup with HSV wheel,
+        // value sliders, and a hex field. Stays in sync with the
+        // R/G/B spinners since they share the same `rgb` buffer.
+        if ui.color_edit_button_srgb(rgb).changed() {
+            changed = true;
+        }
     });
     changed
 }
