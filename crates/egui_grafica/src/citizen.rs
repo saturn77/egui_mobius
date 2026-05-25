@@ -1651,7 +1651,22 @@ impl CanvasCitizen {
     }
 
     fn fit_to_rect(&mut self, screen_rect: egui::Rect) {
-        let bounds = self.registry.with_scene(scene_bounds);
+        // Prefer the page sheet when a paper is configured — that's
+        // the "drawing area" the user is composing into, regardless
+        // of where the nodes happen to sit. Fall back to the scene's
+        // node-content bounds otherwise.
+        let bounds = self.registry.with_scene(|s| {
+            crate::page::page_geometry(&s.settings)
+                .map(|g| {
+                    let (sx, sy) = g.origin;
+                    let (sw, sh) = g.paper;
+                    egui::Rect::from_min_size(
+                        egui::pos2(sx, sy),
+                        egui::vec2(sw, sh),
+                    )
+                })
+                .or_else(|| scene_bounds(s))
+        });
         if let Some(b) = bounds {
             self.viewport = viewport_fit_to(b, screen_rect, self.fit_padding);
         }
