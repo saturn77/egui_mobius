@@ -40,6 +40,7 @@ impl ReactiveEditorState {
 /// `.sublime-syntax` under this crate's `syntaxes/` directory and
 /// merged into the SyntaxSet at first use.
 pub const EDITOR_LANGUAGES: &[&str] = &[
+    "Graphica",
     "Rust",
     "JSON",
     "YAML",

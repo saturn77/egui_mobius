@@ -690,7 +690,7 @@ impl CanvasCitizen {
             .current_path
             .as_ref()
             .and_then(|p| p.file_stem().and_then(|s| s.to_str()))
-            .unwrap_or("canvas")
+            .unwrap_or("scene")
             .to_string();
         let label = ext.to_ascii_uppercase();
         let Some(path) = rfd::FileDialog::new()
@@ -737,7 +737,7 @@ impl CanvasCitizen {
 
     fn open_file(&mut self) {
         let Some(path) = rfd::FileDialog::new()
-            .add_filter("canvas DSL", &["canvas"])
+            .add_filter("graphica node", &["gnx"])
             .pick_file()
         else {
             return;
@@ -759,8 +759,8 @@ impl CanvasCitizen {
 
     fn save_as(&mut self) {
         let Some(path) = rfd::FileDialog::new()
-            .add_filter("canvas DSL", &["canvas"])
-            .set_file_name("scene.canvas")
+            .add_filter("graphica node", &["gnx"])
+            .set_file_name("scene.gnx")
             .save_file()
         else {
             return;

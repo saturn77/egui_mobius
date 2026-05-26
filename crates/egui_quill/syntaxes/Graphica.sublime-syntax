@@ -1,0 +1,99 @@
+%YAML 1.2
+---
+# Sublime-syntax grammar for graphica-node `.gnx` source — the DSL
+# the egui_grafica canvas pretty-prints to. Vendored into egui_quill
+# so the syntect-backed highlighter can colour scripts authored in
+# grafica-ide's Editor pane.
+#
+# Comments use Rust idiom: //, ///, //!. The legacy `#` form is
+# still accepted by the parser for back-compat and highlights too.
+# Scope names follow TextMate convention so any syntect theme
+# colours these consistently.
+
+name: Graphica
+file_extensions:
+  - gnx
+scope: source.graphica
+
+contexts:
+  main:
+    # ── Comments ────────────────────────────────────────────────
+    - match: '//[/!]?.*$'
+      scope: comment.line.double-slash.graphica
+    - match: '#.*$'
+      scope: comment.line.number-sign.graphica
+
+    # ── Strings ─────────────────────────────────────────────────
+    - match: '"'
+      scope: punctuation.definition.string.begin.graphica
+      push: double_string
+
+    # ── Numbers ─────────────────────────────────────────────────
+    - match: '\b\d+\.\d+([eE][+-]?\d+)?\b'
+      scope: constant.numeric.float.graphica
+    - match: '\b\d+([eE][+-]?\d+)?\b'
+      scope: constant.numeric.integer.graphica
+
+    # ── Top-level block keywords ────────────────────────────────
+    - match: '\b(canvas|settings|style|node|wire|text)\b'
+      scope: storage.type.graphica
+
+    # ── Node / wire / settings fields ───────────────────────────
+    - match: '\b(at|size|rotation|border|fill|port|stroke|arrow|routing|label)\b'
+      scope: keyword.other.field.graphica
+    - match: '\b(grid|grid_style|dot_size|units|snap|show_grid|paper|orientation|background)\b'
+      scope: keyword.other.field.graphica
+    - match: '\b(value|anchor|font|bold|italic|color)\b'
+      scope: keyword.other.field.graphica
+
+    # ── Built-in enum values ────────────────────────────────────
+    - match: '\b(rect|circle|ellipse|parallelogram|path|group)\b'
+      scope: constant.language.shape.graphica
+    - match: '\b(solid|dashed|dotted)\b'
+      scope: constant.language.linestyle.graphica
+    - match: '\b(north|south|east|west|free)\b'
+      scope: constant.language.anchor.graphica
+    - match: '\b(in|out|bidir|untyped)\b'
+      scope: constant.language.portkind.graphica
+    - match: '\b(orthogonal|bezier|straight|manual)\b'
+      scope: constant.language.routing.graphica
+    - match: '\b(none|arrow|triangle|diamond|circle)\b'
+      scope: constant.language.arrowhead.graphica
+    - match: '\b(center|top_center|bottom_center|left|right|top_left|top_right|bottom_left|bottom_right)\b'
+      scope: constant.language.textanchor.graphica
+    - match: '\b(light|slate|charcoal|dark)\b'
+      scope: constant.language.background.graphica
+    - match: '\b(lines|dots)\b'
+      scope: constant.language.gridstyle.graphica
+    - match: '\b(pixels|mils|millimeters|inches)\b'
+      scope: constant.language.units.graphica
+    - match: '\b(on|off|true|false)\b'
+      scope: constant.language.boolean.graphica
+
+    # ── Wire endpoint dot — node.port reference ─────────────────
+    - match: '\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b'
+      captures:
+        1: variable.other.node.graphica
+        2: variable.other.port.graphica
+
+    # ── Wire arrow ──────────────────────────────────────────────
+    - match: '->'
+      scope: keyword.operator.arrow.graphica
+
+    # ── Block delimiters + structural punctuation ───────────────
+    - match: '[{}]'
+      scope: punctuation.section.block.graphica
+    - match: ':'
+      scope: punctuation.separator.graphica
+
+    # ── Identifiers (node / style / port names) ─────────────────
+    - match: '\b[A-Za-z_][A-Za-z0-9_]*\b'
+      scope: variable.other.graphica
+
+  double_string:
+    - meta_scope: string.quoted.double.graphica
+    - match: '\\.'
+      scope: constant.character.escape.graphica
+    - match: '"'
+      scope: punctuation.definition.string.end.graphica
+      pop: true

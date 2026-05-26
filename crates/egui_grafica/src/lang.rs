@@ -194,7 +194,26 @@ fn lex(src: &str) -> Result<Vec<Lexed>, ParseError> {
                 i += 1;
             }
             '#' => {
+                // `# …` — original DSL comment form, kept for
+                // back-compat. Body runs to end of line.
                 i += 1;
+                let start = i;
+                while i < chars.len() && chars[i] != '\n' {
+                    i += 1;
+                }
+                let text: String = chars[start..i].iter().collect();
+                out.push(Lexed { tok: Tok::Comment(text), line });
+            }
+            '/' if i + 1 < chars.len() && chars[i + 1] == '/' => {
+                // Rust-style line comments: `//`, `///`, `//!`. The
+                // extra slash / bang is stripped here — all three
+                // forms collapse to a plain comment with the same
+                // payload, so the pretty-printer can emit a single
+                // canonical form on save.
+                i += 2;
+                if i < chars.len() && (chars[i] == '/' || chars[i] == '!') {
+                    i += 1;
+                }
                 let start = i;
                 while i < chars.len() && chars[i] != '\n' {
                     i += 1;
@@ -962,7 +981,7 @@ impl<'a> Printer<'a> {
         for block in blocks {
             if &block.anchor == anchor {
                 for text in &block.lines {
-                    self.line(depth, &format!("#{text}"));
+                    self.line(depth, &format!("//{text}"));
                 }
             }
         }
@@ -1501,6 +1520,34 @@ canvas "" {
     }
 
     #[test]
+    fn rust_style_comments_lex_alongside_hash() {
+        // All four comment forms must lex equivalently.
+        let text = "\
+// outer
+//! inner
+/// doc
+# hash
+canvas \"C\" {
+  // before settings
+  settings { grid 5 }
+}
+";
+        let scene = parse(text).expect("parse");
+        assert_eq!(scene.settings.grid_spacing, 5.0);
+    }
+
+    #[test]
+    fn pretty_emits_double_slash_for_comments() {
+        // A document loaded with `#` comments should re-emit using
+        // the new `//` canonical form on save.
+        let src = "# hdr\ncanvas \"C\" {\n  settings { grid 1 }\n}\n";
+        let doc = parse_document(src).expect("parse");
+        let out = pretty_document(&doc);
+        assert!(out.contains("// hdr"), "expected // form in:\n{out}");
+        assert!(!out.contains("# hdr"));
+    }
+
+    #[test]
     fn error_reports_line_number() {
         let text = "canvas \"C\" {\n  settings {\n    grid bogus\n  }\n}\n";
         let err = parse(text).expect_err("should fail");
@@ -1538,9 +1585,9 @@ canvas \"C\" {
         let printed = pretty_document(&doc);
         let reparsed = parse_document(&printed).expect("reparse");
         assert_eq!(reparsed, doc, "document must survive pretty_document -> parse_document");
-        assert!(printed.contains("# file header"));
-        assert!(printed.contains("# about the settings"));
-        assert!(printed.contains("# the alpha node"));
+        assert!(printed.contains("// file header"));
+        assert!(printed.contains("// about the settings"));
+        assert!(printed.contains("// the alpha node"));
     }
 
     #[test]
