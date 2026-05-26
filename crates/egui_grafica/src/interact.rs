@@ -824,6 +824,7 @@ mod tests {
             transform: Transform { position: pos, size, rotation: 0.0 },
             overlay: Overlay::default(),
             ports: vec![],
+            style_ref: None,
         }
     }
 

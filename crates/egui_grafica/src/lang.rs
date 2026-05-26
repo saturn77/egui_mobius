@@ -55,7 +55,7 @@
 use crate::model::{
     ArrowHead, Border, CanvasBackground, CanvasSettings, Edge, EdgeEnd, EdgeId, EdgeOverlay, Fill,
     GridStyle, GridUnits, LineStyle, Node, NodeId, NodeKind, Overlay, Port, PortAnchor, PortId,
-    PortKind, Routing, Scene, TextAnchor, TextLabel, Transform,
+    PortKind, Routing, Scene, Style, TextAnchor, TextLabel, Transform,
 };
 
 // =============================================================================
@@ -461,8 +461,14 @@ impl Parser {
                         scene.settings = self.parse_settings()?;
                         attach(&mut comments, CommentAnchor::Settings, &mut pending);
                     }
+                    "style" => {
+                        let style = self.parse_style_block()?;
+                        scene.styles.push(style);
+                        // Style blocks aren't yet a CommentAnchor target.
+                        pending.clear();
+                    }
                     "node" => {
-                        let node = self.parse_node()?;
+                        let node = self.parse_node_with_styles(&scene.styles)?;
                         let anchor = CommentAnchor::Node(node.id.clone());
                         scene.nodes.push(node);
                         attach(&mut comments, anchor, &mut pending);
@@ -475,7 +481,7 @@ impl Parser {
                     }
                     other => return self.err(format!("unexpected keyword '{other}'")),
                 },
-                _ => return self.err("expected 'settings', 'node', 'wire', or '}'"),
+                _ => return self.err("expected 'settings', 'style', 'node', 'wire', or '}'"),
             }
         }
 
@@ -517,20 +523,51 @@ impl Parser {
 
     // ── node ─────────────────────────────────────────────────────────────
 
-    fn parse_node(&mut self) -> Result<Node, ParseError> {
+    fn parse_node_with_styles(&mut self, styles: &[Style]) -> Result<Node, ParseError> {
         self.expect_kw("node")?;
         let id = self.ident()?;
         self.expect(&Tok::Colon, "':'")?;
         let kind = self.parse_node_kind()?;
+
+        // Optional second colon → style class reference. The style
+        // pre-seeds the node's overlay + ports; inline fields then
+        // override.
+        let mut style_ref: Option<String> = None;
+        if matches!(self.peek(), Some(Tok::Colon)) {
+            self.pos += 1;
+            let name = self.ident()?;
+            style_ref = Some(name);
+        }
+
         self.expect(&Tok::LBrace, "'{'")?;
         self.skip_trivia();
+
+        // Seed the node from the named style, if any.
+        let mut overlay = Overlay::default();
+        let mut ports: Vec<Port> = Vec::new();
+        if let Some(name) = &style_ref {
+            let Some(style) = styles.iter().find(|s| &s.name == name) else {
+                return self.err(format!("unknown style '{name}'"));
+            };
+            if let Some(b) = &style.border {
+                overlay.border = b.clone();
+            }
+            if let Some(f) = &style.fill {
+                overlay.fill = f.clone();
+            }
+            if let Some(t) = &style.text {
+                overlay.text = Some(t.clone());
+            }
+            ports = style.ports.clone();
+        }
 
         let mut node = Node {
             id: NodeId(id),
             kind,
             transform: Transform::default(),
-            overlay: Overlay::default(),
-            ports: Vec::new(),
+            overlay,
+            ports,
+            style_ref,
         };
 
         while !matches!(self.peek(), Some(Tok::RBrace)) {
@@ -542,13 +579,51 @@ impl Parser {
                 "border" => node.overlay.border = self.parse_border()?,
                 "fill" => node.overlay.fill = self.parse_fill()?,
                 "text" => node.overlay.text = Some(self.parse_text()?),
-                "port" => node.ports.push(self.parse_port()?),
+                "port" => {
+                    // Inline ports override style ports with the same id.
+                    let p = self.parse_port()?;
+                    if let Some(slot) = node.ports.iter_mut().find(|sp| sp.id == p.id) {
+                        *slot = p;
+                    } else {
+                        node.ports.push(p);
+                    }
+                }
                 other => return self.err(format!("unknown node property '{other}'")),
             }
             self.end_statement()?;
         }
         self.pos += 1; // consume RBrace
         Ok(node)
+    }
+
+    /// `style NAME { ... }` block — every inner key is optional, mirrors
+    /// the node-field keys but without `at`/`size`/`rotation`.
+    fn parse_style_block(&mut self) -> Result<Style, ParseError> {
+        self.expect_kw("style")?;
+        let name = self.ident()?;
+        self.expect(&Tok::LBrace, "'{'")?;
+        self.skip_trivia();
+
+        let mut style = Style {
+            name,
+            border: None,
+            fill: None,
+            text: None,
+            ports: Vec::new(),
+        };
+        while !matches!(self.peek(), Some(Tok::RBrace)) {
+            let key = self.ident()?;
+            match key.as_str() {
+                "border" => style.border = Some(self.parse_border()?),
+                "fill" => style.fill = Some(self.parse_fill()?),
+                "text" => style.text = Some(self.parse_text()?),
+                "port" => style.ports.push(self.parse_port()?),
+                other => return self.err(format!("unknown style property '{other}'")),
+            }
+            self.end_statement()?;
+        }
+        self.pos += 1; // consume RBrace
+        Ok(style)
     }
 
     fn parse_node_kind(&mut self) -> Result<NodeKind, ParseError> {
@@ -815,10 +890,22 @@ impl<'a> Printer<'a> {
         self.line(0, &format!("canvas {} {{", quote(&scene.name)));
         self.emit_comments(&CommentAnchor::Settings, 1);
         self.print_settings(&scene.settings);
-        for node in &scene.nodes {
+
+        // Style extraction — group nodes by their (overlay, ports)
+        // signature; every group with 2+ members is factored into a
+        // named style and referenced from each member. Single
+        // occurrences inline as before, so a one-off node doesn't
+        // grow a wrapper.
+        let style_table = build_style_table(scene);
+        for style in &style_table.styles {
+            self.out.push('\n');
+            self.print_style(style);
+        }
+
+        for (idx, node) in scene.nodes.iter().enumerate() {
             self.out.push('\n');
             self.emit_comments(&CommentAnchor::Node(node.id.clone()), 1);
-            self.print_node(node);
+            self.print_node(node, style_table.node_style.get(&idx).cloned());
         }
         for edge in &scene.edges {
             // Dangling (free-ended) wires aren't representable in the
@@ -833,6 +920,40 @@ impl<'a> Printer<'a> {
         }
         self.line(0, "}");
         self.out
+    }
+
+    fn print_style(&mut self, style: &Style) {
+        self.line(1, &format!("style {} {{", style.name));
+        if let Some(b) = &style.border {
+            self.line(
+                2,
+                &format!("border {} {} {}", line_style_kw(b.style), num(b.width), quote(&b.color)),
+            );
+        }
+        if let Some(f) = &style.fill {
+            self.line(2, &format!("fill {} {}", quote(&f.color), num(f.alpha)));
+        }
+        if let Some(text) = &style.text {
+            self.print_text_block(2, text);
+        }
+        for port in &style.ports {
+            self.line(2, &self.port_line(port));
+        }
+        self.line(1, "}");
+    }
+
+    fn print_text_block(&mut self, depth: usize, text: &TextLabel) {
+        self.line(depth, "text {");
+        self.line(depth + 1, &format!("value {}", quote(&text.value)));
+        self.line(depth + 1, &format!("anchor {}", text_anchor_kw(text.anchor)));
+        self.line(
+            depth + 1,
+            &format!("font {} {}", quote(&text.font_family), num(text.font_size)),
+        );
+        self.line(depth + 1, &format!("bold {}", onoff(text.bold)));
+        self.line(depth + 1, &format!("italic {}", onoff(text.italic)));
+        self.line(depth + 1, &format!("color {}", quote(&text.color)));
+        self.line(depth, "}");
     }
 
     /// Emit every comment block anchored at `anchor`, as `#`-prefixed lines.
@@ -874,31 +995,51 @@ impl<'a> Printer<'a> {
         self.line(1, "}");
     }
 
-    fn print_node(&mut self, node: &Node) {
-        self.line(1, &format!("node {} : {} {{", node.id.0, node_kind_kw(&node.kind)));
+    fn print_node(&mut self, node: &Node, applied_style: Option<Style>) {
+        let header = match &applied_style {
+            Some(s) => format!("node {} : {} : {} {{", node.id.0, node_kind_kw(&node.kind), s.name),
+            None => format!("node {} : {} {{", node.id.0, node_kind_kw(&node.kind)),
+        };
+        self.line(1, &header);
         let t = &node.transform;
         self.line(2, &format!("at {} {}", num(t.position.0), num(t.position.1)));
         self.line(2, &format!("size {} {}", num(t.size.0), num(t.size.1)));
         self.line(2, &format!("rotation {}", num(t.rotation)));
 
+        // Skip overlay + ports fields when they match the applied style.
+        // Anything that differs gets emitted as an inline override.
+        let style_border = applied_style.as_ref().and_then(|s| s.border.clone());
+        let style_fill = applied_style.as_ref().and_then(|s| s.fill.clone());
+        let style_text = applied_style.as_ref().and_then(|s| s.text.clone());
+        let style_ports: Vec<Port> = applied_style
+            .as_ref()
+            .map(|s| s.ports.clone())
+            .unwrap_or_default();
+
         let b = &node.overlay.border;
-        self.line(2, &format!("border {} {} {}", line_style_kw(b.style), num(b.width), quote(&b.color)));
+        if style_border.as_ref() != Some(b) {
+            self.line(
+                2,
+                &format!("border {} {} {}", line_style_kw(b.style), num(b.width), quote(&b.color)),
+            );
+        }
         let f = &node.overlay.fill;
-        self.line(2, &format!("fill {} {}", quote(&f.color), num(f.alpha)));
+        if style_fill.as_ref() != Some(f) {
+            self.line(2, &format!("fill {} {}", quote(&f.color), num(f.alpha)));
+        }
 
         if let Some(text) = &node.overlay.text {
-            self.line(2, "text {");
-            self.line(3, &format!("value {}", quote(&text.value)));
-            self.line(3, &format!("anchor {}", text_anchor_kw(text.anchor)));
-            self.line(3, &format!("font {} {}", quote(&text.font_family), num(text.font_size)));
-            self.line(3, &format!("bold {}", onoff(text.bold)));
-            self.line(3, &format!("italic {}", onoff(text.italic)));
-            self.line(3, &format!("color {}", quote(&text.color)));
-            self.line(2, "}");
+            if style_text.as_ref() != Some(text) {
+                self.print_text_block(2, text);
+            }
         }
 
         for port in &node.ports {
-            self.line(2, &self.port_line(port));
+            // Only emit ports that differ from (or aren't in) the style.
+            let in_style = style_ports.iter().any(|sp| sp == port);
+            if !in_style {
+                self.line(2, &self.port_line(port));
+            }
         }
         self.line(1, "}");
     }
@@ -950,6 +1091,80 @@ impl<'a> Printer<'a> {
 
 /// Format a float without a trailing `.0` for integral values. Rust's `{}`
 /// for `f32` emits the shortest string that round-trips to the same `f32`.
+/// Result of style harvesting — the list of styles to emit, and a
+/// per-node index → resolved style mapping for inline omission.
+struct StyleTable {
+    styles: Vec<Style>,
+    node_style: std::collections::HashMap<usize, Style>,
+}
+
+/// Walk the scene's nodes and harvest reusable styles. Two policies
+/// govern the result:
+///
+/// 1. If a node already carries a `style_ref` and the scene's
+///    `styles` list contains that name with a matching signature,
+///    use it as-is.
+/// 2. Otherwise group nodes by their `(overlay, ports)` signature;
+///    any group with 2+ members becomes an auto-style named
+///    `s0`, `s1`, ... Single occurrences emit inline (no style).
+fn build_style_table(scene: &Scene) -> StyleTable {
+    // Use Vec linear scan rather than HashMap because Border/Fill
+    // contain f32 (no Hash). The N here is the node count, kept
+    // tiny in practice.
+    let mut groups: Vec<(Overlay, Vec<Port>, Vec<usize>)> = Vec::new();
+    for (idx, node) in scene.nodes.iter().enumerate() {
+        if let Some(slot) = groups
+            .iter_mut()
+            .find(|(o, p, _)| o == &node.overlay && p == &node.ports)
+        {
+            slot.2.push(idx);
+        } else {
+            groups.push((node.overlay.clone(), node.ports.clone(), vec![idx]));
+        }
+    }
+
+    let mut styles: Vec<Style> = Vec::new();
+    let mut node_style: std::collections::HashMap<usize, Style> = std::collections::HashMap::new();
+    let mut auto_counter = 0;
+
+    for (overlay, ports, indices) in groups {
+        if indices.len() < 2 {
+            continue;
+        }
+        // Pick a name: first node with a style_ref wins; else mint sNN.
+        let name = indices
+            .iter()
+            .find_map(|i| scene.nodes[*i].style_ref.clone())
+            .unwrap_or_else(|| {
+                let n = format!("s{auto_counter}");
+                auto_counter += 1;
+                n
+            });
+        let style = Style {
+            name: name.clone(),
+            border: Some(overlay.border.clone()),
+            fill: Some(overlay.fill.clone()),
+            text: overlay.text.clone(),
+            ports: ports.clone(),
+        };
+        styles.push(style.clone());
+        for i in indices {
+            node_style.insert(i, style.clone());
+        }
+    }
+
+    // Carry through any scene-level styles the parser stored that
+    // weren't referenced by a node — preserves user-authored styles
+    // across a round-trip even when nothing currently uses them.
+    for s in &scene.styles {
+        if !styles.iter().any(|x| x.name == s.name) {
+            styles.push(s.clone());
+        }
+    }
+
+    StyleTable { styles, node_style }
+}
+
 fn num(v: f32) -> String {
     if v.is_finite() && v.fract() == 0.0 {
         format!("{}", v as i64)
@@ -1138,6 +1353,7 @@ mod tests {
                             data_type: None,
                         },
                     ],
+                    style_ref: None,
                 },
                 Node {
                     id: NodeId("b".into()),
@@ -1155,6 +1371,7 @@ mod tests {
                         anchor: PortAnchor::Free(0.1, 0.2),
                         data_type: None,
                     }],
+                    style_ref: None,
                 },
             ],
             edges: vec![Edge {
@@ -1172,6 +1389,7 @@ mod tests {
                 },
             }],
             groups: vec![],
+            styles: vec![],
         }
     }
 
@@ -1189,6 +1407,81 @@ mod tests {
         let once = pretty(&scene);
         let twice = pretty(&parse(&once).unwrap());
         assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn shared_overlay_and_ports_factor_into_a_named_style() {
+        // Three rect nodes with identical overlay + ports — the
+        // pretty-printer should emit a single `style s0 { ... }`
+        // block and three lean `node X : rect : s0 { ... }` rows.
+        let make = |id: &str, x: f32, y: f32| Node {
+            id: NodeId(id.into()),
+            kind: NodeKind::Rect,
+            transform: Transform { position: (x, y), size: (80.0, 50.0), rotation: 0.0 },
+            overlay: Overlay {
+                border: Border { color: "#1F2937".into(), width: 2.0, style: LineStyle::Solid },
+                fill: Fill { color: "#DBEAFE".into(), alpha: 0.9 },
+                text: None,
+            },
+            ports: vec![Port {
+                id: PortId("n".into()),
+                name: "n".into(),
+                kind: PortKind::Untyped,
+                anchor: PortAnchor::North(0.5),
+                data_type: None,
+            }],
+            style_ref: None,
+        };
+        let scene = Scene {
+            nodes: vec![make("a", 0.0, 0.0), make("b", 100.0, 0.0), make("c", 200.0, 0.0)],
+            ..Default::default()
+        };
+        let text = pretty(&scene);
+        assert!(text.contains("style s0 {"), "expected style block in:\n{text}");
+        assert!(text.contains("node a : rect : s0"), "expected style ref:\n{text}");
+        // The border field appears exactly once — inside the style
+        // block, not in any of the three node bodies.
+        let border_count = text.matches("border solid").count();
+        assert_eq!(border_count, 1, "border should appear only in the style:\n{text}");
+        // Round-trip preserves the scene exactly.
+        let reparsed = parse(&text).unwrap();
+        assert_eq!(reparsed.nodes.len(), 3);
+        for n in &reparsed.nodes {
+            assert_eq!(n.overlay.border.color, "#1F2937");
+            assert_eq!(n.style_ref.as_deref(), Some("s0"));
+        }
+    }
+
+    #[test]
+    fn inline_field_overrides_the_named_style() {
+        // Two nodes share style "default"; the second overrides fill.
+        // Parse must preserve the override on `b` while leaving `a`
+        // with the style's value.
+        let dsl = r##"
+canvas "" {
+  settings { grid 10 }
+  style default {
+    border solid 2 "#1F2937"
+    fill "#DBEAFE" 0.9
+  }
+  node a : rect : default {
+    at 0 0
+    size 80 50
+    rotation 0
+  }
+  node b : rect : default {
+    at 100 0
+    size 80 50
+    rotation 0
+    fill "#FF0000" 1.0
+  }
+}
+"##;
+        let scene = parse(dsl).expect("parse");
+        assert_eq!(scene.nodes[0].overlay.fill.color, "#DBEAFE");
+        assert_eq!(scene.nodes[1].overlay.fill.color, "#FF0000");
+        assert_eq!(scene.nodes[0].overlay.border.color, "#1F2937");
+        assert_eq!(scene.nodes[1].overlay.border.color, "#1F2937");
     }
 
     #[test]

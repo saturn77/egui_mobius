@@ -656,6 +656,7 @@ mod tests {
                 }),
             },
             ports: vec![],
+            style_ref: None,
         }
     }
 

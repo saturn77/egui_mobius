@@ -188,6 +188,7 @@ mod tests {
             transform: Transform { position: (0.0, 0.0), size: (100.0, 100.0), rotation: 0.0 },
             overlay: Overlay::default(),
             ports: vec![],
+            style_ref: None,
         };
         // Interior of the parallelogram.
         assert!(contour_contains(&node, (50.0, 50.0)));

@@ -38,6 +38,31 @@ pub struct Scene {
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
     pub groups: Vec<Group>,
+    /// Named style classes — re-usable overlay + port templates.
+    /// Nodes reference them through `Node.style_ref`; the DSL
+    /// pretty-printer auto-extracts shared styles from nodes that
+    /// haven't explicitly named one.
+    #[serde(default)]
+    pub styles: Vec<Style>,
+}
+
+/// A named overlay / port template. Fields are `Option`-typed so a
+/// style can carry just a fill, just text, etc. — without forcing
+/// every node referencing it to inherit unrelated defaults.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Style {
+    pub name: String,
+    #[serde(default)]
+    pub border: Option<Border>,
+    #[serde(default)]
+    pub fill: Option<Fill>,
+    #[serde(default)]
+    pub text: Option<TextLabel>,
+    /// Ports applied to every node that references this style. The
+    /// node may add more inline; duplicates by `id` collapse with
+    /// the node's inline ports winning.
+    #[serde(default)]
+    pub ports: Vec<Port>,
 }
 
 /// Canvas-level settings: grid, snap, paper size, routing default, units.
@@ -203,6 +228,11 @@ pub struct Node {
     pub transform: Transform,
     pub overlay: Overlay,
     pub ports: Vec<Port>,
+    /// Name of the style class this node references in the DSL,
+    /// if any. Purely a serialisation hint — the node's `overlay`
+    /// and `ports` already carry the fully-resolved values.
+    #[serde(default)]
+    pub style_ref: Option<String>,
 }
 
 /// The primitive shape backing a node.
