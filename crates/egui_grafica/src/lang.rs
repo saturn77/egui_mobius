@@ -1093,6 +1093,8 @@ mod tests {
                 default_routing: Routing::Bezier,
                 background: CanvasBackground::Slate,
                 title_block: None,
+                port_marker_size: 4.0,
+                port_marker_style: crate::model::PortMarkerStyle::Disc,
             },
             nodes: vec![
                 Node {

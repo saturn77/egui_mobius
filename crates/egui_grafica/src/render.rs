@@ -115,11 +115,33 @@ pub fn paint_waypoints(painter: &Painter, scene: &Scene, viewport: &Viewport) {
 /// grabbable. Handle radius is constant in screen pixels — ports stay the
 /// same grabbable size at any zoom. Filled colour encodes [`PortKind`].
 pub fn paint_ports(painter: &Painter, scene: &Scene, viewport: &Viewport) {
-    const R: f32 = 4.0;
+    let r = scene.settings.port_marker_size.clamp(1.0, 24.0);
+    let style = scene.settings.port_marker_style;
     for node in &scene.nodes {
         for port in &node.ports {
             let p = viewport.world_to_screen(port_position_on_node(node, port));
-            painter.circle(p, R, port_fill(port.kind), Stroke::new(1.0, Color32::from_gray(40)));
+            let fill = port_fill(port.kind);
+            let outline = Stroke::new(1.0, Color32::from_gray(40));
+            match style {
+                crate::model::PortMarkerStyle::Disc => {
+                    painter.circle(p, r, fill, outline);
+                }
+                crate::model::PortMarkerStyle::Ring => {
+                    painter.circle(p, r, Color32::TRANSPARENT, Stroke::new(1.5, fill));
+                }
+                crate::model::PortMarkerStyle::Cross => {
+                    // X — two crossing strokes scaled to `r`.
+                    let s = Stroke::new(1.5, fill);
+                    painter.line_segment(
+                        [Pos2::new(p.x - r, p.y - r), Pos2::new(p.x + r, p.y + r)],
+                        s,
+                    );
+                    painter.line_segment(
+                        [Pos2::new(p.x - r, p.y + r), Pos2::new(p.x + r, p.y - r)],
+                        s,
+                    );
+                }
+            }
         }
     }
 }

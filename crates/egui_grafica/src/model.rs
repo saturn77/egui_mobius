@@ -66,6 +66,16 @@ pub struct CanvasSettings {
     /// block", which is the default for new documents.
     #[serde(default)]
     pub title_block: Option<crate::page::TitleBlock>,
+    /// Screen-space radius of port markers, in pixels.
+    #[serde(default = "default_port_marker_size")]
+    pub port_marker_size: f32,
+    /// Visual style of port markers.
+    #[serde(default)]
+    pub port_marker_style: PortMarkerStyle,
+}
+
+fn default_port_marker_size() -> f32 {
+    4.0
 }
 
 impl Default for CanvasSettings {
@@ -82,6 +92,8 @@ impl Default for CanvasSettings {
             default_routing: Routing::Orthogonal,
             background: CanvasBackground::Light,
             title_block: None,
+            port_marker_size: default_port_marker_size(),
+            port_marker_style: PortMarkerStyle::default(),
         }
     }
 }
@@ -123,6 +135,29 @@ pub enum GridStyle {
     Lines,
     /// A dot at every grid intersection. Cleaner for dense diagrams.
     Dots,
+}
+
+/// Visual style for port markers — small symbols painted at every
+/// node's port to make connection points discoverable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PortMarkerStyle {
+    /// Filled disc — solid round dot.
+    #[default]
+    Disc,
+    /// Ring — outlined circle with no fill.
+    Ring,
+    /// Cross — small X-shaped tick.
+    Cross,
+}
+
+impl PortMarkerStyle {
+    pub fn label(self) -> &'static str {
+        match self {
+            PortMarkerStyle::Disc => "Solid (●)",
+            PortMarkerStyle::Ring => "Ring (○)",
+            PortMarkerStyle::Cross => "Cross (×)",
+        }
+    }
 }
 
 /// Display unit for grid values in the ribbon. Affects labels only.
