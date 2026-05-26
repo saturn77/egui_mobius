@@ -148,6 +148,17 @@ pub struct CanvasCitizen {
     /// In-app clipboard for Ctrl+C / Ctrl+V. Stores cloned nodes
     /// and any edges that were fully inside the copied selection.
     clipboard: Option<Clipboard>,
+    /// Style clipboard — populated by Ctrl+Shift+C, applied by
+    /// Ctrl+Shift+V. Carries the fill + border of the source node
+    /// so a colour can be propagated across widgets without
+    /// rebuilding it field-by-field in the Inspector.
+    style_clipboard: Option<StyleClipboard>,
+}
+
+#[derive(Clone)]
+struct StyleClipboard {
+    fill: Fill,
+    border: Border,
 }
 
 #[derive(Clone)]
@@ -166,6 +177,22 @@ enum ContextAction {
     SetEdgeOverlay(EdgeId, EdgeOverlay),
     SetNodeOverlay(NodeId, Overlay),
     DuplicateNode(NodeId),
+    AlignSelection(Align),
+    DistributeSelection(Distribute),
+}
+
+#[derive(Clone, Copy)]
+enum Align {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy)]
+enum Distribute {
+    Horizontal,
+    Vertical,
 }
 
 fn hex_to_rgb(hex: &str) -> [u8; 3] {
@@ -231,6 +258,7 @@ impl CanvasCitizen {
             edit_buffer: String::new(),
             show_page_modal: false,
             clipboard: None,
+            style_clipboard: None,
         }
     }
 
@@ -1216,7 +1244,7 @@ impl CanvasCitizen {
             // also fire 'Z' / 'Y' actions (e.g. the Y-axis mirror).
             let mods = ui.input(|i| i.modifiers);
             let plain = !mods.ctrl && !mods.alt;
-            let (g, x, y, r, a, z, yk, c, v, d) = ui.input(|i| {
+            let (g, x, y, r, a, z, yk, c, v, d, s) = ui.input(|i| {
                 (
                     i.key_pressed(Key::G),
                     i.key_pressed(Key::X),
@@ -1228,6 +1256,7 @@ impl CanvasCitizen {
                     i.key_pressed(Key::C),
                     i.key_pressed(Key::V),
                     i.key_pressed(Key::D),
+                    i.key_pressed(Key::S),
                 )
             });
             if plain {
@@ -1276,6 +1305,25 @@ impl CanvasCitizen {
             }
             if mods.ctrl && !mods.shift && d {
                 self.duplicate_selection();
+            }
+            // Ctrl+Shift+C / Ctrl+Shift+V — copy / paste the fill +
+            // border style of the selected node onto others. Useful
+            // for applying a colour across many widgets at once.
+            if mods.ctrl && mods.shift && c {
+                self.copy_style_from_selection();
+            }
+            if mods.ctrl && mods.shift && v {
+                self.paste_style_to_selection();
+            }
+            // Ctrl+S — save the current scene to its `.canvas` path,
+            // or open a Save As dialog if untitled. Save As is
+            // Ctrl+Shift+S.
+            if mods.ctrl && s {
+                if mods.shift || self.current_path.is_none() {
+                    self.save_as();
+                } else {
+                    self.save_to_current();
+                }
             }
 
             if ui.input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
@@ -1398,7 +1446,49 @@ impl CanvasCitizen {
         // node body. The whole menu is suppressed during inline text
         // editing.
         if !editing {
+            let multi_select = self.selection.nodes.len() >= 2;
             response.context_menu(|ui| {
+                // Multi-selection align / distribute sits at the top
+                // of the menu — visible regardless of what the cursor
+                // is hovering, since the action applies to *every*
+                // selected widget at once.
+                if multi_select {
+                    ui.menu_button("Align", |ui| {
+                        if ui.button("Top").clicked() {
+                            action = Some(ContextAction::AlignSelection(Align::Top));
+                            ui.close();
+                        }
+                        if ui.button("Bottom").clicked() {
+                            action = Some(ContextAction::AlignSelection(Align::Bottom));
+                            ui.close();
+                        }
+                        if ui.button("Left").clicked() {
+                            action = Some(ContextAction::AlignSelection(Align::Left));
+                            ui.close();
+                        }
+                        if ui.button("Right").clicked() {
+                            action = Some(ContextAction::AlignSelection(Align::Right));
+                            ui.close();
+                        }
+                    });
+                    if self.selection.nodes.len() >= 3 {
+                        ui.menu_button("Distribute", |ui| {
+                            if ui.button("Horizontally").clicked() {
+                                action = Some(ContextAction::DistributeSelection(
+                                    Distribute::Horizontal,
+                                ));
+                                ui.close();
+                            }
+                            if ui.button("Vertically").clicked() {
+                                action = Some(ContextAction::DistributeSelection(
+                                    Distribute::Vertical,
+                                ));
+                                ui.close();
+                            }
+                        });
+                    }
+                    ui.separator();
+                }
                 if let Some((eid, idx)) = &hit_wp {
                     if ui.button("Delete pivot").clicked() {
                         action = Some(ContextAction::DeletePivot(eid.clone(), *idx));
@@ -1892,6 +1982,50 @@ impl CanvasCitizen {
         self.selection.segments.clear();
     }
 
+    /// Grab fill + border from the first selected node and store it
+    /// on the style clipboard. No-op when nothing is selected — the
+    /// previous clipboard contents survive in case the user clicks
+    /// off by accident.
+    fn copy_style_from_selection(&mut self) {
+        let Some(nid) = self.selection.nodes.first().cloned() else {
+            return;
+        };
+        let overlay = self
+            .registry
+            .with_scene(|s| s.nodes.iter().find(|n| n.id == nid).map(|n| n.overlay.clone()));
+        if let Some(overlay) = overlay {
+            self.style_clipboard = Some(StyleClipboard {
+                fill: overlay.fill,
+                border: overlay.border,
+            });
+        }
+    }
+
+    /// Apply the style clipboard's fill + border to every selected
+    /// node. Text labels are left alone — only the colour-bearing
+    /// fields get copied so the user can tint widgets without
+    /// stomping their per-node labels.
+    fn paste_style_to_selection(&mut self) {
+        let Some(style) = self.style_clipboard.clone() else {
+            return;
+        };
+        if self.selection.nodes.is_empty() {
+            return;
+        }
+        self.registry.begin_undo_batch();
+        for nid in self.selection.nodes.clone() {
+            let current = self
+                .registry
+                .with_scene(|s| s.nodes.iter().find(|n| n.id == nid).map(|n| n.overlay.clone()));
+            if let Some(mut overlay) = current {
+                overlay.fill = style.fill.clone();
+                overlay.border = style.border.clone();
+                self.registry.update_node_overlay(&nid, overlay);
+            }
+        }
+        self.registry.end_undo_batch();
+    }
+
     /// Remove every selected edge and node through the registry. Removing a
     /// node also drops its attached edges (registry handles the cascade).
     fn delete_selection(&mut self) {
@@ -2046,7 +2180,118 @@ impl CanvasCitizen {
                     self.selection.segments.clear();
                 }
             }
+            ContextAction::AlignSelection(kind) => self.align_selection(kind),
+            ContextAction::DistributeSelection(kind) => self.distribute_selection(kind),
         }
+    }
+
+    /// Align every selected node to a single shared edge — Top sets
+    /// the same `y`; Left sets the same `x`; Bottom / Right align
+    /// the far edge so widgets of mixed sizes share the same outer
+    /// boundary. One undo step per align.
+    fn align_selection(&mut self, kind: Align) {
+        if self.selection.nodes.len() < 2 {
+            return;
+        }
+        let snapshots = self.registry.with_scene(|s| {
+            self.selection
+                .nodes
+                .iter()
+                .filter_map(|id| s.nodes.iter().find(|n| &n.id == id))
+                .map(|n| {
+                    let (x, y) = n.transform.position;
+                    let (w, h) = n.transform.size;
+                    (n.id.clone(), x, y, w, h)
+                })
+                .collect::<Vec<_>>()
+        });
+        if snapshots.is_empty() {
+            return;
+        }
+        let (min_x, min_y, max_right, max_bottom) = snapshots.iter().fold(
+            (f32::INFINITY, f32::INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY),
+            |acc, (_, x, y, w, h)| {
+                (acc.0.min(*x), acc.1.min(*y), acc.2.max(x + w), acc.3.max(y + h))
+            },
+        );
+        self.registry.begin_undo_batch();
+        for (id, x, y, w, h) in snapshots {
+            let pos = match kind {
+                Align::Top => (x, min_y),
+                Align::Bottom => (x, max_bottom - h),
+                Align::Left => (min_x, y),
+                Align::Right => (max_right - w, y),
+            };
+            self.registry.set_node_transform(&id, pos, (w, h));
+        }
+        self.registry.end_undo_batch();
+    }
+
+    /// Distribute selected nodes so their centres are evenly spaced
+    /// along the requested axis. First and last (by current centre)
+    /// stay put; interior nodes shift to evenly-spaced positions.
+    fn distribute_selection(&mut self, kind: Distribute) {
+        if self.selection.nodes.len() < 3 {
+            return;
+        }
+        let mut snapshots = self.registry.with_scene(|s| {
+            self.selection
+                .nodes
+                .iter()
+                .filter_map(|id| s.nodes.iter().find(|n| &n.id == id))
+                .map(|n| {
+                    let (x, y) = n.transform.position;
+                    let (w, h) = n.transform.size;
+                    (n.id.clone(), x, y, w, h)
+                })
+                .collect::<Vec<_>>()
+        });
+        if snapshots.len() < 3 {
+            return;
+        }
+        // Sort by centre along the chosen axis.
+        match kind {
+            Distribute::Horizontal => {
+                snapshots.sort_by(|a, b| {
+                    let ca = a.1 + a.3 * 0.5;
+                    let cb = b.1 + b.3 * 0.5;
+                    ca.partial_cmp(&cb).unwrap_or(std::cmp::Ordering::Equal)
+                });
+            }
+            Distribute::Vertical => {
+                snapshots.sort_by(|a, b| {
+                    let ca = a.2 + a.4 * 0.5;
+                    let cb = b.2 + b.4 * 0.5;
+                    ca.partial_cmp(&cb).unwrap_or(std::cmp::Ordering::Equal)
+                });
+            }
+        }
+        let n = snapshots.len();
+        let first = &snapshots[0];
+        let last = &snapshots[n - 1];
+        self.registry.begin_undo_batch();
+        for (idx, (id, x, y, w, h)) in snapshots.iter().enumerate() {
+            if idx == 0 || idx == n - 1 {
+                continue;
+            }
+            let t = idx as f32 / (n - 1) as f32;
+            let pos = match kind {
+                Distribute::Horizontal => {
+                    let c0 = first.1 + first.3 * 0.5;
+                    let c_n = last.1 + last.3 * 0.5;
+                    let cx = c0 + (c_n - c0) * t;
+                    (cx - w * 0.5, *y)
+                }
+                Distribute::Vertical => {
+                    let c0 = first.2 + first.4 * 0.5;
+                    let c_n = last.2 + last.4 * 0.5;
+                    let cy = c0 + (c_n - c0) * t;
+                    (*x, cy - h * 0.5)
+                }
+            };
+            self.registry.set_node_transform(id, pos, (*w, *h));
+        }
+        self.registry.end_undo_batch();
     }
 
     fn apply_routing_to_all(&self, routing: Routing) {
@@ -2074,9 +2319,13 @@ impl CanvasCitizen {
 }
 
 const HOTKEY_TABLE: &[(&str, &str)] = &[
+    ("Ctrl+S", "Save canvas to DSL"),
+    ("Ctrl+Shift+S", "Save As…"),
     ("Ctrl+C", "Copy selection"),
     ("Ctrl+V", "Paste at cursor"),
     ("Ctrl+D", "Duplicate selection"),
+    ("Ctrl+Shift+C", "Copy fill + border style"),
+    ("Ctrl+Shift+V", "Paste style to selection"),
     ("G", "Toggle grid"),
     ("X", "Mirror about X axis"),
     ("Y", "Mirror about Y axis"),
