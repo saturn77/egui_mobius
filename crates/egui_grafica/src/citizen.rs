@@ -2178,6 +2178,7 @@ fn default_label_for(tool: ShapeTool) -> &'static str {
 /// wires from a body face.
 fn default_ports_for(tool: ShapeTool) -> Vec<Port> {
     match tool {
+        // The node-graph widget keeps its 2-in / 2-out compute layout.
         ShapeTool::NodeGraph => vec![
             Port {
                 id: PortId("in0".into()),
@@ -2208,8 +2209,32 @@ fn default_ports_for(tool: ShapeTool) -> Vec<Port> {
                 data_type: None,
             },
         ],
-        _ => vec![],
+        // Text labels are decorative — no ports.
+        ShapeTool::Text | ShapeTool::Select => vec![],
+        // Every other primitive (Rect / Square / Circle / Ellipse /
+        // Parallelogram) gets the four-quadrant N / E / S / W default
+        // ports, midpoint of each face. Wires can attach from any
+        // side immediately on placement.
+        _ => quadrant_ports(),
     }
+}
+
+/// Four cardinal ports at the midpoints of each face — the
+/// CAD-standard "4 quadrants" default for a fresh widget.
+fn quadrant_ports() -> Vec<Port> {
+    let mk = |id: &str, anchor: PortAnchor| Port {
+        id: PortId(id.into()),
+        name: id.into(),
+        kind: PortKind::Untyped,
+        anchor,
+        data_type: None,
+    };
+    vec![
+        mk("n", PortAnchor::North(0.5)),
+        mk("e", PortAnchor::East(0.5)),
+        mk("s", PortAnchor::South(0.5)),
+        mk("w", PortAnchor::West(0.5)),
+    ]
 }
 
 fn file_name(p: &Path) -> String {
@@ -2372,15 +2397,35 @@ mod tests {
     }
 
     #[test]
-    fn other_shape_tools_remain_portless() {
+    fn standard_primitives_get_four_quadrant_ports() {
         for tool in [
             ShapeTool::Rect,
             ShapeTool::Square,
             ShapeTool::Circle,
             ShapeTool::Ellipse,
             ShapeTool::Parallelogram,
-            ShapeTool::Text,
         ] {
+            let node = make_shape_node(tool, NodeId("x".into()), (0.0, 0.0));
+            assert_eq!(node.ports.len(), 4, "{tool:?} should have 4 quadrant ports");
+            // One port on each face — the four cardinal directions.
+            let faces: std::collections::HashSet<&'static str> = node
+                .ports
+                .iter()
+                .map(|p| match p.anchor {
+                    PortAnchor::North(_) => "N",
+                    PortAnchor::South(_) => "S",
+                    PortAnchor::East(_) => "E",
+                    PortAnchor::West(_) => "W",
+                    PortAnchor::Free(..) => "F",
+                })
+                .collect();
+            assert_eq!(faces.len(), 4, "{tool:?} ports should cover N/E/S/W");
+        }
+    }
+
+    #[test]
+    fn text_and_select_tools_remain_portless() {
+        for tool in [ShapeTool::Text, ShapeTool::Select] {
             let node = make_shape_node(tool, NodeId("x".into()), (0.0, 0.0));
             assert!(node.ports.is_empty(), "{tool:?} should not seed ports");
         }

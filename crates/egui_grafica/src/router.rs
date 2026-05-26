@@ -23,16 +23,88 @@ const BEZIER_SEGMENTS: usize = 32;
 // Port geometry
 // =============================================================================
 
-/// World-space position of a port, from its node's transform and the port's
-/// parametric anchor.
+/// World-space position of a port, projected onto the node's actual
+/// *geometric contour* — not its axis-aligned bounding box.
+///
+/// For a [`NodeKind::Rect`] the contour *is* the bbox, so the result
+/// matches the parametric face-anchor directly. For circles, ellipses
+/// and parallelograms the bbox anchor is first computed, then projected
+/// onto the real outline so wires land on the visible shape edge
+/// (which is what the user sees and reaches for) rather than the
+/// invisible bbox corner.
 pub fn port_position_on_node(node: &Node, port: &Port) -> (f32, f32) {
+    let bbox = port_position_on_bbox(node, &port.anchor);
+    match node.kind {
+        crate::model::NodeKind::Rect => bbox,
+        crate::model::NodeKind::Circle | crate::model::NodeKind::Ellipse => {
+            project_to_ellipse(node, bbox)
+        }
+        crate::model::NodeKind::Parallelogram => project_to_parallelogram(node, &port.anchor),
+        // Path / Group: leave on bbox until those kinds get a real
+        // contour API. They are rare on the canvas and Path users
+        // generally place ports manually via PortAnchor::Free.
+        crate::model::NodeKind::Path(_) | crate::model::NodeKind::Group(_) => bbox,
+    }
+}
+
+/// Raw bounding-box port position — used internally by the contour
+/// projectors and as the fallback for shapes without a custom
+/// outline mapping.
+fn port_position_on_bbox(node: &Node, anchor: &PortAnchor) -> (f32, f32) {
     let (x, y) = node.transform.position;
     let (w, h) = node.transform.size;
-    match port.anchor {
+    match anchor {
         PortAnchor::North(t) => (x + w * t, y),
         PortAnchor::South(t) => (x + w * t, y + h),
         PortAnchor::East(t) => (x + w, y + h * t),
         PortAnchor::West(t) => (x, y + h * t),
+        PortAnchor::Free(fx, fy) => (x + w * fx, y + h * fy),
+    }
+}
+
+/// Project a point onto the ellipse inscribed in the node's bounding
+/// box, by tracing a ray from the centre through the point and
+/// intersecting the ellipse curve. Works for both Circle and Ellipse —
+/// a circle is just the rx == ry case.
+fn project_to_ellipse(node: &Node, bbox_pt: (f32, f32)) -> (f32, f32) {
+    let (x, y) = node.transform.position;
+    let (w, h) = node.transform.size;
+    let cx = x + w * 0.5;
+    let cy = y + h * 0.5;
+    let rx = w * 0.5;
+    let ry = h * 0.5;
+    let dx = bbox_pt.0 - cx;
+    let dy = bbox_pt.1 - cy;
+    // Degenerate cases — collapsed shape or anchor at the centre.
+    if rx <= 1e-3 || ry <= 1e-3 {
+        return bbox_pt;
+    }
+    let denom = ((dx / rx).powi(2) + (dy / ry).powi(2)).sqrt();
+    if denom < 1e-6 {
+        return (cx, cy);
+    }
+    let s = 1.0 / denom;
+    (cx + dx * s, cy + dy * s)
+}
+
+/// Project an anchor onto the parallelogram's *slanted* edges (rather
+/// than its rectangular bbox). The skew matches the one the renderer
+/// uses — [`crate::geometry::PARALLELOGRAM_SKEW_RATIO`].
+fn project_to_parallelogram(node: &Node, anchor: &PortAnchor) -> (f32, f32) {
+    let (x, y) = node.transform.position;
+    let (w, h) = node.transform.size;
+    let skew = h * crate::geometry::PARALLELOGRAM_SKEW_RATIO;
+    match anchor {
+        // Top edge: (x+skew, y) → (x+w, y).
+        PortAnchor::North(t) => (x + skew + (w - skew) * t, y),
+        // Bottom edge: (x, y+h) → (x+w-skew, y+h).
+        PortAnchor::South(t) => (x + (w - skew) * t, y + h),
+        // Right slanted edge: (x+w, y) → (x+w-skew, y+h).
+        PortAnchor::East(t) => (x + w - skew * t, y + h * t),
+        // Left slanted edge: (x+skew, y) → (x, y+h).
+        PortAnchor::West(t) => (x + skew * (1.0 - t), y + h * t),
+        // Free: bbox-local — drawn the same way as Rect because there
+        // is no "face" to project against.
         PortAnchor::Free(fx, fy) => (x + w * fx, y + h * fy),
     }
 }
