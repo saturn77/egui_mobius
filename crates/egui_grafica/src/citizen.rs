@@ -153,6 +153,10 @@ pub struct CanvasCitizen {
     /// so a colour can be propagated across widgets without
     /// rebuilding it field-by-field in the Inspector.
     style_clipboard: Option<StyleClipboard>,
+    /// Set by save paths whenever the canvas is pretty-printed to
+    /// DSL — picked up by [`take_pending_dsl`] so a hosting IDE can
+    /// reflect the saved text in an editor panel.
+    pending_dsl_sync: Option<String>,
 }
 
 #[derive(Clone)]
@@ -259,6 +263,7 @@ impl CanvasCitizen {
             show_page_modal: false,
             clipboard: None,
             style_clipboard: None,
+            pending_dsl_sync: None,
         }
     }
 
@@ -772,10 +777,25 @@ impl CanvasCitizen {
             scene: self.registry.scene(),
             comments: self.loaded_comments.clone(),
         };
-        match std::fs::write(&path, lang::pretty_document(&doc)) {
-            Ok(()) => self.status = format!("Saved {}", file_name(&path)),
+        let dsl = lang::pretty_document(&doc);
+        match std::fs::write(&path, &dsl) {
+            Ok(()) => {
+                self.status = format!("Saved {}", file_name(&path));
+                // Hand the freshly-pretty-printed DSL up to whoever
+                // hosts this citizen (e.g. grafica-ide's editor pane)
+                // so the source view reflects what was just written.
+                self.pending_dsl_sync = Some(dsl);
+            }
             Err(e) => self.status = format!("Write error — {e}"),
         }
+    }
+
+    /// Drain any DSL text the canvas pretty-printed during a save.
+    /// Callers (the IDE shell, typically) use this to keep an editor
+    /// view in sync with the canvas after Ctrl+S. Returns `None`
+    /// when nothing new has been saved since the last call.
+    pub fn take_pending_dsl(&mut self) -> Option<String> {
+        self.pending_dsl_sync.take()
     }
 
     fn show_canvas(&mut self, ui: &mut egui::Ui) {
