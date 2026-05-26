@@ -145,6 +145,15 @@ pub struct CanvasCitizen {
     /// Page setup modal — open / closed flag persisted across frames
     /// so the window stays put and the text-edits keep their state.
     show_page_modal: bool,
+    /// In-app clipboard for Ctrl+C / Ctrl+V. Stores cloned nodes
+    /// and any edges that were fully inside the copied selection.
+    clipboard: Option<Clipboard>,
+}
+
+#[derive(Clone)]
+struct Clipboard {
+    nodes: Vec<Node>,
+    edges: Vec<Edge>,
 }
 
 /// An action chosen from the right-click context menu, applied after the
@@ -156,6 +165,7 @@ enum ContextAction {
     AddPort(NodeId, (f32, f32)),
     SetEdgeOverlay(EdgeId, EdgeOverlay),
     SetNodeOverlay(NodeId, Overlay),
+    DuplicateNode(NodeId),
 }
 
 fn hex_to_rgb(hex: &str) -> [u8; 3] {
@@ -220,6 +230,7 @@ impl CanvasCitizen {
             editing_node: None,
             edit_buffer: String::new(),
             show_page_modal: false,
+            clipboard: None,
         }
     }
 
@@ -1205,7 +1216,7 @@ impl CanvasCitizen {
             // also fire 'Z' / 'Y' actions (e.g. the Y-axis mirror).
             let mods = ui.input(|i| i.modifiers);
             let plain = !mods.ctrl && !mods.alt;
-            let (g, x, y, r, a, z, yk) = ui.input(|i| {
+            let (g, x, y, r, a, z, yk, c, v, d) = ui.input(|i| {
                 (
                     i.key_pressed(Key::G),
                     i.key_pressed(Key::X),
@@ -1214,6 +1225,9 @@ impl CanvasCitizen {
                     i.key_pressed(Key::A),
                     i.key_pressed(Key::Z),
                     i.key_pressed(Key::Y),
+                    i.key_pressed(Key::C),
+                    i.key_pressed(Key::V),
+                    i.key_pressed(Key::D),
                 )
             });
             if plain {
@@ -1250,6 +1264,18 @@ impl CanvasCitizen {
             }
             if mods.ctrl && !mods.shift && yk {
                 self.registry.redo();
+            }
+            // Ctrl+C / Ctrl+V / Ctrl+D — clipboard + duplicate. Plain
+            // C / V / D do nothing on the canvas, so the modifier guard
+            // is the whole story.
+            if mods.ctrl && !mods.shift && c {
+                self.copy_selection();
+            }
+            if mods.ctrl && !mods.shift && v {
+                self.paste_clipboard();
+            }
+            if mods.ctrl && !mods.shift && d {
+                self.duplicate_selection();
             }
 
             if ui.input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
@@ -1380,9 +1406,19 @@ impl CanvasCitizen {
                     }
                 } else if let Some(nid) = &hit_node {
                     // Label editing isn't on the context menu — it
-                    // lives on double-click of the node body. The menu
-                    // only carries the style + structural edits.
+                    // lives on double-click of the node body. Style
+                    // edits live in the Inspector. The menu only
+                    // carries structural / clipboard actions.
+                    if ui.button("Duplicate").clicked() {
+                        action = Some(ContextAction::DuplicateNode(nid.clone()));
+                        ui.close();
+                    }
+                    if ui.button("Add connection").clicked() {
+                        action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
+                        ui.close();
+                    }
                     if let Some(overlay) = &node_overlay {
+                        ui.separator();
                         ui.menu_button("Border", |ui| {
                             let mut next = overlay.clone();
                             let mut rgb = hex_to_rgb(&next.border.color);
@@ -1391,18 +1427,10 @@ impl CanvasCitizen {
                             ui.add(
                                 egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("Width"),
                             );
-                            // Dashed / dotted not rendered yet — the
-                            // selector returns when the perimeter dash
-                            // pattern lands in the node shader.
                             if next != *overlay {
                                 action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
                             }
                         });
-                        ui.separator();
-                    }
-                    if ui.button("Add connection").clicked() {
-                        action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
-                        ui.close();
                     }
                 } else if let Some(eid) = &hit_edge {
                     if ui.button("Delete segment").clicked() {
@@ -1672,6 +1700,198 @@ impl CanvasCitizen {
         }
     }
 
+    /// Clone the given set of nodes back into the scene with fresh
+    /// IDs and a positional offset. Any edges that are fully
+    /// internal to the set come with — their endpoints are
+    /// rewritten to the new IDs. Edges that cross the selection
+    /// boundary are skipped (they'd otherwise re-attach to the
+    /// originals and look like ghosts). Returns the list of newly
+    /// minted node IDs so the caller can select them.
+    fn clone_nodes_with_offset(
+        &mut self,
+        source_nodes: &[NodeId],
+        offset: (f32, f32),
+    ) -> Vec<NodeId> {
+        if source_nodes.is_empty() {
+            return Vec::new();
+        }
+        // One undo step covers the whole duplicate.
+        self.registry.begin_undo_batch();
+
+        let (originals, edges_in_set) = self.registry.with_scene(|s| {
+            let nodes: Vec<Node> = source_nodes
+                .iter()
+                .filter_map(|id| s.nodes.iter().find(|n| &n.id == id).cloned())
+                .collect();
+            let id_set: std::collections::HashSet<NodeId> =
+                source_nodes.iter().cloned().collect();
+            let edges: Vec<Edge> = s
+                .edges
+                .iter()
+                .filter(|e| match (&e.from, &e.to) {
+                    (EdgeEnd::Port(a, _), EdgeEnd::Port(b, _)) => {
+                        id_set.contains(a) && id_set.contains(b)
+                    }
+                    _ => false,
+                })
+                .cloned()
+                .collect();
+            (nodes, edges)
+        });
+
+        let mut id_map: std::collections::HashMap<NodeId, NodeId> =
+            std::collections::HashMap::new();
+        let mut new_ids: Vec<NodeId> = Vec::with_capacity(originals.len());
+
+        for mut node in originals {
+            let new_id = self.registry.with_scene(fresh_node_id);
+            id_map.insert(node.id.clone(), new_id.clone());
+            node.id = new_id.clone();
+            node.transform.position.0 += offset.0;
+            node.transform.position.1 += offset.1;
+            self.registry.add_node(node);
+            new_ids.push(new_id);
+        }
+
+        for mut edge in edges_in_set {
+            let new_eid = self.registry.with_scene(fresh_edge_id);
+            edge.id = new_eid;
+            if let EdgeEnd::Port(n, p) = &edge.from
+                && let Some(new_n) = id_map.get(n)
+            {
+                edge.from = EdgeEnd::Port(new_n.clone(), p.clone());
+            }
+            if let EdgeEnd::Port(n, p) = &edge.to
+                && let Some(new_n) = id_map.get(n)
+            {
+                edge.to = EdgeEnd::Port(new_n.clone(), p.clone());
+            }
+            // Translate any manual waypoints by the same offset so
+            // routed shape of the wire follows its endpoints.
+            if let Routing::Manual { waypoints } = &mut edge.routing {
+                for w in waypoints.iter_mut() {
+                    w.0 += offset.0;
+                    w.1 += offset.1;
+                }
+            }
+            self.registry.add_edge(edge);
+        }
+
+        self.registry.end_undo_batch();
+        new_ids
+    }
+
+    /// Duplicate the current node selection in place, with a small
+    /// down-right offset so the copies are visible and selectable.
+    /// After the duplicate, only the copies are selected — Ctrl+D
+    /// style flow.
+    fn duplicate_selection(&mut self) {
+        const OFFSET: (f32, f32) = (20.0, 20.0);
+        let new_ids = self.clone_nodes_with_offset(&self.selection.nodes.clone(), OFFSET);
+        if !new_ids.is_empty() {
+            self.selection.nodes = new_ids;
+            self.selection.edges.clear();
+            self.selection.segments.clear();
+        }
+    }
+
+    /// Snapshot the current selection (nodes + internal edges) into
+    /// the in-app clipboard. World positions are stored so paste can
+    /// offset relative to them.
+    fn copy_selection(&mut self) {
+        let nodes_and_edges = self.registry.with_scene(|s| {
+            let id_set: std::collections::HashSet<NodeId> =
+                self.selection.nodes.iter().cloned().collect();
+            let nodes: Vec<Node> = self
+                .selection
+                .nodes
+                .iter()
+                .filter_map(|id| s.nodes.iter().find(|n| &n.id == id).cloned())
+                .collect();
+            let edges: Vec<Edge> = s
+                .edges
+                .iter()
+                .filter(|e| match (&e.from, &e.to) {
+                    (EdgeEnd::Port(a, _), EdgeEnd::Port(b, _)) => {
+                        id_set.contains(a) && id_set.contains(b)
+                    }
+                    _ => false,
+                })
+                .cloned()
+                .collect();
+            (nodes, edges)
+        });
+        let (nodes, edges) = nodes_and_edges;
+        if nodes.is_empty() {
+            return;
+        }
+        self.clipboard = Some(Clipboard { nodes, edges });
+    }
+
+    /// Paste the in-app clipboard at the last cursor world position
+    /// (offset from each clipboarded node's recorded position).
+    fn paste_clipboard(&mut self) {
+        let Some(cb) = self.clipboard.clone() else {
+            return;
+        };
+        if cb.nodes.is_empty() {
+            return;
+        }
+        // Anchor: top-left of the clipboarded set in world space.
+        let mut anchor = (f32::INFINITY, f32::INFINITY);
+        for n in &cb.nodes {
+            anchor.0 = anchor.0.min(n.transform.position.0);
+            anchor.1 = anchor.1.min(n.transform.position.1);
+        }
+        // Drop near the cursor so the paste lands where the user is
+        // looking. Falls back to (anchor + 20, +20) if no cursor.
+        let target = self.fsm.cursor_world;
+        let offset = if target.0.is_finite() && target.1.is_finite() && target != (0.0, 0.0) {
+            (target.0 - anchor.0, target.1 - anchor.1)
+        } else {
+            (20.0, 20.0)
+        };
+
+        self.registry.begin_undo_batch();
+        let mut id_map: std::collections::HashMap<NodeId, NodeId> =
+            std::collections::HashMap::new();
+        let mut new_ids: Vec<NodeId> = Vec::with_capacity(cb.nodes.len());
+        for mut node in cb.nodes {
+            let new_id = self.registry.with_scene(fresh_node_id);
+            id_map.insert(node.id.clone(), new_id.clone());
+            node.id = new_id.clone();
+            node.transform.position.0 += offset.0;
+            node.transform.position.1 += offset.1;
+            self.registry.add_node(node);
+            new_ids.push(new_id);
+        }
+        for mut edge in cb.edges {
+            edge.id = self.registry.with_scene(fresh_edge_id);
+            if let EdgeEnd::Port(n, p) = &edge.from
+                && let Some(new_n) = id_map.get(n)
+            {
+                edge.from = EdgeEnd::Port(new_n.clone(), p.clone());
+            }
+            if let EdgeEnd::Port(n, p) = &edge.to
+                && let Some(new_n) = id_map.get(n)
+            {
+                edge.to = EdgeEnd::Port(new_n.clone(), p.clone());
+            }
+            if let Routing::Manual { waypoints } = &mut edge.routing {
+                for w in waypoints.iter_mut() {
+                    w.0 += offset.0;
+                    w.1 += offset.1;
+                }
+            }
+            self.registry.add_edge(edge);
+        }
+        self.registry.end_undo_batch();
+
+        self.selection.nodes = new_ids;
+        self.selection.edges.clear();
+        self.selection.segments.clear();
+    }
+
     /// Remove every selected edge and node through the registry. Removing a
     /// node also drops its attached edges (registry handles the cascade).
     fn delete_selection(&mut self) {
@@ -1818,6 +2038,14 @@ impl CanvasCitizen {
             ContextAction::SetNodeOverlay(nid, overlay) => {
                 self.registry.update_node_overlay(&nid, overlay);
             }
+            ContextAction::DuplicateNode(nid) => {
+                let new_ids = self.clone_nodes_with_offset(&[nid], (20.0, 20.0));
+                if !new_ids.is_empty() {
+                    self.selection.nodes = new_ids;
+                    self.selection.edges.clear();
+                    self.selection.segments.clear();
+                }
+            }
         }
     }
 
@@ -1846,6 +2074,9 @@ impl CanvasCitizen {
 }
 
 const HOTKEY_TABLE: &[(&str, &str)] = &[
+    ("Ctrl+C", "Copy selection"),
+    ("Ctrl+V", "Paste at cursor"),
+    ("Ctrl+D", "Duplicate selection"),
     ("G", "Toggle grid"),
     ("X", "Mirror about X axis"),
     ("Y", "Mirror about Y axis"),
