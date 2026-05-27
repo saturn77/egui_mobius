@@ -55,6 +55,11 @@ contexts:
       scope: constant.language.anchor.graphica
     - match: '\b(in|out|bidir|untyped)\b'
       scope: constant.language.portkind.graphica
+    # Port data types — primitive scalars + dimensioned + generic.
+    - match: '\b(bool|int8|int16|int32|int64|uint8|uint16|uint32|uint64|float|real|eng|generic)\b'
+      scope: storage.type.porttype.graphica
+    - match: '\btype\b'
+      scope: keyword.other.type.graphica
     - match: '\b(orthogonal|bezier|straight|manual)\b'
       scope: constant.language.routing.graphica
     - match: '\b(none|arrow|triangle|diamond|circle)\b'
