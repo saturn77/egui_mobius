@@ -1181,6 +1181,33 @@ fn build_style_table(scene: &Scene) -> StyleTable {
         }
     }
 
+    // Honour every node's *explicit* `style_ref`, even for
+    // singletons that auto-extraction skipped. Two things to
+    // settle here:
+    //
+    //   1. The named style must exist in the output `styles` list
+    //      so the parser can find it on reload. We've already
+    //      copied `scene.styles` over above, so any user-set ref
+    //      with a registered style is covered.
+    //   2. The node needs a matching entry in `node_style` so
+    //      `print_node` knows to emit the `: stylename` annotation
+    //      and omit fields equal to the style.
+    //
+    // Without this pass, a programmatic placement (symbol-instance
+    // with unique label text → unique overlay → singleton group)
+    // loses its style ref on save, and recovery sees a stylesless
+    // node and can't tell it was an instance.
+    for (idx, node) in scene.nodes.iter().enumerate() {
+        if node_style.contains_key(&idx) {
+            continue;
+        }
+        if let Some(name) = &node.style_ref
+            && let Some(style) = styles.iter().find(|s| &s.name == name)
+        {
+            node_style.insert(idx, style.clone());
+        }
+    }
+
     StyleTable { styles, node_style }
 }
 
