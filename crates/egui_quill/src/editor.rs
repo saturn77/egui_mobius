@@ -142,8 +142,15 @@ impl<'a> ReactiveEditor<'a> {
         let response = egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                ui.add_sized(
-                    avail,
+                // Fill the panel (min size = remaining rect) and add the
+                // editor left-aligned. We deliberately do NOT use
+                // `add_sized` + `desired_width(INFINITY)` here: that lays the
+                // TextEdit out with a *centered* layout, so any line wider
+                // than the panel is clipped on BOTH sides (the leading
+                // characters vanish). Letting the line wrap at the panel
+                // width keeps every character visible.
+                ui.set_min_size(avail);
+                ui.add(
                     egui::TextEdit::multiline(&mut buffer)
                         .font(egui::TextStyle::Monospace)
                         .code_editor()
@@ -152,7 +159,6 @@ impl<'a> ReactiveEditor<'a> {
                         // from the surrounding visuals — no visible seam
                         // between editor and panel chrome.
                         .frame(egui::Frame::NONE)
-                        .desired_width(f32::INFINITY)
                         .layouter(&mut layouter),
                 )
             });
