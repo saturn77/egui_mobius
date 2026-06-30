@@ -109,7 +109,7 @@ impl eframe::App for ExampleApp {
             logger.log_info(&self.banner.message);
         }
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Custom Log Types Example");
             ui.add_space(8.0);
 

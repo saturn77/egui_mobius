@@ -29,7 +29,6 @@ export-all = ["export-raster", "export-pdf"]
 
 [dependencies]
 egui                 = { workspace = true }
-egui-phosphor        = { workspace = true }
 egui_mobius_reactive = { workspace = true }
 hypercurve           = { workspace = true }
 rfd                  = { workspace = true }

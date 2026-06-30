@@ -129,7 +129,7 @@ impl eframe::App for UiApp {
 
             egui::Panel::bottom("log_panel")
                 .resizable(true)
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     ui.heading("Logs");
 
                     ui.horizontal(|ui| {
@@ -198,7 +198,7 @@ impl eframe::App for UiApp {
                 });
         }
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             // Your UI code here
 
             let counter = self.state.lock().unwrap().dashboard.counter;

@@ -33,7 +33,8 @@
 use std::path::{Path, PathBuf};
 
 use egui::{Color32, Key, Sense, Stroke};
-use egui_phosphor::regular as ico;
+
+use crate::icons as ico;
 
 use crate::interact::{
     apply_resize_delta, hit_test_edge, hit_test_edge_segment, hit_test_free_end, hit_test_node,
@@ -276,7 +277,7 @@ impl CanvasCitizen {
             RibbonSide::Right => egui::Panel::right(ribbon_id),
         };
         let vertical = matches!(self.ribbon_side, RibbonSide::Left | RibbonSide::Right);
-        panel.resizable(false).show_inside(ui, |ui| self.show_ribbon(ui, vertical));
+        panel.resizable(false).show(ui, |ui| self.show_ribbon(ui, vertical));
 
         // Shape-tool palette — a second, independently-dockable ribbon.
         let tool_id = ui.id().with("grafica_tool_ribbon");
@@ -289,9 +290,9 @@ impl CanvasCitizen {
         let tool_vertical = matches!(self.tool_ribbon_side, RibbonSide::Left | RibbonSide::Right);
         tool_panel
             .resizable(false)
-            .show_inside(ui, |ui| self.show_tool_ribbon(ui, tool_vertical));
+            .show(ui, |ui| self.show_tool_ribbon(ui, tool_vertical));
 
-        egui::CentralPanel::default().show_inside(ui, |ui| self.show_canvas(ui));
+        egui::CentralPanel::default().show(ui, |ui| self.show_canvas(ui));
 
         // Page setup modal — rendered last so it floats on top of the
         // panels. Stays open across frames; closes only via the X or

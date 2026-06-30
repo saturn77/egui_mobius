@@ -197,7 +197,7 @@ impl DemoApp {
 
 impl eframe::App for DemoApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             if !self.initial_fit_done {
                 // Approximate the canvas rect on first frame — ribbon hasn't
                 // rendered yet so we use the whole panel as a hint.

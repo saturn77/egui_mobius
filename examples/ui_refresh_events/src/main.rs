@@ -138,7 +138,7 @@ impl eframe::App for UiApp {
             }
         });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.label("Buttons");
             ui.add_space(5.0);
 

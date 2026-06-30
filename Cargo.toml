@@ -6,8 +6,6 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "crates/egui_quill",
     "crates/egui_grafica",
     "crates/egui_3d_viewer",
-    "examples/clock_async",
-    "examples/clock_reactive",
     "examples/dashboard",
     "examples/dashboard_async",
     "examples/reactive",
@@ -24,10 +22,13 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "examples/viewer3d_csgrs",
     "examples"
 ]
-# exclude = [
-    # this example has its own workspace
-#    "examples/egui_crux_example"
-#]
+exclude = [
+    # has its own workspace
+    "examples/egui_crux_example",
+    # egui_taffy has no egui-0.35 release yet — parked until it does
+    "examples/clock_async",
+    "examples/clock_reactive",
+]
 
 resolver = "2"
 
@@ -35,36 +36,34 @@ resolver = "2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
-version = "0.4.0"
+version = "0.5.0"
 
 [workspace.dependencies]
 # egui mobius related crates
-egui_mobius   = { version = "0.4.0", path = "crates/egui_mobius" }
-egui_mobius_widgets = { version = "0.4.0", path = "crates/egui_mobius_widgets" }
-egui_mobius_reactive = { version = "0.4.0", path = "crates/egui_mobius_reactive" }
-egui_mobius_components = { version = "0.4.0", path = "crates/egui_mobius_components" }
-egui_citizen = { version = "0.4.0", path = "crates/egui_citizen" }
-egui_lens = { version = "0.4.0", path = "crates/egui_lens" }
-egui_quill = { version = "0.4.0", path = "crates/egui_quill" }
-egui_grafica = { version = "0.4.0", path = "crates/egui_grafica" }
-egui_3d_viewer = { version = "0.4.0", path = "crates/egui_3d_viewer" }
+egui_mobius   = { version = "0.5.0", path = "crates/egui_mobius" }
+egui_mobius_widgets = { version = "0.5.0", path = "crates/egui_mobius_widgets" }
+egui_mobius_reactive = { version = "0.5.0", path = "crates/egui_mobius_reactive" }
+egui_mobius_components = { version = "0.5.0", path = "crates/egui_mobius_components" }
+egui_citizen = { version = "0.5.0", path = "crates/egui_citizen" }
+egui_lens = { version = "0.5.0", path = "crates/egui_lens" }
+egui_quill = { version = "0.5.0", path = "crates/egui_quill" }
+egui_grafica = { version = "0.5.0", path = "crates/egui_grafica" }
+egui_3d_viewer = { version = "0.5.0", path = "crates/egui_3d_viewer" }
 
 # Exact-geometry kernel — the geometry foundation for egui_grafica's
 # routing and shapes (timschmidt's hyper ecosystem).
 hypercurve = "0.2"
 
 # egui and eframe
-egui_plot = "0.35.0"
-egui = "0.34"
-egui-phosphor = "0.12"
-eframe = { version = "0.34", default-features = false }
-egui-winit = { version = "0.34", features = ["accesskit"] }
-egui_extras = "0.34.0"
-egui_taffy = "0.12.0"
-egui_dock = "0.19"
+egui_plot = "0.36.0"
+egui = "0.35"
+eframe = { version = "0.35", default-features = false }
+egui-winit = { version = "0.35", features = ["accesskit"] }
+egui_extras = "0.35.0"
+egui_dock = "0.20"
 
 # wgpu rendering backend for egui_grafica's GPU pipeline
-egui-wgpu = "0.34"
+egui-wgpu = "0.35"
 wgpu = "29"
 bytemuck = { version = "1", features = ["derive"] }
 

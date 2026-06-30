@@ -25,7 +25,7 @@ impl ReactiveSliderDemo {
 
 impl App for ReactiveSliderDemo {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut Frame) {
-        CentralPanel::default().show_inside(ui, |ui| {
+        CentralPanel::default().show(ui, |ui| {
             ui.heading("Reactive Slider Demo");
             ui.spacing();
 

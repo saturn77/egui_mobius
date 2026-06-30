@@ -6,8 +6,7 @@
 //! evolve as the app grows.
 
 use egui_citizen::{CitizenMessage, Dispatcher};
-use egui_lens::{ReactiveEventLogger, ReactiveEventLoggerState};
-use egui_mobius_reactive::Dynamic;
+use egui_lens::ReactiveEventLogger;
 
 use crate::backend::BackendKind;
 use crate::messages::AppMessage;

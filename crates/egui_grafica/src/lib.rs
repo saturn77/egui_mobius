@@ -28,6 +28,7 @@ pub mod router;
 pub mod render;
 pub mod interact;
 pub mod citizen;
+pub mod icons;
 pub mod export;
 pub mod inspector;
 pub mod page;
@@ -48,18 +49,17 @@ pub use citizen::{CanvasCitizen, RibbonSide, ShapeTool};
 pub use render::Viewport;
 pub use interact::{hit_test_node, snap_to_grid, Selection};
 
-/// Install the Phosphor icon font into an egui context. Call once at app
-/// startup — typically from `eframe::CreationContext` — so ribbon icons
-/// render rather than appearing as tofu boxes.
+/// No-op kept for API compatibility.
+///
+/// The ribbon used to need the Phosphor icon font installed here; it now draws
+/// its glyphs from Unicode/emoji in egui's *default* fonts (see [`icons`]), so
+/// there is nothing to install. Existing callers can keep calling this or drop
+/// the call entirely.
 ///
 /// ```ignore
 /// Box::new(|cc| {
-///     egui_grafica::install_fonts(&cc.egui_ctx);
+///     egui_grafica::install_fonts(&cc.egui_ctx); // optional now
 ///     Ok(Box::new(MyApp::new(cc)))
 /// });
 /// ```
-pub fn install_fonts(ctx: &egui::Context) {
-    let mut fonts = egui::FontDefinitions::default();
-    egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-    ctx.set_fonts(fonts);
-}
+pub fn install_fonts(_ctx: &egui::Context) {}

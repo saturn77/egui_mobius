@@ -127,7 +127,7 @@ impl eframe::App for UiApp {
         let ambient_history = fabric_data.ambient_history.lock().unwrap();
         let y_bounds = fabric_data.y_bounds.lock().unwrap();
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("SiC MOSFET Half-Bridge Thermal Simulation");
             ui.add_space(20.0);
 
