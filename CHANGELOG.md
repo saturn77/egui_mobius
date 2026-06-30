@@ -1,3 +1,18 @@
+## [0.5.0] - 2026-06-29
+
+### Changed
+- **Bumped to egui 0.35** (from 0.34) and the surrounding ecosystem: `eframe`, `egui-winit`, `egui_extras`, `egui-wgpu` → 0.35; `egui_plot` → 0.36; `egui_dock` → 0.20.
+- **Family-wide version bump to 0.5.0.** The egui major bump is a breaking change for downstreams, so every workspace crate moves together.
+- Migrated to the egui 0.35 API: `show_inside` → `show`, unified `egui::Panel`.
+
+### Removed
+- **Dropped the `egui-phosphor` dependency** — it had no egui-0.35 release and was the lone blocker for the bump. `egui_grafica` now draws its ribbon glyphs from egui's default fonts via a local `icons.rs`, so there is no external icon-font crate to keep in lockstep with egui.
+- **Dropped `egui_taffy`** and the `clock_async` / `clock_reactive` examples that depended on it; taffy has no egui-0.35 release. Revisit if it ships 0.35 support.
+
+### Notes
+- Published to crates.io at 0.5.0: `egui_mobius`, `egui_mobius_reactive`, `egui_mobius_widgets`, `egui_mobius_components`, `egui_lens`.
+- `egui_citizen` and its citizen crates (`egui_quill`, `egui_grafica`, `egui_3d_viewer`) remain workspace-only and are intentionally not published, pending a possible split into a dedicated repository.
+
 ## [0.4.0] - 2026-05-03
 
 ### Added
