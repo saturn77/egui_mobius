@@ -2,6 +2,7 @@
 members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
     "crates/egui_mobius_reactive", "crates/egui_mobius_components",
     "crates/egui_citizen",
+    "crates/mobius_lang",
     "crates/egui_lens",
     "crates/egui_quill",
     "crates/egui_grafica",

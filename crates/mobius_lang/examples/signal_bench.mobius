@@ -1,0 +1,45 @@
+// SignalBench — bench controls, live plot, and a logger.
+app SignalBench {
+
+    interface Bench {
+        // shared state — pull edges, reactive Dynamic<T> values
+        amplitude : f32 = 1.0
+        enabled   : bool = true
+        trace     : Vec<f32> = []
+
+        // dispatched data — push edge, drained by the dispatcher
+        commands  : signal BenchCmd
+
+        // modports: each party's complete view of the boundary —
+        // write (out), observe (in), produce (emit), consume (drain)
+        modport controls (out amplitude, out enabled, in trace, emit commands)
+        modport display  (in  amplitude, in  enabled, in trace)
+        modport backend  (in  amplitude, out trace,   drain commands)
+    }
+
+    // An input panel built from widget primitives — pure source, live.
+    citizen ControlsPanel (bench : Bench.controls) {
+        column {
+            checkbox "Enabled"              <-> bench.enabled;
+            slider   "Amplitude" 0.0..10.0  <-> bench.amplitude;
+            button   "Apply"                ->  bench.commands.send(BenchCmd::Apply);
+        }
+    }
+
+    @wiring {
+        let bench    = Bench();
+        let controls = ControlsPanel(bench = bench.controls);
+        let plot     = PlotPanel(bench = bench.display);
+        let log      = LensLogger(observe = bench.display);
+
+        // the worker drains `commands`; results come back through
+        // `trace` (out) — written by the handler, observed by the plot.
+        bind "bench_worker" = bench.backend;
+    }
+
+    @layout {
+        dock(plot,     region = center);
+        dock(controls, region = left,  fraction = 0.25);
+        dock(log,      region = below, fraction = 0.20);
+    }
+}

@@ -1,0 +1,15 @@
+[package]
+name                   = "mobius_lang"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "Application composition language for egui_mobius — lexer, AST, and parser"
+edition.workspace      = true
+rust-version.workspace = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+license.workspace      = true
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "development-tools", "parser-implementations"]
+keywords               = ["egui", "dsl", "composition", "citizen", "reactive"]
+include                = ["LICENSE", "**/*.rs", "Cargo.toml"]
+
+[dependencies]
