@@ -528,6 +528,46 @@ impl Registry {
 
     /// Rotate every node 90° clockwise around the scene center. Each node's
     /// width and height are swapped so the bounding box stays axis-aligned.
+    /// Rotate the given nodes 90° CW about their COMMON center (screen coords, y-down).
+    /// Adjacent wires re-route on the next pass; node sizes swap w/h like the scene rotate.
+    pub fn rotate_nodes_90_cw(&self, ids: &[crate::model::NodeId]) {
+        self.mutate(|scene| {
+            let picked: Vec<usize> = scene
+                .nodes
+                .iter()
+                .enumerate()
+                .filter(|(_, n)| ids.contains(&n.id))
+                .map(|(i, _)| i)
+                .collect();
+            if picked.is_empty() {
+                return;
+            }
+            let (mut cx, mut cy) = (0.0f32, 0.0f32);
+            for &i in &picked {
+                let t = &scene.nodes[i].transform;
+                cx += t.position.0 + t.size.0 * 0.5;
+                cy += t.position.1 + t.size.1 * 0.5;
+            }
+            let n = picked.len() as f32;
+            let c = (cx / n, cy / n);
+            for &i in &picked {
+                let node = &mut scene.nodes[i];
+                let (cx_n, cy_n) = (
+                    node.transform.position.0 + node.transform.size.0 * 0.5,
+                    node.transform.position.1 + node.transform.size.1 * 0.5,
+                );
+                // 90° CW in screen coords (y-down): (dx, dy) -> (-dy, dx)
+                let dx = cx_n - c.0;
+                let dy = cy_n - c.1;
+                let new_cx_n = c.0 - dy;
+                let new_cy_n = c.1 + dx;
+                let (w, h) = (node.transform.size.0, node.transform.size.1);
+                node.transform.size = (h, w);
+                node.transform.position = (new_cx_n - h * 0.5, new_cy_n - w * 0.5);
+            }
+        });
+    }
+
     pub fn rotate_scene_90_cw(&self) {
         self.mutate(|scene| {
             if let Some(c) = scene_world_center(scene) {

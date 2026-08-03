@@ -1290,8 +1290,14 @@ impl CanvasCitizen {
                 if y {
                     self.registry.mirror_scene_about_y();
                 }
+                // R rotates the SELECTED object(s); the whole scene only when
+                // nothing is selected.
                 if r {
-                    self.registry.rotate_scene_90_cw();
+                    if self.selection.nodes.is_empty() {
+                        self.registry.rotate_scene_90_cw();
+                    } else {
+                        self.registry.rotate_nodes_90_cw(&self.selection.nodes);
+                    }
                 }
                 // A — snap every selected node to the nearest grid
                 // intersection. Adjacent Manual-wire waypoints follow

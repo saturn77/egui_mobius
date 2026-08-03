@@ -111,7 +111,7 @@ impl Default for CanvasSettings {
             show_grid: true,
             grid_style: GridStyle::Lines,
             dot_size: 2.0,
-            grid_units: GridUnits::Pixels,
+            grid_units: GridUnits::Mils,
             paper_size: None,
             paper_orientation: None,
             default_routing: Routing::Orthogonal,
