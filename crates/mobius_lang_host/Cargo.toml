@@ -1,0 +1,18 @@
+[package]
+name                   = "mobius_lang_host"
+version.workspace      = true
+authors                = ["James Bonanno <atlantix-eda@proton.me>"]
+description            = "egui plugin host for mobius_lang — wrap real egui_mobius citizens and render wired apps"
+edition.workspace      = true
+rust-version.workspace = true
+homepage               = "https://github.com/saturn77/egui_mobius"
+license.workspace      = true
+repository             = "https://github.com/saturn77/egui_mobius"
+categories             = ["gui", "development-tools"]
+keywords               = ["egui", "dsl", "citizen", "plugin", "reactive"]
+include                = ["LICENSE", "**/*.rs", "Cargo.toml"]
+
+[dependencies]
+egui = { workspace = true }
+egui_citizen = { workspace = true }
+mobius_lang = { path = "../mobius_lang" }

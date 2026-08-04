@@ -116,6 +116,12 @@ impl EmitHandle {
         let _ = self.sender.send(Box::new(event));
     }
 
+    /// Send an already-boxed event — for generic renderers that construct
+    /// events through a registered constructor rather than a static type.
+    pub fn send_boxed(&self, event: Box<dyn Any + Send>) {
+        let _ = self.sender.send(event);
+    }
+
     pub fn signal_name(&self) -> &str {
         &self.signal
     }
@@ -245,6 +251,9 @@ pub struct WiredInstance {
     pub ty: String,
     pub kind: InstanceKind,
     pub bindings: BindingSet,
+    /// Widget tree for source-declared citizens (empty for registry
+    /// citizens) — a generic renderer draws these against `bindings`.
+    pub widgets: Vec<crate::ir::IrWidget>,
 }
 
 /// A wired backend handler: its bindings plus the drain ends it owns.
@@ -384,6 +393,7 @@ pub fn wire(ir: &Ir, host: &Host) -> Result<WiredApp, ExecError> {
             ty: instance.ty.clone(),
             kind: instance.kind,
             bindings,
+            widgets: instance.widgets.clone(),
         })
         .collect();
 

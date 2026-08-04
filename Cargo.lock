@@ -3546,6 +3546,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "mobius_lang"
+version = "0.5.0"
+dependencies = [
+ "egui_mobius_reactive",
+]
+
+[[package]]
+name = "mobius_lang_demo"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "egui_citizen",
+ "egui_dock",
+ "egui_lens",
+ "egui_mobius_reactive",
+ "egui_plot",
+ "mobius_lang",
+ "mobius_lang_host",
+]
+
+[[package]]
+name = "mobius_lang_host"
+version = "0.5.0"
+dependencies = [
+ "egui",
+ "egui_citizen",
+ "mobius_lang",
+]
+
+[[package]]
 name = "moxcms"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

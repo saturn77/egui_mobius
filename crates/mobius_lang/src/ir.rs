@@ -89,7 +89,40 @@ pub struct IrInstance {
     pub ty: String,
     pub kind: InstanceKind,
     pub bindings: Vec<IrBinding>,
+    /// For [`InstanceKind::Source`]: the widget tree, with every path
+    /// already rewritten to qualified value/signal names — the generic
+    /// renderer needs nothing but the IR. Empty for registry citizens.
+    pub widgets: Vec<IrWidget>,
     pub span: Span,
+}
+
+/// A widget in a source-declared citizen, fully resolved.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IrWidget {
+    /// `column { ... }`, `row { ... }`, `group { ... }`.
+    Container {
+        kind: String,
+        children: Vec<IrWidget>,
+    },
+    Primitive {
+        kind: String,
+        label: Option<String>,
+        range: Option<(f64, f64)>,
+        target: IrWidgetTarget,
+    },
+}
+
+/// What a rendered primitive touches, by qualified name.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IrWidgetTarget {
+    /// `<->` — edits a value the instance holds `rw`.
+    Write { value: String },
+    /// `<-` — displays a value the instance holds `ro`.
+    Read { value: String },
+    /// `->` — fires `event` (e.g. `BenchCmd::Apply`) into `signal`.
+    Event { signal: String, event: String },
+    /// e.g. `separator;`
+    None,
 }
 
 /// One queued event edge (a `signal` interface field).

@@ -1,0 +1,16 @@
+[package]
+name    = "mobius_lang_demo"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+eframe = { workspace = true, features = ["default"] }
+egui = { workspace = true }
+egui_citizen = { workspace = true }
+egui_dock = { workspace = true }
+egui_lens = { workspace = true }
+egui_plot = { workspace = true }
+egui_mobius_reactive = { workspace = true }
+mobius_lang = { path = "../../crates/mobius_lang" }
+mobius_lang_host = { path = "../../crates/mobius_lang_host" }

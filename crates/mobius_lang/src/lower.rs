@@ -434,6 +434,7 @@ impl<'a> Lowerer<'a> {
         let id = self.ir.instances.len();
         self.instance_ids.insert(name.to_owned(), id);
         let mut bindings = Vec::new();
+        let mut port_map: HashMap<String, String> = HashMap::new();
         for arg in args {
             let Expr::Path(view) = &arg.value else {
                 self.error(
@@ -445,14 +446,30 @@ impl<'a> Lowerer<'a> {
                 );
                 continue;
             };
+            if view.segments.len() == 2 {
+                port_map.insert(arg.name.clone(), view.segments[0].clone());
+            }
             self.apply_view(Party::Instance(id), view, &mut bindings);
         }
+        // The renderer works from the IR alone: bake the widget tree in,
+        // with every port path rewritten to its qualified value name.
+        let widgets = if kind == InstanceKind::Source {
+            let citizen = self.source_citizens[ty_name.as_str()];
+            citizen
+                .body
+                .iter()
+                .map(|node| lower_widget(node, &port_map))
+                .collect()
+        } else {
+            Vec::new()
+        };
         self.ir.instances.push(IrInstance {
             id,
             name: name.to_owned(),
             ty: ty_name,
             kind,
             bindings,
+            widgets,
             span,
         });
     }
@@ -685,6 +702,60 @@ impl Party {
         match self {
             Party::Instance(id) => format!("instance i{id}"),
             Party::Handler(id) => format!("handler h{id}"),
+        }
+    }
+}
+
+/// Rewrite a source widget node into IR form, replacing `port.field`
+/// paths with `iface_instance.field` qualified names via `ports`.
+fn lower_widget(node: &WidgetNode, ports: &HashMap<String, String>) -> IrWidget {
+    let qualify = |path: &Path| -> String {
+        if path.segments.len() < 2 {
+            return path.joined();
+        }
+        let port = path.segments[0].as_str();
+        let instance = ports.get(port).map(String::as_str).unwrap_or(port);
+        format!("{instance}.{}", path.segments[1])
+    };
+    match node {
+        WidgetNode::Container { kind, children, .. } => IrWidget::Container {
+            kind: kind.clone(),
+            children: children
+                .iter()
+                .map(|child| lower_widget(child, ports))
+                .collect(),
+        },
+        WidgetNode::Primitive(primitive) => {
+            let target = match &primitive.binding {
+                Binding::TwoWay(path) => IrWidgetTarget::Write {
+                    value: qualify(path),
+                },
+                Binding::Read(path) => IrWidgetTarget::Read {
+                    value: qualify(path),
+                },
+                Binding::Event(Expr::Call { path, args, .. }) => IrWidgetTarget::Event {
+                    signal: qualify(path),
+                    event: match args.first() {
+                        Some(Expr::Path(event)) => event.segments.join("::"),
+                        _ => String::new(),
+                    },
+                },
+                Binding::Event(_) | Binding::None => IrWidgetTarget::None,
+            };
+            let literal = |expr: &Expr| match expr {
+                Expr::Float(value, _) => *value,
+                Expr::Int(value, _) => *value as f64,
+                _ => 0.0,
+            };
+            IrWidget::Primitive {
+                kind: primitive.kind.clone(),
+                label: primitive.label.clone(),
+                range: primitive
+                    .range
+                    .as_ref()
+                    .map(|(lo, hi)| (literal(lo), literal(hi))),
+                target,
+            }
         }
     }
 }
