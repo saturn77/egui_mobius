@@ -37,12 +37,14 @@
 
 pub mod ast;
 pub mod error;
+pub mod execute;
 pub mod ir;
 pub mod lexer;
 pub mod lower;
 pub mod parser;
 
 pub use error::{ParseError, Span};
+pub use execute::{Host, WiredApp, wire};
 pub use ir::Ir;
 pub use lower::{Diagnostic, Registry, lower};
 pub use parser::parse;

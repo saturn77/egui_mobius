@@ -13,3 +13,4 @@ keywords               = ["egui", "dsl", "composition", "citizen", "reactive"]
 include                = ["LICENSE", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
+egui_mobius_reactive = { workspace = true }
