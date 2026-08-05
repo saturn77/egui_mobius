@@ -53,7 +53,7 @@ That is a complete, runnable app: one slider bound to one reactive value.
 - **Shared state** lives in an `interface` as `Dynamic<T>` fields. A `modport`
   gives each citizen a directional view — `out` (writes), `in` (observes),
   and for `signal` fields `emit` (pushes onto a `Signal`) / `drain` (a `Slot`
-  run on its own thread — the backend). Exactly one writer per value is
+  run off the UI thread — the backend). Exactly one writer per value is
   enforced when you elaborate.
 - **Citizens** are either *source* (built from primitives: `checkbox`,
   `slider`, `text`, `button`, `label`, in `column`/`row`/`group`) or *plugins*
@@ -69,10 +69,11 @@ That is a complete, runnable app: one slider bound to one reactive value.
 | `<- path`            | read-only: widget shows an `in` value      |
 | `-> sig.send(Event)` | push onto an `emit` signal → a backend `Slot` thread |
 
-A `drain` binding runs its handler on a dedicated thread (`egui_mobius`
-`Slot`), off the UI thread; it answers by writing shared `Dynamic<T>` state,
-which the UI observes reactively. There is no reply edge — events go out,
-results come back as state.
+A `drain` binding runs its handler on an `egui_mobius` `Slot`, off the UI
+thread — on a dedicated thread (`Slot::start`) or an async task
+(`start_async` / `AsyncDispatcher`). It answers by writing shared `Dynamic<T>`
+state, which the UI observes reactively. There is no reply edge — events go
+out, results come back as state.
 
 ## 5. See the netlist, add a plugin
 

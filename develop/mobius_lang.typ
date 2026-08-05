@@ -197,9 +197,10 @@ The language declares six kinds of thing:
   interface* alongside the state fields — the push half of the boundary.
   Produced through an `emit` view, consumed on a threaded `Slot` through a
   `drain` view (@sec:signals).
-/ handler: A named backend endpoint — a `Slot` run on its own thread. Bound
-  to an interface's backend modport; implemented in Rust, it answers by
-  writing shared state.
+/ handler: A named backend endpoint — a `Slot` run off the UI thread,
+  either on a dedicated thread (`Slot::start`) or as an async task
+  (`start_async` / `AsyncDispatcher`). Bound to an interface's backend
+  modport; implemented in Rust, it answers by writing shared state.
 
 #pagebreak()
 // ============================================================
@@ -244,7 +245,7 @@ Citizens whose ports bind them.
 By the nature of a software application, a citizen's boundary carries *two*
 kinds of traffic: shared state (the pull edges — reactive, observed) and
 dispatched work (the push edges — a `Signal`/`Slot` pair whose consumer runs
-on its own thread, *off* the UI thread). The
+*off* the UI thread, on a dedicated thread or an async task). The
 invariant demands that *both* be visible; an interface that described only
 state would be lying about being the interface. So an `interface` declares
 both kinds of field, and a `modport` — as in SystemVerilog, where it gives
@@ -258,7 +259,7 @@ interface Bench {
     enabled   : bool = true
     trace     : Vec<f32> = []
 
-    // dispatched work — push edge; a Signal/Slot pair, the Slot on a thread
+    // dispatched work — push edge; a Signal/Slot pair, the Slot off the UI thread
     commands  : signal BenchCmd
 
     // modports: one party's complete view of the boundary — what it may
@@ -424,9 +425,9 @@ file is live, the registry is compiled.
 A `signal` field is a push-based work edge, declared inside an interface next
 to the state it travels with (@sec:state). It is an `egui_mobius`
 `Signal`/`Slot` pair: the `emit` side pushes onto the `Signal`, the `drain`
-side is a `Slot` that runs on its own thread. There is no standalone route
-declaration: *routing falls out of the modports*. A handler is bound to a
-modport like any citizen:
+side is a `Slot` that runs off the UI thread — on a dedicated thread or an
+async task. There is no standalone route declaration: *routing falls out of
+the modports*. A handler is bound to a modport like any citizen:
 
 ```rust
 @wiring {
@@ -438,10 +439,11 @@ modport like any citizen:
 ```
 
 Elaboration creates the `Signal`/`Slot` pair for each `signal` field, hands
-the `Signal<T>` end to every `emit` holder, and starts the `Slot` on a
-dedicated thread running the `drain` holder — here the handler registered as
-`"bench_worker"`. The consumer runs off the UI thread; backend work never
-blocks rendering. The event type is resolved against the registry like any
+the `Signal<T>` end to every `emit` holder, and starts the `Slot` running the
+`drain` holder — here the handler registered as `"bench_worker"`. The host
+chooses whether that `Slot` runs on a dedicated thread (`Slot::start`) or as
+an async task (`start_async` / `AsyncDispatcher`); either way it is off the
+UI thread, so backend work never blocks rendering. The event type is resolved against the registry like any
 other type; an unknown handler name, a signal with an `emit` holder but no
 `drain` holder (dangling), or two `drain` holders (ambiguous) are elaboration
 errors, not runtime surprises.

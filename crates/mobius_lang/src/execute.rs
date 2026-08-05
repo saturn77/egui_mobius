@@ -135,14 +135,17 @@ pub struct DrainHandle {
 }
 
 impl DrainHandle {
-    /// Run this signal's consumer on a dedicated thread — the `egui_mobius`
-    /// backend model (`Slot::start`). The thread blocks on the channel and
-    /// calls `handler` for each event as it arrives; no polling. It ends
-    /// when the last emitter is dropped (e.g. app shutdown or reload).
+    /// Run this signal's consumer on a dedicated thread — the threaded
+    /// `egui_mobius` backend model (`Slot::start`). The thread blocks on the
+    /// channel and calls `handler` for each event as it arrives; no polling.
+    /// It ends when the last emitter is dropped (e.g. app shutdown or
+    /// reload).
     ///
-    /// A backend handler answers by writing shared `Dynamic<T>` values it
-    /// holds — thread-safe, so the UI observes the result reactively.
-    /// Wrong-typed events are a wiring bug and are dropped.
+    /// This is the threaded option; a `drain` consumer may equally run as an
+    /// async task (`Slot::start_async` / `AsyncDispatcher`) — the choice is
+    /// the host's. Either way it runs off the UI thread and answers by
+    /// writing shared `Dynamic<T>` values it holds — thread-safe, so the UI
+    /// observes the result reactively. Wrong-typed events are dropped.
     pub fn start<E, F>(self, mut handler: F)
     where
         E: Any + Send + 'static,
