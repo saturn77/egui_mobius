@@ -135,8 +135,32 @@ pub struct DrainHandle {
 }
 
 impl DrainHandle {
-    /// Take all pending events of type `E`, leaving the queue empty.
-    /// Events of the wrong type are a wiring bug and are dropped.
+    /// Run this signal's consumer on a dedicated thread — the `egui_mobius`
+    /// backend model (`Slot::start`). The thread blocks on the channel and
+    /// calls `handler` for each event as it arrives; no polling. It ends
+    /// when the last emitter is dropped (e.g. app shutdown or reload).
+    ///
+    /// A backend handler answers by writing shared `Dynamic<T>` values it
+    /// holds — thread-safe, so the UI observes the result reactively.
+    /// Wrong-typed events are a wiring bug and are dropped.
+    pub fn start<E, F>(self, mut handler: F)
+    where
+        E: Any + Send + 'static,
+        F: FnMut(E) + Send + 'static,
+    {
+        std::thread::spawn(move || {
+            while let Ok(boxed) = self.receiver.recv() {
+                if let Ok(event) = boxed.downcast::<E>() {
+                    handler(*event);
+                }
+            }
+        });
+    }
+
+    /// Take all pending events of type `E` without blocking, leaving the
+    /// queue empty. Prefer [`start`](DrainHandle::start) for a real backend;
+    /// this is for tests and single-threaded drivers. Wrong-typed events are
+    /// dropped.
     pub fn drain<E: Any + Send>(&self) -> Vec<E> {
         let mut events = Vec::new();
         while let Ok(boxed) = self.receiver.try_recv() {

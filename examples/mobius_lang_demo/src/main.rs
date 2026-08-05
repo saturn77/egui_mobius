@@ -181,9 +181,51 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 // Application
 // ----------------------------------------------------------------------
 
+/// Spawn the `bench_worker` backend as a real `egui_mobius` `Slot` thread
+/// (`DrainHandle::start`): it blocks on the `commands` signal, and on each
+/// `Apply` computes a trace and *writes the shared `Dynamic<Vec<f32>>`* — the
+/// return path is state, per the framework contract. `ctx.request_repaint()`
+/// wakes the UI so it observes the write. The thread ends when the emitters
+/// drop (shutdown / reload).
+fn spawn_backends(wired: &mut WiredApp, ctx: &egui::Context) {
+    for handler in &mut wired.handlers {
+        if handler.name != "bench_worker" {
+            continue;
+        }
+        let amplitude = handler.bindings.read::<f32>("bench.amplitude");
+        let enabled = handler.bindings.read::<bool>("bench.enabled");
+        let trace = handler.bindings.write::<Vec<f32>>("bench.trace");
+        for drain in handler.drains.drain(..) {
+            let (amplitude, enabled, trace, ctx) = (
+                amplitude.clone(),
+                enabled.clone(),
+                trace.clone(),
+                ctx.clone(),
+            );
+            drain.start::<BenchCmd, _>(move |_command| {
+                let (Some(amplitude), Some(enabled), Some(trace)) = (&amplitude, &enabled, &trace)
+                else {
+                    return;
+                };
+                if enabled.get() {
+                    let amp = amplitude.get();
+                    let samples: Vec<f32> = (0..512)
+                        .map(|i| amp * (i as f32 * std::f32::consts::TAU / 128.0).sin())
+                        .collect();
+                    trace.set(samples);
+                } else {
+                    trace.set(Vec::new());
+                }
+                ctx.request_repaint();
+            });
+        }
+    }
+}
+
 struct DemoApp {
     path: PathBuf,
     plugins: Plugins,
+    ctx: egui::Context,
     wired: Option<WiredApp>,
     views: Vec<Option<Box<dyn CitizenView>>>,
     dock_state: Option<DockState<Tab>>,
@@ -217,6 +259,7 @@ impl DemoApp {
         let mut app = Self {
             path,
             plugins: plugins(),
+            ctx: cc.egui_ctx.clone(),
             wired: None,
             views: Vec::new(),
             dock_state: None,
@@ -232,7 +275,9 @@ impl DemoApp {
     /// Build (or rebuild) the wired app, plugin views, dock, and dispatcher.
     fn elaborate(&mut self, is_reload: bool) {
         match build(&self.path, &self.plugins) {
-            Ok(wired) => {
+            Ok(mut wired) => {
+                // Stand up the backend Slot threads for this elaboration.
+                spawn_backends(&mut wired, &self.ctx);
                 self.views = wired
                     .instances
                     .iter()
@@ -261,48 +306,11 @@ impl DemoApp {
             self.elaborate(true);
         }
     }
-
-    /// The demo's `bench_worker` handler: drain commands, answer through
-    /// `trace`. In a real host this runs on a backend thread; the wiring is
-    /// identical (all handles are `Send`).
-    fn drive_backend(&self) {
-        let Some(wired) = &self.wired else { return };
-        for handler in &wired.handlers {
-            if handler.name != "bench_worker" {
-                continue;
-            }
-            let applies: usize = handler
-                .drains
-                .iter()
-                .map(|drain| drain.drain::<BenchCmd>().len())
-                .sum();
-            if applies == 0 {
-                continue;
-            }
-            let (Some(amplitude), Some(enabled), Some(trace)) = (
-                handler.bindings.read::<f32>("bench.amplitude"),
-                handler.bindings.read::<bool>("bench.enabled"),
-                handler.bindings.write::<Vec<f32>>("bench.trace"),
-            ) else {
-                continue;
-            };
-            if !enabled.get() {
-                trace.set(Vec::new());
-                continue;
-            }
-            let amp = amplitude.get();
-            let samples: Vec<f32> = (0..512)
-                .map(|i| amp * (i as f32 * std::f32::consts::TAU / 128.0).sin())
-                .collect();
-            trace.set(samples);
-        }
-    }
 }
 
 impl eframe::App for DemoApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.watch();
-        self.drive_backend();
 
         egui::Panel::top("demo_status").show(ui, |ui| {
             ui.horizontal(|ui| {
