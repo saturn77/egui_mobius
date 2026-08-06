@@ -56,7 +56,8 @@ That is a complete, runnable app: one slider bound to one reactive value.
   run off the UI thread — the backend). Exactly one writer per value is
   enforced when you elaborate.
 - **Citizens** are either *source* (built from primitives: `checkbox`,
-  `slider`, `text`, `button`, `label`, in `column`/`row`/`group`) or *plugins*
+  `slider`, `text`, `button`, `combo`, `radio`, `label`, in
+  `column`/`row`/`group`/`scroll`) or *plugins*
   that wrap a real crate (`PlotPanel`, `LensLogger`, …).
 - **Sections**: `@wiring` instantiates and connects; `@layout` docks by region
   (`center`, `left`, `right`, `above`, `below`, with an optional `fraction`).

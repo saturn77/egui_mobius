@@ -113,6 +113,11 @@ fn render_widget(
             "group" => {
                 ui.group(|ui| render_source(ui, children, bindings, events));
             }
+            "scroll" => {
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| render_source(ui, children, bindings, events));
+            }
             _ => {
                 ui.vertical(|ui| render_source(ui, children, bindings, events));
             }

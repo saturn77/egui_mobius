@@ -403,7 +403,9 @@ Two binding arrows:
   `button` (event).
 / readout: `label`, `value` (display a shared value), `progress`
   (`f32` fraction). Read-only; bind with `<-`.
-/ layout: `column`, `row`, `group`, `separator`, `spacer`.
+/ layout: `column`, `row`, `group`, `scroll` (a vertically scrolling
+  region — the natural home for shells, logs, and long channel lists),
+  `separator`, `spacer`.
 
 #open[exact vocabulary boundaries — e.g. color picker, date field — decided
 by what egui offers natively and what stays a library citizen.]

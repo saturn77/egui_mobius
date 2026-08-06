@@ -173,3 +173,38 @@ app A {
         "initializers but length",
     );
 }
+
+#[test]
+fn scroll_container_wraps_a_channel_list() {
+    let ir = lower_ok(
+        r#"
+app Rig {
+    interface Bus {
+        duty : [f32; 32] = {0.0}
+        modport ctl (out duty)
+    }
+    citizen DutyCmd (b : Bus.ctl) {
+        scroll {
+            column {
+                for ch in 0..32 { slider "Ch {ch}" 0.0..100.0 <-> b.duty[ch]; }
+            }
+        }
+    }
+    @wiring { let bus = Bus(); let cmd = DutyCmd(b = bus.ctl); }
+    @layout { dock(cmd, region = center); }
+}
+"#,
+    );
+    // 32 channels expanded.
+    assert_eq!(ir.values.len(), 32);
+    // scroll → column → 32 sliders.
+    let IrWidget::Container { kind, children } = &ir.instances[0].widgets[0] else {
+        panic!("scroll");
+    };
+    assert_eq!(kind, "scroll");
+    let IrWidget::Container { kind, children } = &children[0] else {
+        panic!("column");
+    };
+    assert_eq!(kind, "column");
+    assert_eq!(children.len(), 32);
+}
