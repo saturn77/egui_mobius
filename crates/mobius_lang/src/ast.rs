@@ -264,6 +264,21 @@ pub enum Expr {
         args: Vec<Expr>,
         span: Span,
     },
+    /// Integer arithmetic — `cl * 4 + ch`. Used for loop indices and label
+    /// interpolation; evaluated at elaboration.
+    Binary {
+        op: BinOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+        span: Span,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
 }
 
 impl Expr {
@@ -275,7 +290,7 @@ impl Expr {
             | Expr::Str(_, s)
             | Expr::Array(_, s) => *s,
             Expr::Path(p) => p.span,
-            Expr::Call { span, .. } => *span,
+            Expr::Call { span, .. } | Expr::Binary { span, .. } => *span,
         }
     }
 }

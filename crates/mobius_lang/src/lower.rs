@@ -356,8 +356,9 @@ impl<'a> Lowerer<'a> {
         }
     }
 
-    /// An index must be a literal or an in-scope loop variable, and must
-    /// stay within `0..len`.
+    /// An index is a literal, an in-scope loop variable, or arithmetic over
+    /// them (`cl*4 + ch`). Its whole possible range — computed by interval
+    /// arithmetic from the enclosing loop bounds — must stay within `0..len`.
     fn check_index(
         &mut self,
         index: &Expr,
@@ -366,33 +367,13 @@ impl<'a> Lowerer<'a> {
         loops: &HashMap<String, (i64, i64)>,
         span: Span,
     ) {
-        match index {
-            Expr::Int(value, _) => {
-                if *value < 0 || *value as usize >= len {
-                    self.error(
-                        format!("index {value} out of bounds for `{field}` (len {len})"),
-                        span,
-                    );
-                }
-            }
-            Expr::Path(path) if path.segments.len() == 1 => match loops.get(&path.segments[0]) {
-                None => self.error(
-                    format!("`{}` is not a loop variable in scope", path.segments[0]),
-                    span,
-                ),
-                Some((lo, hi)) if *lo < 0 || *hi as usize > len => self.error(
-                    format!(
-                        "loop `{}` ranges {lo}..{hi}, out of bounds for `{field}` (len {len})",
-                        path.segments[0]
-                    ),
-                    span,
-                ),
-                _ => {}
-            },
-            _ => self.error(
-                "index must be an integer or a loop variable".to_owned(),
+        match eval_interval(index, loops) {
+            Err(message) => self.error(message, span),
+            Ok((min, max)) if min < 0 || max >= len as i64 => self.error(
+                format!("index range {min}..={max} out of bounds for `{field}` (len {len})"),
                 span,
             ),
+            Ok(_) => {}
         }
     }
 
@@ -1017,7 +998,7 @@ fn lower_primitive(
             return path.joined();
         }
         let base = format!("{}.{}", instance_of(&path.segments[0]), path.segments[1]);
-        match index.as_ref().and_then(|idx| resolve_index(idx, loops)) {
+        match index.as_ref().and_then(|idx| eval_expr(idx, loops)) {
             Some(i) => format!("{base}.{i}"),
             None => base,
         }
@@ -1063,22 +1044,84 @@ fn lower_primitive(
     }
 }
 
-/// Resolve a loop index expression (a literal or a loop variable) to a value.
-fn resolve_index(expr: &Expr, loops: &HashMap<String, i64>) -> Option<i64> {
+/// Evaluate an integer index expression — a literal, a loop variable, or
+/// arithmetic over them (`cl * 4 + ch`) — against the current loop values.
+fn eval_expr(expr: &Expr, loops: &HashMap<String, i64>) -> Option<i64> {
     match expr {
         Expr::Int(value, _) => Some(*value),
         Expr::Path(path) if path.segments.len() == 1 => loops.get(&path.segments[0]).copied(),
+        Expr::Binary { op, lhs, rhs, .. } => {
+            let l = eval_expr(lhs, loops)?;
+            let r = eval_expr(rhs, loops)?;
+            Some(match op {
+                BinOp::Add => l + r,
+                BinOp::Sub => l - r,
+                BinOp::Mul => l * r,
+            })
+        }
         _ => None,
     }
 }
 
-/// Replace `{var}` in a label with each enclosing loop variable's value.
-fn interpolate(label: &str, loops: &HashMap<String, i64>) -> String {
-    let mut text = label.to_owned();
-    for (var, value) in loops {
-        text = text.replace(&format!("{{{var}}}"), &value.to_string());
+/// The inclusive `[min, max]` range an index expression can take, by
+/// interval arithmetic over the enclosing loops (each `lo..hi` contributes
+/// `[lo, hi-1]`). Used to bounds-check an index without unrolling.
+fn eval_interval(expr: &Expr, loops: &HashMap<String, (i64, i64)>) -> Result<(i64, i64), String> {
+    match expr {
+        Expr::Int(value, _) => Ok((*value, *value)),
+        Expr::Path(path) if path.segments.len() == 1 => match loops.get(&path.segments[0]) {
+            Some((lo, hi)) => Ok((*lo, *hi - 1)),
+            None => Err(format!(
+                "`{}` is not a loop variable in scope",
+                path.segments[0]
+            )),
+        },
+        Expr::Binary { op, lhs, rhs, .. } => {
+            let (al, ah) = eval_interval(lhs, loops)?;
+            let (bl, bh) = eval_interval(rhs, loops)?;
+            Ok(match op {
+                BinOp::Add => (al + bl, ah + bh),
+                BinOp::Sub => (al - bh, ah - bl),
+                BinOp::Mul => {
+                    let products = [al * bl, al * bh, ah * bl, ah * bh];
+                    (
+                        *products.iter().min().unwrap(),
+                        *products.iter().max().unwrap(),
+                    )
+                }
+            })
+        }
+        _ => Err("index must be an integer or arithmetic over loop variables".to_owned()),
     }
-    text
+}
+
+/// Replace each `{expr}` in a label with its evaluated value — a loop
+/// variable (`{ch}`) or arithmetic over loop variables (`{cl*4+ch}`).
+/// Unparseable braces are left as written.
+fn interpolate(label: &str, loops: &HashMap<String, i64>) -> String {
+    let mut out = String::new();
+    let mut rest = label;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let Some(close) = rest[open + 1..].find('}') else {
+            break; // no closing brace — leave the remainder verbatim below
+        };
+        let inner = &rest[open + 1..open + 1 + close];
+        match crate::parser::parse_arith(inner)
+            .ok()
+            .and_then(|expr| eval_expr(&expr, loops))
+        {
+            Some(value) => out.push_str(&value.to_string()),
+            None => {
+                out.push('{');
+                out.push_str(inner);
+                out.push('}');
+            }
+        }
+        rest = &rest[open + 1 + close + 1..];
+    }
+    out.push_str(rest);
+    out
 }
 
 /// The default literal for element `i` of an array field.
@@ -1130,6 +1173,14 @@ fn expr_text(expr: &Expr) -> String {
         Expr::Call { path, args, .. } => {
             let inner: Vec<String> = args.iter().map(expr_text).collect();
             format!("{}({})", path.segments.join("."), inner.join(", "))
+        }
+        Expr::Binary { op, lhs, rhs, .. } => {
+            let symbol = match op {
+                BinOp::Add => "+",
+                BinOp::Sub => "-",
+                BinOp::Mul => "*",
+            };
+            format!("{} {symbol} {}", expr_text(lhs), expr_text(rhs))
         }
     }
 }

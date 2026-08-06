@@ -36,6 +36,18 @@ pub fn parse(source: &str) -> Result<(SourceFile, Vec<Comment>), ParseError> {
     Ok((file, comments))
 }
 
+/// Parse a standalone arithmetic expression — for `{cl*4+ch}` label
+/// interpolation, where the braces content is a substring of a string token.
+pub fn parse_arith(source: &str) -> Result<Expr, ParseError> {
+    let LexOutput { tokens, .. } = lex(source)?;
+    let mut parser = Parser::new(tokens);
+    let expr = parser.expr()?;
+    if !matches!(parser.peek().kind, TokenKind::Eof) {
+        return Err(parser.error("unexpected trailing input in expression"));
+    }
+    Ok(expr)
+}
+
 struct Parser {
     tokens: Vec<Token>,
     pos: usize,
@@ -669,6 +681,49 @@ impl Parser {
     // ------------------------------------------------------------------
 
     fn expr(&mut self) -> Result<Expr, ParseError> {
+        self.additive()
+    }
+
+    /// `+` and `-` — lowest precedence.
+    fn additive(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.multiplicative()?;
+        while matches!(self.peek().kind, TokenKind::Plus | TokenKind::Minus) {
+            let op = if matches!(self.peek().kind, TokenKind::Plus) {
+                BinOp::Add
+            } else {
+                BinOp::Sub
+            };
+            self.bump();
+            let rhs = self.multiplicative()?;
+            let span = lhs.span().to(rhs.span());
+            lhs = Expr::Binary {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+                span,
+            };
+        }
+        Ok(lhs)
+    }
+
+    /// `*` — binds tighter than `+`/`-`.
+    fn multiplicative(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.primary()?;
+        while matches!(self.peek().kind, TokenKind::Star) {
+            self.bump();
+            let rhs = self.primary()?;
+            let span = lhs.span().to(rhs.span());
+            lhs = Expr::Binary {
+                op: BinOp::Mul,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+                span,
+            };
+        }
+        Ok(lhs)
+    }
+
+    fn primary(&mut self) -> Result<Expr, ParseError> {
         let span = self.peek().span;
         match self.peek().kind.clone() {
             TokenKind::Int(value) => {

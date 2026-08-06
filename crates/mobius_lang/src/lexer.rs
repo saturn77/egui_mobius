@@ -28,6 +28,9 @@ pub enum TokenKind {
     At,
     Lt,
     Gt,
+    Plus,
+    Minus,
+    Star,
     /// `<->` two-way binding.
     ArrowBoth,
     /// `->` event binding.
@@ -208,17 +211,22 @@ impl<'s> Lexer<'s> {
                     if self.peek() == b'>' {
                         self.bump();
                         self.push(TokenKind::ArrowRight, start);
-                    } else if self.peek().is_ascii_digit() {
-                        self.number(start, true)?;
                     } else {
-                        return Err(ParseError::new(
-                            "unexpected `-` (only `->` and negative numbers use it)",
-                            self.span_from(start),
-                        ));
+                        // Subtraction / unary minus; negatives are formed in
+                        // the parser, so the lexer never makes a signed number.
+                        self.push(TokenKind::Minus, start);
                     }
                 }
+                b'+' => {
+                    self.bump();
+                    self.push(TokenKind::Plus, start);
+                }
+                b'*' => {
+                    self.bump();
+                    self.push(TokenKind::Star, start);
+                }
                 b'"' => self.string(start)?,
-                b'0'..=b'9' => self.number(start, false)?,
+                b'0'..=b'9' => self.number(start)?,
                 b'_' | b'a'..=b'z' | b'A'..=b'Z' => self.ident(start),
                 other => {
                     return Err(ParseError::new(
@@ -302,8 +310,8 @@ impl<'s> Lexer<'s> {
 
     /// Lex an integer or float. Stops before `..` so ranges like `0.0..10.0`
     /// lex as `Float DotDot Float`.
-    fn number(&mut self, start: Span, negative: bool) -> Result<(), ParseError> {
-        let begin = if negative { self.pos - 1 } else { self.pos };
+    fn number(&mut self, start: Span) -> Result<(), ParseError> {
+        let begin = self.pos;
         while self.peek().is_ascii_digit() {
             self.bump();
         }

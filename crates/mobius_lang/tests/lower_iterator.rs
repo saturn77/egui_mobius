@@ -208,3 +208,68 @@ app Rig {
     assert_eq!(kind, "column");
     assert_eq!(children.len(), 32);
 }
+
+#[test]
+fn nested_loops_with_index_arithmetic() {
+    let ir = lower_ok(
+        r#"
+app Rig {
+    interface Bus {
+        duty : [f32; 24] = {0.0}
+        modport ctl (out duty)
+    }
+    citizen Command (b : Bus.ctl) {
+        column {
+            for cl in 0..6 {
+                group {
+                    for ch in 0..4 {
+                        slider "Ch {cl*4 + ch}" 0.0..100.0 <-> b.duty[cl*4 + ch];
+                    }
+                }
+            }
+        }
+    }
+    @wiring { let bus = Bus(); let cmd = Command(b = bus.ctl); }
+    @layout { dock(cmd, region = center); }
+}
+"#,
+    );
+    assert_eq!(ir.values.len(), 24);
+
+    // Cluster 5 (cl=5), lane 3 (ch=3) → global channel 23.
+    let IrWidget::Container {
+        children: clusters, ..
+    } = &ir.instances[0].widgets[0]
+    else {
+        panic!("column");
+    };
+    let IrWidget::Container {
+        children: lanes, ..
+    } = &clusters[5]
+    else {
+        panic!("cluster group");
+    };
+    let IrWidget::Primitive { label, target, .. } = &lanes[3] else {
+        panic!("slider");
+    };
+    assert_eq!(label.as_deref(), Some("Ch 23"), "cl*4+ch interpolated");
+    assert!(matches!(target, IrWidgetTarget::Write { value } if value == "bus.duty.23"));
+}
+
+#[test]
+fn arithmetic_index_out_of_bounds_is_caught_by_intervals() {
+    // cl in 0..8, cl*4+3 reaches 31 — past a 24-element array.
+    expect_error(
+        r#"
+app A {
+    interface S { xs : [f32; 24] = {0.0}  modport ui (out xs) }
+    citizen P (s : S.ui) {
+        column { for cl in 0..8 { for ch in 0..4 { slider "x" 0.0..1.0 <-> s.xs[cl*4+ch]; } } }
+    }
+    @wiring { let s = S(); let p = P(s = s.ui); }
+    @layout { dock(p, region = center); }
+}
+"#,
+        "out of bounds",
+    );
+}
