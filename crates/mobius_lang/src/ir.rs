@@ -108,6 +108,9 @@ pub enum IrWidget {
         kind: String,
         label: Option<String>,
         range: Option<(f64, f64)>,
+        /// Variant list for `combo`/`radio` (from the bound enum); empty
+        /// otherwise.
+        options: Vec<String>,
         target: IrWidgetTarget,
     },
 }

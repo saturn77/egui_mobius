@@ -25,12 +25,24 @@ pub struct App {
 pub enum AppItem {
     /// `let name : type = default;` — an app-owned shared value.
     Value(ValueDecl),
+    /// `enum Name { A, B, ... }` — a variant set for combo/radio fields.
+    Enum(EnumDecl),
     /// `interface Name { ... }` — state + signal fields with modports.
     Interface(Interface),
     /// `citizen Name (ports) { ... }` — an interior built from primitives.
     Citizen(CitizenDecl),
     /// `@wiring { ... }` / `@layout { ... }`.
     Section(Section),
+}
+
+/// `enum Name { A, B, C }` — a closed set of variant names. A field typed by
+/// an enum is a variant-constrained string; `combo`/`radio` widgets offer
+/// its variants.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumDecl {
+    pub name: String,
+    pub variants: Vec<String>,
+    pub span: Span,
 }
 
 /// `let name : type = default;`

@@ -121,8 +121,18 @@ fn render_widget(
             kind,
             label,
             range,
+            options,
             target,
-        } => render_primitive(ui, kind, label.as_deref(), *range, target, bindings, events),
+        } => render_primitive(
+            ui,
+            kind,
+            label.as_deref(),
+            *range,
+            options,
+            target,
+            bindings,
+            events,
+        ),
     }
 }
 
@@ -132,12 +142,46 @@ fn render_primitive(
     kind: &str,
     label: Option<&str>,
     range: Option<(f64, f64)>,
+    options: &[String],
     target: &IrWidgetTarget,
     bindings: &BindingSet,
     events: &EventResolver,
 ) {
     let label = label.unwrap_or("");
     match (kind, target) {
+        ("combo", IrWidgetTarget::Write { value }) => {
+            if let Some(binding) = bindings.write::<String>(value) {
+                let mut current = binding.get();
+                egui::ComboBox::from_label(label)
+                    .selected_text(current.clone())
+                    .show_ui(ui, |ui| {
+                        for variant in options {
+                            ui.selectable_value(&mut current, variant.clone(), variant);
+                        }
+                    });
+                if current != binding.get() {
+                    binding.set(current);
+                }
+            }
+        }
+        ("radio", IrWidgetTarget::Write { value }) => {
+            if let Some(binding) = bindings.write::<String>(value) {
+                let mut current = binding.get();
+                ui.horizontal(|ui| {
+                    if !label.is_empty() {
+                        ui.label(label);
+                    }
+                    for variant in options {
+                        if ui
+                            .radio_value(&mut current, variant.clone(), variant)
+                            .changed()
+                        {
+                            binding.set(current.clone());
+                        }
+                    }
+                });
+            }
+        }
         ("checkbox" | "toggle", IrWidgetTarget::Write { value }) => {
             if let Some(binding) = bindings.write::<bool>(value) {
                 let mut current = binding.get();

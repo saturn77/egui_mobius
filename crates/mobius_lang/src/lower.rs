@@ -98,6 +98,7 @@ struct Lowerer<'a> {
     app: &'a App,
     registry: &'a Registry,
     interfaces: HashMap<&'a str, &'a Interface>,
+    enums: HashMap<&'a str, &'a EnumDecl>,
     source_citizens: HashMap<&'a str, &'a CitizenDecl>,
     /// interface-instance name → interface name
     iface_instances: HashMap<String, &'a str>,
@@ -117,6 +118,7 @@ impl<'a> Lowerer<'a> {
             app,
             registry,
             interfaces: HashMap::new(),
+            enums: HashMap::new(),
             source_citizens: HashMap::new(),
             iface_instances: HashMap::new(),
             value_ids: HashMap::new(),
@@ -144,6 +146,9 @@ impl<'a> Lowerer<'a> {
             match item {
                 AppItem::Interface(interface) => {
                     self.interfaces.insert(interface.name.as_str(), interface);
+                }
+                AppItem::Enum(enum_decl) => {
+                    self.enums.insert(enum_decl.name.as_str(), enum_decl);
                 }
                 AppItem::Citizen(citizen) => {
                     self.source_citizens.insert(citizen.name.as_str(), citizen);
@@ -269,6 +274,9 @@ impl<'a> Lowerer<'a> {
                         "`<->`",
                         primitive.span,
                     );
+                    if matches!(primitive.kind.as_str(), "combo" | "radio") {
+                        self.check_enum_binding(path, ports, primitive.span);
+                    }
                 }
                 Binding::Read { path, index } => {
                     self.check_port_access(
@@ -388,6 +396,65 @@ impl<'a> Lowerer<'a> {
         }
     }
 
+    /// A `combo`/`radio` widget must bind a field typed by a declared enum.
+    fn check_enum_binding(
+        &mut self,
+        path: &Path,
+        ports: &HashMap<&str, (&Interface, &Modport)>,
+        span: Span,
+    ) {
+        if path.segments.len() != 2 {
+            return; // shape already reported by check_port_access
+        }
+        let Some((interface, _)) = ports.get(path.segments[0].as_str()) else {
+            return;
+        };
+        let is_enum = interface.fields.iter().any(|f| {
+            f.name == path.segments[1]
+                && matches!(&f.kind, FieldKind::State { ty, .. }
+                    if self.enums.contains_key(type_name(ty).as_str()))
+        });
+        if !is_enum {
+            self.error(
+                format!(
+                    "`combo`/`radio` needs an enum field, but `{}` is not one",
+                    path.segments[1]
+                ),
+                span,
+            );
+        }
+    }
+
+    /// Validate an enum field's default is one of its variants; return the
+    /// variant name.
+    fn enum_default(
+        &mut self,
+        enum_decl: &EnumDecl,
+        default: &Option<Expr>,
+        span: Span,
+    ) -> Option<String> {
+        match default {
+            None => None,
+            Some(Expr::Path(path)) if path.segments.len() == 1 => {
+                let variant = &path.segments[0];
+                if !enum_decl.variants.contains(variant) {
+                    self.error(
+                        format!("`{variant}` is not a variant of enum `{}`", enum_decl.name),
+                        span,
+                    );
+                }
+                Some(variant.clone())
+            }
+            Some(other) => {
+                self.error(
+                    format!("enum `{}` default must be a variant name", enum_decl.name),
+                    other.span(),
+                );
+                None
+            }
+        }
+    }
+
     /// `-> port.signal_field.send(EventType::Variant)`
     fn check_event(&mut self, expr: &Expr, ports: &HashMap<&str, (&Interface, &Modport)>) {
         let Expr::Call { path, args, span } = expr else {
@@ -490,13 +557,24 @@ impl<'a> Lowerer<'a> {
                 let qualified = format!("{name}.{}", field.name);
                 match &field.kind {
                     FieldKind::State { ty, default } => {
+                        let tyname = type_name(ty);
+                        // An enum field is a variant-constrained string: it
+                        // elaborates to a `String` value whose default is the
+                        // chosen variant.
+                        let (ir_ty, ir_default) =
+                            if let Some(enum_decl) = self.enums.get(tyname.as_str()).copied() {
+                                let variant = self.enum_default(enum_decl, default, field.span);
+                                ("String".to_owned(), variant.map(|v| format!("\"{v}\"")))
+                            } else {
+                                (tyname, default.as_ref().map(expr_text))
+                            };
                         let id = self.ir.values.len();
                         self.value_ids.insert(qualified.clone(), id);
                         self.ir.values.push(IrValue {
                             id,
                             name: qualified,
-                            ty: type_name(ty),
-                            default: default.as_ref().map(expr_text),
+                            ty: ir_ty,
+                            default: ir_default,
                             writer: None,
                             readers: Vec::new(),
                             span: field.span,
@@ -586,8 +664,35 @@ impl<'a> Lowerer<'a> {
         // with every port path rewritten to its qualified value name.
         let widgets = if kind == InstanceKind::Source {
             let citizen = self.source_citizens[ty_name.as_str()];
+            // Map each `port.field` that is enum-typed to its variants, so
+            // `combo`/`radio` widgets can offer them.
+            let mut combo_opts: HashMap<String, Vec<String>> = HashMap::new();
+            for port in &citizen.ports {
+                if port.ty.path.segments.len() != 2 {
+                    continue;
+                }
+                let Some(interface) = self.interfaces.get(port.ty.path.segments[0].as_str()) else {
+                    continue;
+                };
+                for f in &interface.fields {
+                    if let FieldKind::State { ty, .. } = &f.kind
+                        && let Some(enum_decl) = self.enums.get(type_name(ty).as_str())
+                    {
+                        combo_opts.insert(
+                            format!("{}.{}", port.name, f.name),
+                            enum_decl.variants.clone(),
+                        );
+                    }
+                }
+            }
             let mut widgets = Vec::new();
-            lower_widgets(&citizen.body, &port_map, &HashMap::new(), &mut widgets);
+            lower_widgets(
+                &citizen.body,
+                &port_map,
+                &combo_opts,
+                &HashMap::new(),
+                &mut widgets,
+            );
             widgets
         } else {
             Vec::new()
@@ -858,24 +963,26 @@ impl Party {
 fn lower_widgets(
     nodes: &[WidgetNode],
     ports: &HashMap<String, String>,
+    combo_opts: &HashMap<String, Vec<String>>,
     loops: &HashMap<String, i64>,
     out: &mut Vec<IrWidget>,
 ) {
     for node in nodes {
-        lower_widget(node, ports, loops, out);
+        lower_widget(node, ports, combo_opts, loops, out);
     }
 }
 
 fn lower_widget(
     node: &WidgetNode,
     ports: &HashMap<String, String>,
+    combo_opts: &HashMap<String, Vec<String>>,
     loops: &HashMap<String, i64>,
     out: &mut Vec<IrWidget>,
 ) {
     match node {
         WidgetNode::Container { kind, children, .. } => {
             let mut inner = Vec::new();
-            lower_widgets(children, ports, loops, &mut inner);
+            lower_widgets(children, ports, combo_opts, loops, &mut inner);
             out.push(IrWidget::Container {
                 kind: kind.clone(),
                 children: inner,
@@ -887,11 +994,11 @@ fn lower_widget(
             for i in *lo..*hi {
                 let mut inner_loops = loops.clone();
                 inner_loops.insert(var.clone(), i);
-                lower_widgets(body, ports, &inner_loops, out);
+                lower_widgets(body, ports, combo_opts, &inner_loops, out);
             }
         }
         WidgetNode::Primitive(primitive) => {
-            out.push(lower_primitive(primitive, ports, loops));
+            out.push(lower_primitive(primitive, ports, combo_opts, loops));
         }
     }
 }
@@ -899,6 +1006,7 @@ fn lower_widget(
 fn lower_primitive(
     primitive: &Primitive,
     ports: &HashMap<String, String>,
+    combo_opts: &HashMap<String, Vec<String>>,
     loops: &HashMap<String, i64>,
 ) -> IrWidget {
     let instance_of =
@@ -935,6 +1043,14 @@ fn lower_primitive(
         Expr::Int(value, _) => *value as f64,
         _ => 0.0,
     };
+    // `combo`/`radio` offer the variants of the enum field they bind.
+    let options = match &primitive.binding {
+        Binding::TwoWay { path, .. } if path.segments.len() == 2 => combo_opts
+            .get(&format!("{}.{}", path.segments[0], path.segments[1]))
+            .cloned()
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
     IrWidget::Primitive {
         kind: primitive.kind.clone(),
         label: primitive.label.as_ref().map(|l| interpolate(l, loops)),
@@ -942,6 +1058,7 @@ fn lower_primitive(
             .range
             .as_ref()
             .map(|(lo, hi)| (literal(lo), literal(hi))),
+        options,
         target,
     }
 }

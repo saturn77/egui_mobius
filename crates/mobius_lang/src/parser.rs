@@ -135,6 +135,8 @@ impl Parser {
     fn app_item(&mut self) -> Result<AppItem, ParseError> {
         if self.at_word("let") {
             Ok(AppItem::Value(self.value_decl()?))
+        } else if self.at_word("enum") {
+            Ok(AppItem::Enum(self.enum_decl()?))
         } else if self.at_word("interface") {
             Ok(AppItem::Interface(self.interface()?))
         } else if self.at_word("citizen") {
@@ -142,8 +144,37 @@ impl Parser {
         } else if matches!(self.peek().kind, TokenKind::At) {
             Ok(AppItem::Section(self.section()?))
         } else {
-            Err(self.error("expected `let`, `interface`, `citizen`, or a `@section` inside `app`"))
+            Err(self.error(
+                "expected `let`, `enum`, `interface`, `citizen`, or a `@section` inside `app`",
+            ))
         }
+    }
+
+    /// `enum Name { A, B, C }` — comma-separated variants, trailing comma ok.
+    fn enum_decl(&mut self) -> Result<EnumDecl, ParseError> {
+        let start = self.peek().span;
+        self.bump(); // `enum`
+        let (name, _) = self.ident("enum name")?;
+        self.expect(&TokenKind::LBrace, "`{`")?;
+        let mut variants = Vec::new();
+        while !matches!(self.peek().kind, TokenKind::RBrace) {
+            let (variant, _) = self.ident("variant name")?;
+            variants.push(variant);
+            if matches!(self.peek().kind, TokenKind::Comma) {
+                self.bump();
+            } else {
+                break;
+            }
+        }
+        let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
+        if variants.is_empty() {
+            return Err(self.error("enum must have at least one variant"));
+        }
+        Ok(EnumDecl {
+            name,
+            variants,
+            span: start.to(end),
+        })
     }
 
     // ------------------------------------------------------------------
