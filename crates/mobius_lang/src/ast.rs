@@ -84,8 +84,24 @@ pub struct Field {
 pub enum FieldKind {
     /// `name : type = default` — elaborates to a `Dynamic<T>`.
     State { ty: TypeRef, default: Option<Expr> },
-    /// `name : signal Type` — a queued event edge, drained by the dispatcher.
+    /// `name : [type; N] = {..}` — elaborates to N `Dynamic<T>` values
+    /// (`name.0` … `name.N-1`). Indexed in source as `name[i]`.
+    Array {
+        elem: TypeRef,
+        len: usize,
+        default: Option<ArrayDefault>,
+    },
+    /// `name : signal Type` — a threaded `Signal`/`Slot` edge.
     Signal { ty: TypeRef },
+}
+
+/// The `{..}` initializer of an array field.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArrayDefault {
+    /// `{expr}` — the same value for every element.
+    Broadcast(Expr),
+    /// `{e0, e1, ...}` — one value per element (count must match `len`).
+    Elements(Vec<Expr>),
 }
 
 /// `modport name (verb field, ...)` — one party's complete view of the
@@ -132,10 +148,19 @@ pub struct PortParam {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WidgetNode {
-    /// `column { ... }`, `row { ... }`, `group { ... }`.
+    /// `column { ... }`, `row { ... }`, `group { ... }`, `grid { ... }`.
     Container {
         kind: String,
         children: Vec<WidgetNode>,
+        span: Span,
+    },
+    /// `for VAR in LO..HI { ... }` — a generate loop, unrolled at lowering.
+    /// Inside a `grid`, each pass is one row.
+    For {
+        var: String,
+        lo: i64,
+        hi: i64,
+        body: Vec<WidgetNode>,
         span: Span,
     },
     /// `checkbox "Enabled" <-> bench.enabled;` and friends.
@@ -154,10 +179,10 @@ pub struct Primitive {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Binding {
-    /// `<-> path` — widget edits an `out` port.
-    TwoWay(Path),
-    /// `<- path` — read-only display of a port.
-    Read(Path),
+    /// `<-> path` / `<-> path[i]` — widget edits an `out` port.
+    TwoWay { path: Path, index: Option<Expr> },
+    /// `<- path` / `<- path[i]` — read-only display of a port.
+    Read { path: Path, index: Option<Expr> },
     /// `-> path(args)` — fire into an `emit` signal field.
     Event(Expr),
     /// e.g. `separator;`

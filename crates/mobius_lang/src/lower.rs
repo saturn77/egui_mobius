@@ -185,9 +185,10 @@ impl<'a> Lowerer<'a> {
     // ------------------------------------------------------------------
 
     /// Widget bindings in a source citizen must respect the modport verbs
-    /// of the port they go through.
+    /// of the port they go through — and array fields must be indexed within
+    /// bounds by a literal or an enclosing loop variable.
     fn check_source_citizen(&mut self, citizen: &'a CitizenDecl) {
-        let mut ports: HashMap<&str, &Modport> = HashMap::new();
+        let mut ports: HashMap<&str, (&Interface, &Modport)> = HashMap::new();
         for port in &citizen.ports {
             let segments = &port.ty.path.segments;
             if segments.len() != 2 {
@@ -200,7 +201,7 @@ impl<'a> Lowerer<'a> {
                 );
                 continue;
             }
-            let Some(interface) = self.interfaces.get(segments[0].as_str()) else {
+            let Some(interface) = self.interfaces.get(segments[0].as_str()).copied() else {
                 self.error(format!("unknown interface `{}`", segments[0]), port.span);
                 continue;
             };
@@ -214,26 +215,71 @@ impl<'a> Lowerer<'a> {
                 );
                 continue;
             };
-            ports.insert(port.name.as_str(), modport);
+            ports.insert(port.name.as_str(), (interface, modport));
         }
+        let mut loops = HashMap::new();
         for node in &citizen.body {
-            self.check_widget(node, &ports);
+            self.check_widget(node, &ports, &mut loops);
         }
     }
 
-    fn check_widget(&mut self, node: &WidgetNode, ports: &HashMap<&str, &Modport>) {
+    fn check_widget(
+        &mut self,
+        node: &WidgetNode,
+        ports: &HashMap<&str, (&Interface, &Modport)>,
+        loops: &mut HashMap<String, (i64, i64)>,
+    ) {
         match node {
             WidgetNode::Container { children, .. } => {
                 for child in children {
-                    self.check_widget(child, ports);
+                    self.check_widget(child, ports, loops);
+                }
+            }
+            WidgetNode::For {
+                var,
+                lo,
+                hi,
+                body,
+                span,
+            } => {
+                if lo > hi {
+                    self.error(format!("empty loop range {lo}..{hi}"), *span);
+                }
+                let shadowed = loops.insert(var.clone(), (*lo, *hi));
+                for child in body {
+                    self.check_widget(child, ports, loops);
+                }
+                match shadowed {
+                    Some(range) => {
+                        loops.insert(var.clone(), range);
+                    }
+                    None => {
+                        loops.remove(var);
+                    }
                 }
             }
             WidgetNode::Primitive(primitive) => match &primitive.binding {
-                Binding::TwoWay(path) => {
-                    self.check_port_access(path, ports, Verb::Out, "`<->`", primitive.span);
+                Binding::TwoWay { path, index } => {
+                    self.check_port_access(
+                        path,
+                        index,
+                        ports,
+                        loops,
+                        Verb::Out,
+                        "`<->`",
+                        primitive.span,
+                    );
                 }
-                Binding::Read(path) => {
-                    self.check_port_access(path, ports, Verb::In, "`<-`", primitive.span);
+                Binding::Read { path, index } => {
+                    self.check_port_access(
+                        path,
+                        index,
+                        ports,
+                        loops,
+                        Verb::In,
+                        "`<-`",
+                        primitive.span,
+                    );
                 }
                 Binding::Event(expr) => self.check_event(expr, ports),
                 Binding::None => {}
@@ -241,10 +287,13 @@ impl<'a> Lowerer<'a> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn check_port_access(
         &mut self,
         path: &Path,
-        ports: &HashMap<&str, &Modport>,
+        index: &Option<Expr>,
+        ports: &HashMap<&str, (&Interface, &Modport)>,
+        loops: &HashMap<String, (i64, i64)>,
         needed: Verb,
         arrow: &str,
         span: Span,
@@ -256,37 +305,91 @@ impl<'a> Lowerer<'a> {
             );
             return;
         }
-        let Some(modport) = ports.get(path.segments[0].as_str()) else {
+        let Some((interface, modport)) = ports.get(path.segments[0].as_str()) else {
             self.error(format!("unknown port `{}`", path.segments[0]), span);
             return;
         };
         let field = path.segments[1].as_str();
-        let entry = modport.entries.iter().find(|e| e.field == field);
-        match entry {
-            None => self.error(
+        let Some(entry) = modport.entries.iter().find(|e| e.field == field) else {
+            self.error(
                 format!("modport `{}` has no field `{}`", modport.name, field),
                 span,
+            );
+            return;
+        };
+        if entry.verb != needed && !(needed == Verb::In && entry.verb == Verb::Out) {
+            self.error(
+                format!(
+                    "{arrow} needs `{}` on `{}`, but modport `{}` marks it `{}`",
+                    verb_name(needed),
+                    field,
+                    modport.name,
+                    verb_name(entry.verb),
+                ),
+                span,
+            );
+        }
+        // Array-ness: an array field must be indexed, a scalar must not.
+        let array_len = interface.fields.iter().find_map(|f| match &f.kind {
+            FieldKind::Array { len, .. } if f.name == field => Some(*len),
+            _ => None,
+        });
+        match (array_len, index) {
+            (Some(len), Some(index)) => self.check_index(index, len, field, loops, span),
+            (Some(_), None) => self.error(
+                format!("array field `{field}` must be indexed, e.g. `{field}[i]`"),
+                span,
             ),
-            Some(entry)
-                if entry.verb != needed && !(needed == Verb::In && entry.verb == Verb::Out) =>
-            {
-                self.error(
+            (None, Some(_)) => self.error(
+                format!("field `{field}` is not an array and cannot be indexed"),
+                span,
+            ),
+            (None, None) => {}
+        }
+    }
+
+    /// An index must be a literal or an in-scope loop variable, and must
+    /// stay within `0..len`.
+    fn check_index(
+        &mut self,
+        index: &Expr,
+        len: usize,
+        field: &str,
+        loops: &HashMap<String, (i64, i64)>,
+        span: Span,
+    ) {
+        match index {
+            Expr::Int(value, _) => {
+                if *value < 0 || *value as usize >= len {
+                    self.error(
+                        format!("index {value} out of bounds for `{field}` (len {len})"),
+                        span,
+                    );
+                }
+            }
+            Expr::Path(path) if path.segments.len() == 1 => match loops.get(&path.segments[0]) {
+                None => self.error(
+                    format!("`{}` is not a loop variable in scope", path.segments[0]),
+                    span,
+                ),
+                Some((lo, hi)) if *lo < 0 || *hi as usize > len => self.error(
                     format!(
-                        "{arrow} needs `{}` on `{}`, but modport `{}` marks it `{}`",
-                        verb_name(needed),
-                        field,
-                        modport.name,
-                        verb_name(entry.verb),
+                        "loop `{}` ranges {lo}..{hi}, out of bounds for `{field}` (len {len})",
+                        path.segments[0]
                     ),
                     span,
-                );
-            }
-            _ => {}
+                ),
+                _ => {}
+            },
+            _ => self.error(
+                "index must be an integer or a loop variable".to_owned(),
+                span,
+            ),
         }
     }
 
     /// `-> port.signal_field.send(EventType::Variant)`
-    fn check_event(&mut self, expr: &Expr, ports: &HashMap<&str, &Modport>) {
+    fn check_event(&mut self, expr: &Expr, ports: &HashMap<&str, (&Interface, &Modport)>) {
         let Expr::Call { path, args, span } = expr else {
             self.error("`->` must call `port.signal.send(...)`", expr.span());
             return;
@@ -301,7 +404,7 @@ impl<'a> Lowerer<'a> {
             );
             return;
         }
-        let Some(modport) = ports.get(path.segments[0].as_str()) else {
+        let Some((_interface, modport)) = ports.get(path.segments[0].as_str()) else {
             self.error(format!("unknown port `{}`", path.segments[0]), *span);
             return;
         };
@@ -399,6 +502,34 @@ impl<'a> Lowerer<'a> {
                             span: field.span,
                         });
                     }
+                    FieldKind::Array { elem, len, default } => {
+                        if let Some(ArrayDefault::Elements(items)) = default
+                            && items.len() != *len
+                        {
+                            self.error(
+                                format!(
+                                    "array `{}` has {} initializers but length {len}",
+                                    field.name,
+                                    items.len()
+                                ),
+                                field.span,
+                            );
+                        }
+                        for i in 0..*len {
+                            let elem_name = format!("{name}.{}.{i}", field.name);
+                            let id = self.ir.values.len();
+                            self.value_ids.insert(elem_name.clone(), id);
+                            self.ir.values.push(IrValue {
+                                id,
+                                name: elem_name,
+                                ty: type_name(elem),
+                                default: array_element_default(default, i),
+                                writer: None,
+                                readers: Vec::new(),
+                                span: field.span,
+                            });
+                        }
+                    }
                     FieldKind::Signal { ty } => {
                         let id = self.ir.signals.len();
                         self.signal_ids.insert(qualified.clone(), id);
@@ -455,11 +586,9 @@ impl<'a> Lowerer<'a> {
         // with every port path rewritten to its qualified value name.
         let widgets = if kind == InstanceKind::Source {
             let citizen = self.source_citizens[ty_name.as_str()];
-            citizen
-                .body
-                .iter()
-                .map(|node| lower_widget(node, &port_map))
-                .collect()
+            let mut widgets = Vec::new();
+            lower_widgets(&citizen.body, &port_map, &HashMap::new(), &mut widgets);
+            widgets
         } else {
             Vec::new()
         };
@@ -507,63 +636,77 @@ impl<'a> Lowerer<'a> {
             return;
         };
 
+        // Resolve each entry's field to its element value name(s): an array
+        // field expands to `instance.field.0` … `instance.field.N-1`.
+        let field_len = |interface: &Interface, field: &str| -> Option<usize> {
+            interface.fields.iter().find_map(|f| match &f.kind {
+                FieldKind::Array { len, .. } if f.name == field => Some(*len),
+                _ => None,
+            })
+        };
         for entry in &modport.entries {
-            let qualified = format!("{instance}.{}", entry.field);
+            let base = format!("{instance}.{}", entry.field);
             match entry.verb {
                 Verb::Out | Verb::In => {
-                    let Some(&value_id) = self.value_ids.get(&qualified) else {
-                        continue; // field/modport mismatch reported by check_interface
+                    let names: Vec<String> = match field_len(interface, &entry.field) {
+                        Some(len) => (0..len).map(|i| format!("{base}.{i}")).collect(),
+                        None => vec![base],
                     };
-                    if entry.verb == Verb::Out {
-                        let value = &mut self.ir.values[value_id];
-                        if let Some(existing) = value.writer {
-                            let value_span = value.span;
-                            let message = format!(
-                                "one-writer rule: `{qualified}` already has writer {}",
-                                existing.display_name(),
-                            );
-                            self.diagnostics.push(Diagnostic {
-                                message,
-                                span: view.span,
-                                related: vec![(format!("`{qualified}` declared here"), value_span)],
+                    for qualified in names {
+                        let Some(&value_id) = self.value_ids.get(&qualified) else {
+                            continue; // field/modport mismatch reported by check_interface
+                        };
+                        if entry.verb == Verb::Out {
+                            let value = &mut self.ir.values[value_id];
+                            if let Some(existing) = value.writer {
+                                let value_span = value.span;
+                                let message = format!(
+                                    "one-writer rule: `{qualified}` already has writer {}",
+                                    existing.display_name(),
+                                );
+                                self.diagnostics.push(Diagnostic {
+                                    message,
+                                    span: view.span,
+                                    related: vec![(
+                                        format!("`{qualified}` declared here"),
+                                        value_span,
+                                    )],
+                                });
+                            } else {
+                                value.writer = Some(party);
+                            }
+                            bindings.push(IrBinding {
+                                port: qualified,
+                                value: value_id,
+                                access: Access::Rw,
                             });
                         } else {
-                            value.writer = Some(party);
+                            self.ir.values[value_id].readers.push(party);
+                            bindings.push(IrBinding {
+                                port: qualified,
+                                value: value_id,
+                                access: Access::Ro,
+                            });
                         }
-                        bindings.push(IrBinding {
-                            port: qualified,
-                            value: value_id,
-                            access: Access::Rw,
-                        });
-                    } else {
-                        self.ir.values[value_id].readers.push(party);
-                        bindings.push(IrBinding {
-                            port: qualified,
-                            value: value_id,
-                            access: Access::Ro,
-                        });
                     }
                 }
                 Verb::Emit => {
-                    if let Some(&signal_id) = self.signal_ids.get(&qualified) {
+                    if let Some(&signal_id) = self.signal_ids.get(&base) {
                         self.ir.signals[signal_id].emitters.push(party);
                     }
                 }
                 Verb::Drain => {
-                    if let Some(&signal_id) = self.signal_ids.get(&qualified) {
+                    if let Some(&signal_id) = self.signal_ids.get(&base) {
                         let signal = &mut self.ir.signals[signal_id];
                         if let Some(existing) = signal.drainer {
                             let signal_span = signal.span;
                             self.diagnostics.push(Diagnostic {
                                 message: format!(
-                                    "signal `{qualified}` already drained by {}",
+                                    "signal `{base}` already drained by {}",
                                     existing.display_name(),
                                 ),
                                 span: view.span,
-                                related: vec![(
-                                    format!("`{qualified}` declared here"),
-                                    signal_span,
-                                )],
+                                related: vec![(format!("`{base}` declared here"), signal_span)],
                             });
                         } else {
                             signal.drainer = Some(party);
@@ -680,7 +823,9 @@ fn check_interface(interface: &Interface, diagnostics: &mut Vec<Diagnostic>) {
                 continue;
             };
             let ok = match field.kind {
-                FieldKind::State { .. } => matches!(entry.verb, Verb::Out | Verb::In),
+                FieldKind::State { .. } | FieldKind::Array { .. } => {
+                    matches!(entry.verb, Verb::Out | Verb::In)
+                }
                 FieldKind::Signal { .. } => matches!(entry.verb, Verb::Emit | Verb::Drain),
             };
             if !ok {
@@ -706,57 +851,125 @@ impl Party {
     }
 }
 
-/// Rewrite a source widget node into IR form, replacing `port.field`
-/// paths with `iface_instance.field` qualified names via `ports`.
-fn lower_widget(node: &WidgetNode, ports: &HashMap<String, String>) -> IrWidget {
-    let qualify = |path: &Path| -> String {
+/// Lower a widget tree into flat IR, unrolling `for` loops: `loops` maps
+/// each enclosing loop variable to its current value, so indexed bindings
+/// resolve to element value names and `{var}` labels interpolate. `ports`
+/// maps a citizen port name to its wiring instance name.
+fn lower_widgets(
+    nodes: &[WidgetNode],
+    ports: &HashMap<String, String>,
+    loops: &HashMap<String, i64>,
+    out: &mut Vec<IrWidget>,
+) {
+    for node in nodes {
+        lower_widget(node, ports, loops, out);
+    }
+}
+
+fn lower_widget(
+    node: &WidgetNode,
+    ports: &HashMap<String, String>,
+    loops: &HashMap<String, i64>,
+    out: &mut Vec<IrWidget>,
+) {
+    match node {
+        WidgetNode::Container { kind, children, .. } => {
+            let mut inner = Vec::new();
+            lower_widgets(children, ports, loops, &mut inner);
+            out.push(IrWidget::Container {
+                kind: kind.clone(),
+                children: inner,
+            });
+        }
+        WidgetNode::For {
+            var, lo, hi, body, ..
+        } => {
+            for i in *lo..*hi {
+                let mut inner_loops = loops.clone();
+                inner_loops.insert(var.clone(), i);
+                lower_widgets(body, ports, &inner_loops, out);
+            }
+        }
+        WidgetNode::Primitive(primitive) => {
+            out.push(lower_primitive(primitive, ports, loops));
+        }
+    }
+}
+
+fn lower_primitive(
+    primitive: &Primitive,
+    ports: &HashMap<String, String>,
+    loops: &HashMap<String, i64>,
+) -> IrWidget {
+    let instance_of =
+        |port: &str| -> String { ports.get(port).cloned().unwrap_or_else(|| port.to_owned()) };
+    // `port.field` (+ optional `[i]`) → `instance.field` or `instance.field.i`.
+    let qualify = |path: &Path, index: &Option<Expr>| -> String {
         if path.segments.len() < 2 {
             return path.joined();
         }
-        let port = path.segments[0].as_str();
-        let instance = ports.get(port).map(String::as_str).unwrap_or(port);
-        format!("{instance}.{}", path.segments[1])
-    };
-    match node {
-        WidgetNode::Container { kind, children, .. } => IrWidget::Container {
-            kind: kind.clone(),
-            children: children
-                .iter()
-                .map(|child| lower_widget(child, ports))
-                .collect(),
-        },
-        WidgetNode::Primitive(primitive) => {
-            let target = match &primitive.binding {
-                Binding::TwoWay(path) => IrWidgetTarget::Write {
-                    value: qualify(path),
-                },
-                Binding::Read(path) => IrWidgetTarget::Read {
-                    value: qualify(path),
-                },
-                Binding::Event(Expr::Call { path, args, .. }) => IrWidgetTarget::Event {
-                    signal: qualify(path),
-                    event: match args.first() {
-                        Some(Expr::Path(event)) => event.segments.join("::"),
-                        _ => String::new(),
-                    },
-                },
-                Binding::Event(_) | Binding::None => IrWidgetTarget::None,
-            };
-            let literal = |expr: &Expr| match expr {
-                Expr::Float(value, _) => *value,
-                Expr::Int(value, _) => *value as f64,
-                _ => 0.0,
-            };
-            IrWidget::Primitive {
-                kind: primitive.kind.clone(),
-                label: primitive.label.clone(),
-                range: primitive
-                    .range
-                    .as_ref()
-                    .map(|(lo, hi)| (literal(lo), literal(hi))),
-                target,
-            }
+        let base = format!("{}.{}", instance_of(&path.segments[0]), path.segments[1]);
+        match index.as_ref().and_then(|idx| resolve_index(idx, loops)) {
+            Some(i) => format!("{base}.{i}"),
+            None => base,
         }
+    };
+    let target = match &primitive.binding {
+        Binding::TwoWay { path, index } => IrWidgetTarget::Write {
+            value: qualify(path, index),
+        },
+        Binding::Read { path, index } => IrWidgetTarget::Read {
+            value: qualify(path, index),
+        },
+        Binding::Event(Expr::Call { path, args, .. }) => IrWidgetTarget::Event {
+            signal: qualify(path, &None),
+            event: match args.first() {
+                Some(Expr::Path(event)) => event.segments.join("::"),
+                _ => String::new(),
+            },
+        },
+        Binding::Event(_) | Binding::None => IrWidgetTarget::None,
+    };
+    let literal = |expr: &Expr| match expr {
+        Expr::Float(value, _) => *value,
+        Expr::Int(value, _) => *value as f64,
+        _ => 0.0,
+    };
+    IrWidget::Primitive {
+        kind: primitive.kind.clone(),
+        label: primitive.label.as_ref().map(|l| interpolate(l, loops)),
+        range: primitive
+            .range
+            .as_ref()
+            .map(|(lo, hi)| (literal(lo), literal(hi))),
+        target,
+    }
+}
+
+/// Resolve a loop index expression (a literal or a loop variable) to a value.
+fn resolve_index(expr: &Expr, loops: &HashMap<String, i64>) -> Option<i64> {
+    match expr {
+        Expr::Int(value, _) => Some(*value),
+        Expr::Path(path) if path.segments.len() == 1 => loops.get(&path.segments[0]).copied(),
+        _ => None,
+    }
+}
+
+/// Replace `{var}` in a label with each enclosing loop variable's value.
+fn interpolate(label: &str, loops: &HashMap<String, i64>) -> String {
+    let mut text = label.to_owned();
+    for (var, value) in loops {
+        text = text.replace(&format!("{{{var}}}"), &value.to_string());
+    }
+    text
+}
+
+/// The default literal for element `i` of an array field.
+fn array_element_default(default: &Option<ArrayDefault>, i: usize) -> Option<String> {
+    match default {
+        None => None,
+        Some(ArrayDefault::Broadcast(expr)) => Some(expr_text(expr)),
+        Some(ArrayDefault::Elements(items)) => items.get(i).map(expr_text),
     }
 }
 

@@ -113,8 +113,10 @@ fn primitives_citizen_bindings() {
     };
     assert_eq!(checkbox.kind, "checkbox");
     assert_eq!(checkbox.label.as_deref(), Some("Enabled"));
-    assert!(matches!(&checkbox.binding, Binding::TwoWay(path)
-        if path.segments == ["bench", "enabled"]));
+    assert!(
+        matches!(&checkbox.binding, Binding::TwoWay { path, index: None }
+        if path.segments == ["bench", "enabled"])
+    );
 
     let WidgetNode::Primitive(slider) = &children[1] else {
         panic!()

@@ -256,6 +256,32 @@ impl Parser {
                 kind: FieldKind::Signal { ty },
                 span,
             })
+        } else if matches!(self.peek().kind, TokenKind::LBracket) {
+            // `[type; N]` array field
+            self.bump(); // `[`
+            let elem = self.type_ref()?;
+            self.expect(&TokenKind::Semi, "`;` in array type")?;
+            let len = match self.peek().kind {
+                TokenKind::Int(value) if value > 0 => {
+                    self.bump();
+                    value as usize
+                }
+                _ => return Err(self.error("array length must be a positive integer")),
+            };
+            let mut end = self.expect(&TokenKind::RBracket, "`]`")?.span;
+            let default = if matches!(self.peek().kind, TokenKind::Eq) {
+                self.bump();
+                let (array_default, default_end) = self.array_default()?;
+                end = default_end;
+                Some(array_default)
+            } else {
+                None
+            };
+            Ok(Field {
+                name,
+                kind: FieldKind::Array { elem, len, default },
+                span: start.to(end),
+            })
         } else {
             let ty = self.type_ref()?;
             let mut end = ty.span;
@@ -356,6 +382,9 @@ impl Parser {
     }
 
     fn widget(&mut self) -> Result<WidgetNode, ParseError> {
+        if self.at_word("for") {
+            return self.for_loop();
+        }
         let (kind, start) = self.ident("widget or container name")?;
         if matches!(self.peek().kind, TokenKind::LBrace) {
             self.bump();
@@ -391,11 +420,13 @@ impl Parser {
         let binding = match self.peek().kind {
             TokenKind::ArrowBoth => {
                 self.bump();
-                Binding::TwoWay(self.path()?)
+                let (path, index) = self.indexed_path()?;
+                Binding::TwoWay { path, index }
             }
             TokenKind::ArrowLeft => {
                 self.bump();
-                Binding::Read(self.path()?)
+                let (path, index) = self.indexed_path()?;
+                Binding::Read { path, index }
             }
             TokenKind::ArrowRight => {
                 self.bump();
@@ -412,6 +443,74 @@ impl Parser {
             binding,
             span: start.to(end),
         })))
+    }
+
+    /// `for VAR in LO..HI { widget* }`
+    fn for_loop(&mut self) -> Result<WidgetNode, ParseError> {
+        let start = self.peek().span;
+        self.bump(); // `for`
+        let (var, _) = self.ident("loop variable")?;
+        if !self.eat_word("in") {
+            return Err(self.error("expected `in` after loop variable"));
+        }
+        let lo = self.int_literal("loop start")?;
+        self.expect(&TokenKind::DotDot, "`..` in loop range")?;
+        let hi = self.int_literal("loop end")?;
+        self.expect(&TokenKind::LBrace, "`{`")?;
+        let mut body = Vec::new();
+        while !matches!(self.peek().kind, TokenKind::RBrace) {
+            body.push(self.widget()?);
+        }
+        let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
+        Ok(WidgetNode::For {
+            var,
+            lo,
+            hi,
+            body,
+            span: start.to(end),
+        })
+    }
+
+    fn int_literal(&mut self, what: &str) -> Result<i64, ParseError> {
+        match self.peek().kind {
+            TokenKind::Int(value) => {
+                self.bump();
+                Ok(value)
+            }
+            _ => Err(self.error(format!("expected an integer for {what}"))),
+        }
+    }
+
+    /// A binding path with an optional `[index]`: `b.selected` or
+    /// `b.selected[i]`. The index is an integer literal or a loop variable.
+    fn indexed_path(&mut self) -> Result<(Path, Option<Expr>), ParseError> {
+        let path = self.path()?;
+        let index = if matches!(self.peek().kind, TokenKind::LBracket) {
+            self.bump();
+            let expr = self.expr()?;
+            self.expect(&TokenKind::RBracket, "`]`")?;
+            Some(expr)
+        } else {
+            None
+        };
+        Ok((path, index))
+    }
+
+    /// `{expr}` (broadcast) or `{e0, e1, ...}` (per-element).
+    fn array_default(&mut self) -> Result<(ArrayDefault, Span), ParseError> {
+        self.expect(&TokenKind::LBrace, "`{` array initializer")?;
+        let mut items = vec![self.expr()?];
+        while matches!(self.peek().kind, TokenKind::Comma) {
+            self.bump();
+            items.push(self.expr()?);
+        }
+        let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
+        let default = if items.len() == 1 {
+            ArrayDefault::Broadcast(items.into_iter().next().unwrap())
+        } else {
+            ArrayDefault::Elements(items)
+        };
+        Ok((default, end))
     }
 
     // ------------------------------------------------------------------
