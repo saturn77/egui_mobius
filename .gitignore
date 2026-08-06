@@ -47,3 +47,6 @@ examples/clock_async/default_config.ron
 # WASM build artifacts (Trunk)
 **/dist/
 **/.trunk/
+
+# design/thinking docs live outside the public repo
+/develop/
