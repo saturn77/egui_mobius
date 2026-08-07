@@ -23,7 +23,7 @@ use egui_citizen::{CitizenId, Dispatcher};
 use egui_dock::{DockArea, DockState, NodeIndex};
 use mobius_lang::ir::InstanceKind;
 use mobius_lang::{Host, Registry, WiredApp, lower, parse, wire};
-use mobius_lang_host::{CitizenView, EventResolver, Plugins, render_source};
+use mobius_lang_host::{CitizenView, EventResolver, Interactions, Plugins, render_source};
 
 use plugins::{LensLogger, PlotPanel};
 
@@ -171,7 +171,8 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             // Source citizen: rendered generically from its IR widgets.
             None => {
                 let instance = &self.wired.instances[tab.instance];
-                render_source(ui, &instance.widgets, &instance.bindings, self.events);
+                let ix = Interactions::events_only(self.events);
+                render_source(ui, &instance.widgets, &instance.bindings, &ix);
             }
         }
     }

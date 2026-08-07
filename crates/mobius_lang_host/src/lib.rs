@@ -32,6 +32,25 @@ use mobius_lang::ir::{IrWidget, IrWidgetTarget};
 /// the host supplies this; a `button ->` with no matching event is inert.
 pub type EventResolver<'a> = dyn Fn(&str) -> Option<Box<dyn Any + Send>> + 'a;
 
+/// Host callbacks for user interactions in source-rendered widgets.
+pub struct Interactions<'a> {
+    /// Constructs the compiled event a `button ->` fires.
+    pub events: &'a EventResolver<'a>,
+    /// Called when a slider/drag is *released* (mouse up), with the widget's
+    /// label and its new value — for "committed value" logging. `None` = no-op.
+    pub on_release: Option<&'a dyn Fn(&str, f64)>,
+}
+
+impl Interactions<'_> {
+    /// Interactions that only resolve events (no release notifications).
+    pub fn events_only<'a>(events: &'a EventResolver<'a>) -> Interactions<'a> {
+        Interactions {
+            events,
+            on_release: None,
+        }
+    }
+}
+
 /// A live citizen the host can render: lifecycle ([`Citizen`]) plus a
 /// per-frame draw. Rendering is intentionally *not* on the `Citizen` trait
 /// (that stays object-safe and lifecycle-only), so this subtrait carries the
@@ -92,34 +111,29 @@ pub fn render_source(
     ui: &mut egui::Ui,
     widgets: &[IrWidget],
     bindings: &BindingSet,
-    events: &EventResolver,
+    ix: &Interactions,
 ) {
     for widget in widgets {
-        render_widget(ui, widget, bindings, events);
+        render_widget(ui, widget, bindings, ix);
     }
 }
 
-fn render_widget(
-    ui: &mut egui::Ui,
-    widget: &IrWidget,
-    bindings: &BindingSet,
-    events: &EventResolver,
-) {
+fn render_widget(ui: &mut egui::Ui, widget: &IrWidget, bindings: &BindingSet, ix: &Interactions) {
     match widget {
         IrWidget::Container { kind, children } => match kind.as_str() {
             "row" => {
-                ui.horizontal(|ui| render_source(ui, children, bindings, events));
+                ui.horizontal(|ui| render_source(ui, children, bindings, ix));
             }
             "group" => {
-                ui.group(|ui| render_source(ui, children, bindings, events));
+                ui.group(|ui| render_source(ui, children, bindings, ix));
             }
             "scroll" => {
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
-                    .show(ui, |ui| render_source(ui, children, bindings, events));
+                    .show(ui, |ui| render_source(ui, children, bindings, ix));
             }
             _ => {
-                ui.vertical(|ui| render_source(ui, children, bindings, events));
+                ui.vertical(|ui| render_source(ui, children, bindings, ix));
             }
         },
         IrWidget::Primitive {
@@ -136,7 +150,7 @@ fn render_widget(
             options,
             target,
             bindings,
-            events,
+            ix,
         ),
     }
 }
@@ -150,7 +164,7 @@ fn render_primitive(
     options: &[String],
     target: &IrWidgetTarget,
     bindings: &BindingSet,
-    events: &EventResolver,
+    ix: &Interactions,
 ) {
     let label = label.unwrap_or("");
     match (kind, target) {
@@ -187,11 +201,33 @@ fn render_primitive(
                 });
             }
         }
-        ("checkbox" | "toggle", IrWidgetTarget::Write { value }) => {
+        ("checkbox", IrWidgetTarget::Write { value }) => {
             if let Some(binding) = bindings.write::<bool>(value) {
                 let mut current = binding.get();
                 if ui.checkbox(&mut current, label).changed() {
                     binding.set(current);
+                }
+            }
+        }
+        // A prominent on/off switch (larger than a checkbox).
+        ("toggle", IrWidgetTarget::Write { value }) => {
+            if let Some(binding) = bindings.write::<bool>(value) {
+                let mut on = binding.get();
+                let (mark, fill) = if on {
+                    ("●  ON", egui::Color32::from_rgb(58, 122, 72))
+                } else {
+                    ("○  OFF", egui::Color32::from_rgb(96, 64, 64))
+                };
+                let button = egui::Button::new(
+                    egui::RichText::new(format!("{label}   {mark}"))
+                        .size(15.0)
+                        .strong(),
+                )
+                .fill(fill)
+                .min_size(egui::vec2(180.0, 30.0));
+                if ui.add(button).clicked() {
+                    on = !on;
+                    binding.set(on);
                 }
             }
         }
@@ -200,8 +236,15 @@ fn render_primitive(
                 let (lo, hi) = range.unwrap_or((0.0, 1.0));
                 let mut current = binding.get();
                 let slider = egui::Slider::new(&mut current, lo as f32..=hi as f32).text(label);
-                if ui.add(slider).changed() {
+                let response = ui.add(slider);
+                if response.changed() {
                     binding.set(current);
+                }
+                // On mouse release (drag end), notify the host of the value.
+                if response.drag_stopped()
+                    && let Some(on_release) = ix.on_release
+                {
+                    on_release(label, current as f64);
                 }
             }
         }
@@ -219,7 +262,7 @@ fn render_primitive(
         ("button", IrWidgetTarget::Event { signal, event }) => {
             if ui.button(label).clicked()
                 && let Some(emit) = bindings.emit(signal)
-                && let Some(boxed) = events(event)
+                && let Some(boxed) = (ix.events)(event)
             {
                 emit.send_boxed(boxed);
             }
