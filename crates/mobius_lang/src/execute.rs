@@ -298,6 +298,8 @@ pub struct WiredApp {
     pub instances: Vec<WiredInstance>,
     pub handlers: Vec<WiredHandler>,
     pub layout: Vec<IrDock>,
+    /// Resolved `@style` intent for the host to apply.
+    pub style: crate::ir::IrStyle,
 }
 
 impl std::fmt::Debug for WiredApp {
@@ -441,5 +443,6 @@ pub fn wire(ir: &Ir, host: &Host) -> Result<WiredApp, ExecError> {
         instances,
         handlers,
         layout: ir.layout.clone(),
+        style: ir.style.clone(),
     })
 }

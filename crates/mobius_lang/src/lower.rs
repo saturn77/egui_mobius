@@ -131,6 +131,7 @@ impl<'a> Lowerer<'a> {
                 signals: Vec::new(),
                 handlers: Vec::new(),
                 layout: Vec::new(),
+                style: IrStyle::default(),
             },
             diagnostics: Vec::new(),
         }
@@ -171,6 +172,7 @@ impl<'a> Lowerer<'a> {
             match item {
                 AppItem::Value(value) => self.lower_app_value(value),
                 AppItem::Section(section) => self.lower_section(section),
+                AppItem::Style(style) => self.lower_style(style),
                 _ => {}
             }
         }
@@ -499,6 +501,26 @@ impl<'a> Lowerer<'a> {
             readers: Vec::new(),
             span: value.span,
         });
+    }
+
+    fn lower_style(&mut self, style: &StyleDecl) {
+        for entry in &style.entries {
+            match (entry.key.as_str(), &entry.value) {
+                ("theme", StyleValue::Ident(name)) => self.ir.style.theme = Some(name.clone()),
+                ("font_scale", StyleValue::Number(n)) => self.ir.style.font_scale = Some(*n as f32),
+                ("item_spacing", StyleValue::Number(n)) => {
+                    self.ir.style.item_spacing = Some(*n as f32)
+                }
+                ("slider_width", StyleValue::Number(n)) => {
+                    self.ir.style.slider_width = Some(*n as f32)
+                }
+                ("theme", _) => self.error("`theme` expects a name", entry.span),
+                ("font_scale" | "item_spacing" | "slider_width", _) => {
+                    self.error(format!("`{}` expects a number", entry.key), entry.span)
+                }
+                _ => self.error(format!("unknown @style key `{}`", entry.key), entry.span),
+            }
+        }
     }
 
     fn lower_section(&mut self, section: &Section) {

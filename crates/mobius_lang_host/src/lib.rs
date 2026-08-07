@@ -32,13 +32,16 @@ use mobius_lang::ir::{IrWidget, IrWidgetTarget};
 /// the host supplies this; a `button ->` with no matching event is inert.
 pub type EventResolver<'a> = dyn Fn(&str) -> Option<Box<dyn Any + Send>> + 'a;
 
+/// Called when a slider/drag is released, with the widget's label and its
+/// new value — for "committed value" logging.
+pub type ReleaseFn<'a> = dyn Fn(&str, f64) + 'a;
+
 /// Host callbacks for user interactions in source-rendered widgets.
 pub struct Interactions<'a> {
     /// Constructs the compiled event a `button ->` fires.
     pub events: &'a EventResolver<'a>,
-    /// Called when a slider/drag is *released* (mouse up), with the widget's
-    /// label and its new value — for "committed value" logging. `None` = no-op.
-    pub on_release: Option<&'a dyn Fn(&str, f64)>,
+    /// Called on slider/drag release (mouse up). `None` = no-op.
+    pub on_release: Option<&'a ReleaseFn<'a>>,
 }
 
 impl Interactions<'_> {
@@ -102,6 +105,36 @@ impl Plugins {
         let builder = self.builders.get(&instance.ty)?;
         Some(builder(&instance.name, &instance.bindings))
     }
+}
+
+/// Apply the generic parts of resolved `@style` to the egui context — font
+/// scale, item spacing, slider width. The theme *name* (`style.theme`) is
+/// left to the host, which owns the palette; read it from `WiredApp::style`.
+pub fn apply_style(ctx: &egui::Context, style: &mobius_lang::ir::IrStyle) {
+    // egui's default text sizes; scaling from a fixed base keeps it idempotent.
+    let base: &[(egui::TextStyle, f32)] = &[
+        (egui::TextStyle::Small, 9.0),
+        (egui::TextStyle::Body, 12.5),
+        (egui::TextStyle::Monospace, 12.0),
+        (egui::TextStyle::Button, 12.5),
+        (egui::TextStyle::Heading, 18.0),
+    ];
+    ctx.all_styles_mut(|s| {
+        if let Some(scale) = style.font_scale {
+            let factor = scale / 100.0;
+            for (text_style, size) in base {
+                if let Some(font) = s.text_styles.get_mut(text_style) {
+                    font.size = size * factor;
+                }
+            }
+        }
+        if let Some(spacing) = style.item_spacing {
+            s.spacing.item_spacing = egui::vec2(spacing, spacing * 0.75);
+        }
+        if let Some(width) = style.slider_width {
+            s.spacing.slider_width = width;
+        }
+    });
 }
 
 /// Render a source-declared citizen generically from its IR widget tree

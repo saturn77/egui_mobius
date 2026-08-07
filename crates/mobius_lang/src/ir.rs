@@ -20,6 +20,22 @@ pub struct Ir {
     pub signals: Vec<IrSignal>,
     pub handlers: Vec<IrHandler>,
     pub layout: Vec<IrDock>,
+    /// Resolved `@style` intent, if the app declared one.
+    pub style: IrStyle,
+}
+
+/// Resolved style intent from `@style`. The host applies these; the language
+/// only carries the *choice*, never the color palettes.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IrStyle {
+    /// Named theme (`tokyo_night`), applied at startup by the host.
+    pub theme: Option<String>,
+    /// Font scale in percent (100 = default sizes).
+    pub font_scale: Option<f32>,
+    /// Item spacing in points.
+    pub item_spacing: Option<f32>,
+    /// Slider width in points.
+    pub slider_width: Option<f32>,
 }
 
 /// A party that can hold a binding: a citizen instance or a handler.
@@ -241,6 +257,24 @@ impl Ir {
             );
             if let Some(fraction) = dock.fraction {
                 let _ = write!(out, " fraction={fraction}");
+            }
+            let _ = writeln!(out);
+        }
+
+        let s = &self.style;
+        if s != &IrStyle::default() {
+            let _ = write!(out, "style   ");
+            if let Some(theme) = &s.theme {
+                let _ = write!(out, " theme={theme}");
+            }
+            if let Some(scale) = s.font_scale {
+                let _ = write!(out, " font_scale={scale}");
+            }
+            if let Some(spacing) = s.item_spacing {
+                let _ = write!(out, " item_spacing={spacing}");
+            }
+            if let Some(width) = s.slider_width {
+                let _ = write!(out, " slider_width={width}");
             }
             let _ = writeln!(out);
         }

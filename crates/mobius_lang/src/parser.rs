@@ -154,7 +154,7 @@ impl Parser {
         } else if self.at_word("citizen") {
             Ok(AppItem::Citizen(self.citizen()?))
         } else if matches!(self.peek().kind, TokenKind::At) {
-            Ok(AppItem::Section(self.section()?))
+            self.at_section()
         } else {
             Err(self.error(
                 "expected `let`, `enum`, `interface`, `citizen`, or a `@section` inside `app`",
@@ -560,18 +560,59 @@ impl Parser {
     // Sections
     // ------------------------------------------------------------------
 
-    fn section(&mut self) -> Result<Section, ParseError> {
+    /// `@name { ... }` — `@style` parses `key = value` entries; every other
+    /// section (`@wiring`, `@layout`) parses statements.
+    fn at_section(&mut self) -> Result<AppItem, ParseError> {
         let start = self.expect(&TokenKind::At, "`@`")?.span;
         let (name, _) = self.ident("section name")?;
         self.expect(&TokenKind::LBrace, "`{`")?;
-        let mut stmts = Vec::new();
-        while !matches!(self.peek().kind, TokenKind::RBrace) {
-            stmts.push(self.stmt()?);
+        if name == "style" {
+            let mut entries = Vec::new();
+            while !matches!(self.peek().kind, TokenKind::RBrace) {
+                entries.push(self.style_entry()?);
+            }
+            let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
+            Ok(AppItem::Style(StyleDecl {
+                entries,
+                span: start.to(end),
+            }))
+        } else {
+            let mut stmts = Vec::new();
+            while !matches!(self.peek().kind, TokenKind::RBrace) {
+                stmts.push(self.stmt()?);
+            }
+            let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
+            Ok(AppItem::Section(Section {
+                name,
+                stmts,
+                span: start.to(end),
+            }))
         }
-        let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
-        Ok(Section {
-            name,
-            stmts,
+    }
+
+    /// `key = value;` — value is a name (`tokyo_night`) or a number (`110`).
+    fn style_entry(&mut self) -> Result<StyleEntry, ParseError> {
+        let (key, start) = self.ident("style key")?;
+        self.expect(&TokenKind::Eq, "`=`")?;
+        let value = match self.peek().kind.clone() {
+            TokenKind::Int(v) => {
+                self.bump();
+                StyleValue::Number(v as f64)
+            }
+            TokenKind::Float(v) => {
+                self.bump();
+                StyleValue::Number(v)
+            }
+            TokenKind::Ident(name) => {
+                self.bump();
+                StyleValue::Ident(name)
+            }
+            other => return Err(self.error(format!("expected a name or number, found {other:?}"))),
+        };
+        let end = self.expect(&TokenKind::Semi, "`;`")?.span;
+        Ok(StyleEntry {
+            key,
+            value,
             span: start.to(end),
         })
     }

@@ -33,6 +33,31 @@ pub enum AppItem {
     Citizen(CitizenDecl),
     /// `@wiring { ... }` / `@layout { ... }`.
     Section(Section),
+    /// `@style { theme = ...; font_scale = ...; ... }` — declarative style
+    /// intent the host resolves (CSS-model, resolved at elaboration).
+    Style(StyleDecl),
+}
+
+/// The `@style { key = value; ... }` section.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StyleDecl {
+    pub entries: Vec<StyleEntry>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StyleEntry {
+    pub key: String,
+    pub value: StyleValue,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StyleValue {
+    /// A name, e.g. `theme = tokyo_night`.
+    Ident(String),
+    /// A number, e.g. `font_scale = 110`.
+    Number(f64),
 }
 
 /// `enum Name { A, B, C }` — a closed set of variant names. A field typed by
