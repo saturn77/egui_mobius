@@ -1,10 +1,10 @@
 # Introduction
 
-> **Book version:** 0.4.0 &nbsp;·&nbsp; **Last updated:** 2026-05-05 &nbsp;·&nbsp; tracks `egui_mobius` v0.4.0
+> **Book version:** 0.5.0 &nbsp;·&nbsp; **Last updated:** 2026-08-26 &nbsp;·&nbsp; tracks `egui_mobius` v0.5.0 (egui 0.35)
 >
 > The book is *live* — it evolves alongside the framework. Each
 > chapter footer notes the date of its last substantive revision.
-> When egui_mobius ships v0.5.0, this book becomes 0.5.0.
+> When egui_mobius ships v0.6.0, this book becomes 0.6.0.
 
 This book is the know-how for building solid, professional GUI
 applications in Rust on top of `egui` and the `egui_mobius`
@@ -42,12 +42,15 @@ A mobius-citizen application sits at one of three levels, each
 adding capability without throwing away what came before:
 
 - **Level 1** — shared `Dynamic<T>` between panels; the registrar
-  manages panel state. Examples: `getting_started`, `citizen_dock`.
-- **Level 2** — the registrar is extended to handle synchronous
-  backend processing — filter, parser, anything in-process.
-  Examples: `filter_plotter`, `citizen_fetch`.
-- **Level 3** — `egui_mobius` signals and slots wire the registrar
-  to async / multi-threaded backends. Example:
+  manages panel lifecycle. Examples: `getting_started`,
+  `citizen_dock`.
+- **Level 2** — panels push app-level messages onto an outbox; the
+  app's drain loop routes them to a synchronous backend — filter,
+  parser, anything in-process. The registrar stays a lifecycle
+  registry; it is not the backend path. Examples: `filter_plotter`,
+  `citizen_fetch`.
+- **Level 3** — `egui_mobius` signals and slots carry the drained
+  messages to async / multi-threaded backends. Example:
   `citizen_signal_async`.
 
 Levels 1–2 use `egui_citizen` and `egui_mobius_reactive`; level 3

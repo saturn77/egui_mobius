@@ -3,7 +3,6 @@
 //! the backend.
 
 use eframe::egui;
-use egui_citizen::Registrar;
 
 use crate::messages::AppMessage;
 use crate::state::SharedState;
@@ -19,7 +18,7 @@ impl SettingsPanel {
         Self { outbox: Vec::new() }
     }
 
-    pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState, _dispatcher: &mut Registrar) {
+    pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
         ui.heading("Filter parameters");
         ui.add_space(8.0);
 

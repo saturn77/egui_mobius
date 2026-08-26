@@ -74,7 +74,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
             TabKind::Plot => self.plot.show(ui, self.state),
-            TabKind::Settings => self.settings.show(ui, self.state, self.registrar),
+            TabKind::Settings => self.settings.show(ui, self.state),
             TabKind::Logger => self.logger.show(ui, self.state),
             TabKind::Editor => self.editor.show(ui, self.state),
         }

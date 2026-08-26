@@ -204,4 +204,4 @@ references to the others.
 
 ---
 
-*Chapter last revised: 2026-05-04 — egui_mobius v0.4.0.*
+*Chapter last revised: 2026-08-26 — egui_mobius v0.5.0.*

@@ -158,4 +158,4 @@ implementations port to wgpu's pipeline / buffer model.
 
 ---
 
-*Chapter last revised: 2026-05-05 — egui_mobius v0.4.0.*
+*Chapter last revised: 2026-08-26 — egui_mobius v0.5.0.*

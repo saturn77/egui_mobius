@@ -54,7 +54,8 @@ the real minimum:
 struct PlotPanel {
     citizen_id: CitizenId,
     citizen_state: CitizenState,
-    samples: Vec<f32>,
+    /// App-level intents, drained by the app's update loop each frame.
+    outbox: Vec<AppMessage>,
 }
 
 impl PlotPanel {
@@ -62,28 +63,28 @@ impl PlotPanel {
         Self {
             citizen_id: CitizenId::new("plot"),
             citizen_state: state,
-            samples: Vec::new(),
+            outbox: Vec::new(),
         }
     }
 
-    fn show(&mut self, ui: &mut egui::Ui, registrar: &mut Registrar) {
+    fn show(&mut self, ui: &mut egui::Ui, shared: &SharedState) {
         ui.heading("Plot");
 
-        // Read direction: registrar → panel.
+        // Registrar → panel: reactive, no method call.
         // The registrar's activate() writes self.citizen_state.active
-        // through the shared Arc; we observe it reactively via
-        // is_active(). No method call from this side is needed.
+        // through the shared Arc; we observe it via is_active().
         if self.is_active() {
             ui.label("(active — drawing live)");
-            // ... actual plotting against self.samples ...
+            // ... actual plotting against shared.traces ...
         } else {
             ui.label("(inactive — paused)");
         }
 
-        // Write direction: panel → registrar.
-        // The panel can hand control to a sibling citizen explicitly.
+        // Panel → app: push an intent, don't call anything.
+        // The app's drain loop routes this — including any
+        // registrar.activate(...) it decides to make.
         if ui.button("Switch to settings").clicked() {
-            registrar.activate(&CitizenId::new("settings"));
+            self.outbox.push(AppMessage::FocusSettings);
         }
     }
 }
@@ -106,18 +107,32 @@ you'd write that path manually every time you wanted to check
 activation. The accessor boilerplate is the price; the readers
 and hooks are what you actually buy.
 
-The two state-flow directions are intentionally asymmetric.
-**Registrar → panel happens reactively** — the registrar writes
-through the `Arc` underneath `citizen_state.active`, and the panel
-sees the new value the next time `is_active()` reads it. No
-method call from the panel side is needed. **Panel → registrar
-requires a method-call surface**, which is what `&mut Registrar`
-in the `show()` signature provides — the panel can call
-`registrar.activate(...)` to hand control to a sibling, or
-`registrar.send(...)` to push a custom message. Some apps wrap
-the registrar and shared services in a `PanelCtx` struct
-(`fn show(&mut self, ui: &mut egui::Ui, ctx: &mut PanelCtx)`) to
-keep the parameter list short; either shape works.
+Notice what the panel's `show()` signature is — and what it isn't.
+The panel sees `&SharedState`, the reactive state shared between
+panels, and its own outbox. It does **not** take `&mut Registrar`.
+Both flow directions stay declarative:
+
+- **Registrar → panel is reactive.** The registrar writes through
+  the `Arc` underneath `citizen_state.active`, and the panel sees
+  the new value the next time `is_active()` reads it. No method
+  call in either direction.
+- **Panel → app is a message.** The panel pushes an `AppMessage`
+  onto its outbox; the app's update loop drains outboxes once per
+  frame and routes each message. If a message means "activate a
+  sibling," it is the *app layer* that calls
+  `registrar.activate(...)`. The registrar lives with the app and
+  the `TabViewer` — panels never hold a reference to it.
+
+Keeping the registrar out of panel signatures is what keeps
+panels composable: a panel is a function of `SharedState` plus its
+own atoms, and its only side channel is the outbox. It also draws
+the backend boundary cleanly. `SharedState` is a **UI-side**
+structure — it never crosses into backend processing. When a
+drained message needs backend work, the app snapshots the relevant
+`Dynamic<T>` values into an owned request and sends *that* over
+the signal/channel; the backend thread receives plain data, never
+a reference into shared state (see
+[CitizenMessage — the backend bridge](messages.md)).
 
 The `state` argument to `PlotPanel::new` should always come from
 [`Registrar::register()`](registrar.md#registerid---citizenstate),
@@ -344,15 +359,16 @@ the app level and gets passed by reference into each panel's
 
 ```rust,ignore
 struct App {
-    services: Arc<SharedServices>,
-    registrar: Registrar,
+    shared: SharedState,      // reactive state panels read and write
+    registrar: Registrar,     // app-layer only — panels never see it
     logger: LoggerPanel,
     bom: BomPanel,
 }
 
-// And inside each panel's show():
-self.logger.show(ui, &mut self.registrar, &self.services);
-self.bom.show(ui, &mut self.registrar, &self.services);
+// The app's update loop hands each panel the shared state — and
+// only the shared state. The registrar stays behind.
+self.logger.show(ui, &self.shared);
+self.bom.show(ui, &self.shared);
 ```
 
 Whether the shared bits are themselves reactive (`Dynamic<T>`
