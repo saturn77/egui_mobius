@@ -1,7 +1,7 @@
 //! Reactive lifecycle state for a citizen panel.
 //!
 //! Each field is a [`Dynamic<T>`](egui_mobius_reactive::Dynamic) — other panels
-//! and threads can read the value without polling. When the registrar calls
+//! and threads can read the value without polling. When the registry calls
 //! `activate()`, the `active` field updates immediately and all readers see
 //! the new value on their next `.get()`.
 

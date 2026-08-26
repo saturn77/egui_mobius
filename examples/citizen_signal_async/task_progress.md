@@ -69,7 +69,7 @@ clean before moving on.
 
 ## Phase 4 — citizen activation logging (already done in Phase 3)
 
-- [x] Tab clicks call `registrar.activate(&id)` (via
+- [x] Tab clicks call `registry.activate(&id)` (via
       `TabViewer::on_tab_button`)
 - [x] `drain_messages()` appended to `state.log` so Logger shows both
       backend events and citizen lifecycle events

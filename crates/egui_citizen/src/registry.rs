@@ -1,4 +1,4 @@
-//! Central registrar for citizen lifecycle management and message routing.
+//! Central registry for citizen lifecycle management and message routing.
 
 use std::collections::HashMap;
 
@@ -7,12 +7,12 @@ use crate::state::CitizenState;
 
 /// Manages citizen registration, activation, and message routing.
 ///
-/// The registrar is the hub between the UI (panels reading shared state)
+/// The registry is the hub between the UI (panels reading shared state)
 /// and the backend (threads receiving messages over channels).
 ///
 /// # Activation
 ///
-/// [`activate()`](Registrar::activate) is the core operation — an encoded
+/// [`activate()`](Registry::activate) is the core operation — an encoded
 /// set/reset. When you activate citizen "alpha":
 /// - `alpha.active` is set to `true`
 /// - All other active citizens are set to `false`
@@ -23,40 +23,40 @@ use crate::state::CitizenState;
 ///
 /// ```text
 /// Tab click
-///   → registrar.activate("alpha")
+///   → registry.activate("alpha")
 ///     → alpha.state.active = true        (reactive, immediate)
 ///     → beta.state.active = false
 ///     → queue ← [Activated, Deactivated]
-///   → registrar.drain_messages()
+///   → registry.drain_messages()
 ///     → route to backend threads via channels
 /// ```
 ///
 /// # Example
 ///
 /// ```rust
-/// use egui_citizen::{Registrar, CitizenId, CitizenMessage};
+/// use egui_citizen::{Registry, CitizenMessage};
 ///
-/// let mut registrar = Registrar::new();
-/// registrar.register(CitizenId::new("alpha"));
-/// registrar.register(CitizenId::new("beta"));
+/// let mut registry = Registry::new();
+/// registry.add().with_name("alpha");
+/// registry.add().with_name("beta");
 ///
-/// registrar.activate(&CitizenId::new("alpha"));
+/// registry.activate("alpha");
 ///
-/// let messages = registrar.drain_messages();
+/// let messages = registry.drain_messages();
 /// assert_eq!(messages.len(), 1); // Activated{alpha} only (beta was never active)
 ///
-/// registrar.activate(&CitizenId::new("beta"));
+/// registry.activate("beta");
 ///
-/// let messages = registrar.drain_messages();
+/// let messages = registry.drain_messages();
 /// assert_eq!(messages.len(), 2); // Deactivated{alpha} + Activated{beta}
 /// ```
-pub struct Registrar {
+pub struct Registry {
     citizens: HashMap<CitizenId, CitizenState>,
     message_queue: Vec<CitizenMessage>,
 }
 
-impl Registrar {
-    /// Create an empty registrar.
+impl Registry {
+    /// Create an empty registry.
     pub fn new() -> Self {
         Self {
             citizens: HashMap::new(),
@@ -64,20 +64,24 @@ impl Registrar {
         }
     }
 
-    /// Register a citizen and return its shared state handle.
+    /// Start adding a citizen. Finish the chain with
+    /// [`with_name()`](CitizenBuilder::with_name), which registers the
+    /// citizen and returns its shared [`CitizenState`] handle:
     ///
-    /// The returned [`CitizenState`] can be cloned and handed to the panel
-    /// struct. All clones share the same underlying `Dynamic<T>` fields,
-    /// so changes made by the registrar are visible to the panel immediately.
-    pub fn register(&mut self, id: CitizenId) -> CitizenState {
-        let state = CitizenState::new();
-        self.citizens.insert(id, state.clone());
-        state
+    /// ```rust
+    /// # use egui_citizen::Registry;
+    /// # let mut registry = Registry::new();
+    /// let plot_state = registry.add().with_name("plot");
+    /// ```
+    ///
+    /// Future per-citizen options chain between `add()` and `with_name()`.
+    pub fn add(&mut self) -> CitizenBuilder<'_> {
+        CitizenBuilder { registry: self }
     }
 
     /// Get the state of a registered citizen.
-    pub fn get(&self, id: &CitizenId) -> Option<&CitizenState> {
-        self.citizens.get(id)
+    pub fn get(&self, id: impl Into<CitizenId>) -> Option<&CitizenState> {
+        self.citizens.get(&id.into())
     }
 
     /// Push a message onto the queue.
@@ -88,14 +92,15 @@ impl Registrar {
         self.message_queue.push(message);
     }
 
-    /// Activate a citizen by ID, deactivating all others.
+    /// Activate a citizen by name, deactivating all others.
     ///
     /// This is an encoded set/reset — exactly one citizen is active at a
     /// time. Both `Activated` and `Deactivated` messages are emitted for
     /// downstream consumers.
-    pub fn activate(&mut self, id: &CitizenId) {
+    pub fn activate(&mut self, id: impl Into<CitizenId>) {
+        let id = id.into();
         for (cid, state) in &self.citizens {
-            if cid == id {
+            if *cid == id {
                 state.active.set(true);
                 self.message_queue
                     .push(CitizenMessage::Activated { id: cid.clone() });
@@ -121,14 +126,36 @@ impl Registrar {
         self.citizens.len()
     }
 
-    /// Whether the registrar has no citizens.
+    /// Whether the registry has no citizens.
     pub fn is_empty(&self) -> bool {
         self.citizens.is_empty()
     }
 }
 
-impl Default for Registrar {
+impl Default for Registry {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// In-progress citizen registration, started by [`Registry::add()`].
+///
+/// Chain option setters here as they grow; [`with_name()`](Self::with_name)
+/// completes the registration.
+pub struct CitizenBuilder<'a> {
+    registry: &'a mut Registry,
+}
+
+impl CitizenBuilder<'_> {
+    /// Name the citizen, completing registration.
+    ///
+    /// Returns the shared [`CitizenState`] handle. The handle can be cloned
+    /// and given to the panel struct — all clones share the same underlying
+    /// `Dynamic<T>` fields, so changes made by the registry are visible to
+    /// the panel immediately.
+    pub fn with_name(self, name: impl Into<CitizenId>) -> CitizenState {
+        let state = CitizenState::new();
+        self.registry.citizens.insert(name.into(), state.clone());
+        state
     }
 }

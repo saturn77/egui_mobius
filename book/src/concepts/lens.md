@@ -5,7 +5,7 @@
 > — System Info, Filters, Logger Colors, Save Logs, Clear Logs,
 > the column-toggle checkboxes, the scrollable log area itself.
 > Like every other citizen panel, it observes shared reactive state
-> through `Dynamic<T>` and participates in registrar-coordinated
+> through `Dynamic<T>` and participates in registry-coordinated
 > activation.
 
 If "citizen" doesn't ring a bell yet, read [What is a

@@ -4,7 +4,8 @@
 - **`egui_citizen::citizen_panel!`** — generates a citizen panel's struct, `new(citizen_state)` constructor, and `Citizen` impl from one declaration. Canonicalizes the macro previously copy-pasted (and diverging) across CopperForge, CopperTrace, and forgePM; uses `$crate::` paths so callers need no imports in scope. Covered in the book's Citizen trait chapter and reference cheat sheet.
 
 ### Changed
-- **`egui_citizen::Dispatcher` renamed to `Registrar`.** The type registers citizens, tracks the one-hot active flag, and queues lifecycle messages — it never dispatched anything to the backend. "Dispatcher" now refers only to the machinery that actually routes events: `egui_mobius::dispatching::Dispatcher` and app-level message routing. Book, README, and examples updated to match. `egui_citizen` is workspace-only (unpublished), so no deprecation alias is provided.
+- **`egui_citizen::Dispatcher` renamed to `Registry`.** The type registers citizens, tracks the one-hot active flag, and queues lifecycle messages — it never dispatched anything to the backend. "Dispatcher" now refers only to the machinery that actually routes events: `egui_mobius::dispatching::Dispatcher` and app-level message routing. Book, README, and examples updated to match. `egui_citizen` is workspace-only (unpublished), so no deprecation alias is provided.
+- **Builder-style registration: `registry.add().with_name("plot")`** replaces `register(CitizenId::new("plot"))`. `add()` returns a `CitizenBuilder` so per-citizen options can chain before the `with_name()` finisher as the API grows. `activate()` and `get()` now take `impl Into<CitizenId>` — a plain `"name"` works; `CitizenId` converts from `&str`, `String`, and `&CitizenId`.
 
 ## [0.5.0] - 2026-06-29
 

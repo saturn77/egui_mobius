@@ -20,7 +20,7 @@ into any host app with a four-line integration: `cargo add` the
 crate, declare one `Dynamic<T>` field, add a `TabKind` variant,
 render it from the `TabViewer`. No glue code. Real apps grow by
 **accumulating citizens**, not by extending a core — and the
-[Registrar](concepts/registrar.md) is the registry those citizens
+[Registry](concepts/registry.md) is the registry those citizens
 register with.
 
 `egui_lens` and `egui_quill` are the shipped examples; the same
@@ -34,19 +34,19 @@ than just architecturally tidy.
 real-world `egui_citizen` + `egui_dock` application for PCB gerber
 inspection. Each docked region is a citizen-panel; the panels share
 state through reactive cells, and the 3D rendering thread is
-coordinated through the registrar.*
+coordinated through the registry.*
 
 ## Three levels of mobius-citizen apps
 
 A mobius-citizen application sits at one of three levels, each
 adding capability without throwing away what came before:
 
-- **Level 1** — shared `Dynamic<T>` between panels; the registrar
+- **Level 1** — shared `Dynamic<T>` between panels; the registry
   manages panel lifecycle. Examples: `getting_started`,
   `citizen_dock`.
 - **Level 2** — panels push app-level messages onto an outbox; the
   app's drain loop routes them to a synchronous backend — filter,
-  parser, anything in-process. The registrar stays a lifecycle
+  parser, anything in-process. The registry stays a lifecycle
   registry; it is not the backend path. Examples: `filter_plotter`,
   `citizen_fetch`.
 - **Level 3** — `egui_mobius` signals and slots carry the drained
@@ -66,7 +66,7 @@ brings in `egui_mobius` itself.
 ## How to read this book
 
 Background covers `Dynamic<T>`, `egui_dock`, and the vocabulary.
-Concepts cover the `Citizen` trait, the registrar, messages, and
+Concepts cover the `Citizen` trait, the registry, messages, and
 coupling. The Tutorial is a worked example end-to-end — you can
 go straight there and refer back to Concepts as needed. The book
 closes with patterns, common pitfalls, and a reference sheet.

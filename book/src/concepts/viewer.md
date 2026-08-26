@@ -45,11 +45,11 @@ So `ViewerCitizen` owns everything:
 
 ```rust,ignore
 use egui_3d_viewer::ViewerCitizen;
-use egui_citizen::{CitizenId, Registrar};
+use egui_citizen::{CitizenId, Registry};
 
 // At app construction
-let mut registrar = Registrar::new();
-let viewer_state = registrar.register(CitizenId::new("viewer"));
+let mut registry = Registry::new();
+let viewer_state = registry.add().with_name("viewer");
 let mut viewer = ViewerCitizen::new("viewer", viewer_state);
 
 // Per frame inside `ui()` — pass the glow context from eframe::Frame

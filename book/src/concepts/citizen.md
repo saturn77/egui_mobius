@@ -11,7 +11,7 @@ gives the panel three things:
    `is_selected`).
 
 This chapter covers the trait surface, the way state flows between
-the registrar and the panel, where panel-author state lives across
+the registry and the panel, where panel-author state lives across
 the three structs that any non-trivial app uses, and the runtime
 story for how the trait actually gets exercised.
 
@@ -42,7 +42,7 @@ That is the whole trait.
 The trait's three required methods (`id`, `citizen_state`,
 `citizen_state_mut`) are pure plumbing — they hand the trait
 references back to the fields you store on the struct. They're
-required because the registrar and the defaulted hooks need a
+required because the registry and the defaulted hooks need a
 uniform way to reach into your panel; that's the entire purpose.
 
 What the trait actually *buys* you is the rest of the contract:
@@ -70,8 +70,8 @@ impl PlotPanel {
     fn show(&mut self, ui: &mut egui::Ui, shared: &SharedState) {
         ui.heading("Plot");
 
-        // Registrar → panel: reactive, no method call.
-        // The registrar's activate() writes self.citizen_state.active
+        // Registry → panel: reactive, no method call.
+        // The registry's activate() writes self.citizen_state.active
         // through the shared Arc; we observe it via is_active().
         if self.is_active() {
             ui.label("(active — drawing live)");
@@ -82,7 +82,7 @@ impl PlotPanel {
 
         // Panel → app: push an intent, don't call anything.
         // The app's drain loop routes this — including any
-        // registrar.activate(...) it decides to make.
+        // registry.activate(...) it decides to make.
         if ui.button("Switch to settings").clicked() {
             self.outbox.push(AppMessage::FocusSettings);
         }
@@ -109,10 +109,10 @@ and hooks are what you actually buy.
 
 Notice what the panel's `show()` signature is — and what it isn't.
 The panel sees `&SharedState`, the reactive state shared between
-panels, and its own outbox. It does **not** take `&mut Registrar`.
+panels, and its own outbox. It does **not** take `&mut Registry`.
 Both flow directions stay declarative:
 
-- **Registrar → panel is reactive.** The registrar writes through
+- **Registry → panel is reactive.** The registry writes through
   the `Arc` underneath `citizen_state.active`, and the panel sees
   the new value the next time `is_active()` reads it. No method
   call in either direction.
@@ -120,10 +120,10 @@ Both flow directions stay declarative:
   onto its outbox; the app's update loop drains outboxes once per
   frame and routes each message. If a message means "activate a
   sibling," it is the *app layer* that calls
-  `registrar.activate(...)`. The registrar lives with the app and
+  `registry.activate(...)`. The registry lives with the app and
   the `TabViewer` — panels never hold a reference to it.
 
-Keeping the registrar out of panel signatures is what keeps
+Keeping the registry out of panel signatures is what keeps
 panels composable: a panel is a function of `SharedState` plus its
 own atoms, and its only side channel is the outbox. It also draws
 the backend boundary cleanly. `SharedState` is a **UI-side**
@@ -135,10 +135,10 @@ a reference into shared state (see
 [CitizenMessage — the backend bridge](messages.md)).
 
 The `state` argument to `PlotPanel::new` should always come from
-[`Registrar::register()`](registrar.md#registerid---citizenstate),
+[`Registry::add().with_name()`](registry.md#addwith_namename),
 **never** from `CitizenState::new()` or `CitizenState::default()`.
 The latter allocate fresh disconnected storage and silently sever
-the reactive link with the registrar (see
+the reactive link with the registry (see
 [the trap in the state chapter](state.md#the-trap-that-bites-everyone)).
 
 ## Skipping the boilerplate: `citizen_panel!`
@@ -168,7 +168,7 @@ plumbing.
 
 The construction rule from the previous section still applies
 unchanged: the `CitizenState` you pass to the generated `new()`
-must come from `Registrar::register()`, never from
+must come from `Registry::add().with_name()`, never from
 `CitizenState::new()`.
 
 Two cases still call for writing the impl by hand:
@@ -360,13 +360,13 @@ the app level and gets passed by reference into each panel's
 ```rust,ignore
 struct App {
     shared: SharedState,      // reactive state panels read and write
-    registrar: Registrar,     // app-layer only — panels never see it
+    registry: Registry,     // app-layer only — panels never see it
     logger: LoggerPanel,
     bom: BomPanel,
 }
 
 // The app's update loop hands each panel the shared state — and
-// only the shared state. The registrar stays behind.
+// only the shared state. The registry stays behind.
 self.logger.show(ui, &self.shared);
 self.bom.show(ui, &self.shared);
 ```
@@ -443,11 +443,11 @@ A `CitizenId` is a stable string identifier. The same id must be used
 consistently across:
 
 - `CitizenId::new("plot")` when constructing the panel.
-- `registrar.register(CitizenId::new("plot"))` at startup.
-- `registrar.activate(&CitizenId::new("plot"))` when the user
+- `registry.add().with_name("plot")` at startup.
+- `registry.activate("plot")` when the user
   clicks the corresponding tab.
 
-If the strings disagree, the registrar silently treats them as
+If the strings disagree, the registry silently treats them as
 different citizens — `activate("plt")` will do nothing visible to a
 panel registered as `"plot"`, and you'll burn an evening debugging
 why a click does nothing.
@@ -458,10 +458,10 @@ Define ids as constants once and reference them everywhere:
 const PLOT_ID:     &str = "plot";
 const SETTINGS_ID: &str = "settings";
 
-registrar.register(CitizenId::new(PLOT_ID));
-registrar.register(CitizenId::new(SETTINGS_ID));
+registry.add().with_name(PLOT_ID);
+registry.add().with_name(SETTINGS_ID);
 
-registrar.activate(&CitizenId::new(PLOT_ID));
+registry.activate(PLOT_ID);
 ```
 
 This turns a typo into a compile error rather than a silent runtime
@@ -489,7 +489,7 @@ impl Citizen for FetchPanel {
 ```
 
 In practice, most apps **do not** override the hooks. They let the
-registrar do the flag flip and route side-effect logic through
+registry do the flag flip and route side-effect logic through
 [`CitizenMessage`](messages.md) instead — backend threads receive
 `Activated { id: "fetch" }` and start the fetch from there. Override
 the hooks only when the response is genuinely synchronous and
@@ -499,15 +499,15 @@ panel-local.
 
 The `Citizen` trait is a **contract**, not a polymorphism mechanism:
 
-- The registrar does *not* hold trait objects. It stores
+- The registry does *not* hold trait objects. It stores
   `CitizenState` clones in a `HashMap<CitizenId, CitizenState>`.
 - Your `TabViewer` impl pulls panels by tab kind and calls each
   panel's own `show()` (or whatever you named it). The trait gives
   you uniform access to `id()` and `is_active()` if rendering needs
-  it, but the registrar never walks an array of `dyn Citizen`.
+  it, but the registry never walks an array of `dyn Citizen`.
 - The hooks exist so panel code can call them on its own (e.g. from
   inside `show()` when a button is clicked), not because the
-  registrar fires them.
+  registry fires them.
 
 The trait earns its keep by giving consistent shape across panels —
 not by enabling runtime polymorphism over them.
@@ -517,7 +517,7 @@ not by enabling runtime polymorphism over them.
 - Three required methods (`id`, `citizen_state`, `citizen_state_mut`),
   three defaulted hooks, two defaulted readers.
 - Always obtain the `CitizenState` field from
-  [`Registrar::register()`](registrar.md). Constructing it directly
+  [`Registry::add().with_name()`](registry.md). Constructing it directly
   severs reactivity.
 - Define citizen ids as `const`s so typos become compile errors.
 - Override hooks only when the panel itself does synchronous extra

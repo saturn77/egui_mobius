@@ -1,5 +1,5 @@
 //! Filter parameter sliders + Generate button. Sends `AppMessage::Generate`
-//! through the registrar; the drain loop in main.rs picks it up and runs
+//! through the registry; the drain loop in main.rs picks it up and runs
 //! the backend.
 
 use eframe::egui;
@@ -8,7 +8,7 @@ use crate::messages::AppMessage;
 use crate::state::SharedState;
 
 pub struct SettingsPanel {
-    /// Outgoing app-level messages routed through the registrar.
+    /// Outgoing app-level messages routed through the registry.
     /// Populated by show() and drained by main.rs each frame.
     pub outbox: Vec<AppMessage>,
 }

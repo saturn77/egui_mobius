@@ -17,12 +17,12 @@
 //! ## Quick start
 //!
 //! ```rust,no_run
-//! use egui_citizen::{CitizenId, Registrar};
+//! use egui_citizen::{CitizenId, Registry};
 //! use egui_3d_viewer::ViewerCitizen;
 //!
-//! # let mut registrar = Registrar::new();
+//! # let mut registry = Registry::new();
 //! // At app construction:
-//! let viewer_state = registrar.register(CitizenId::new("viewer"));
+//! let viewer_state = registry.add().with_name("viewer");
 //! let mut viewer = ViewerCitizen::new("viewer", viewer_state);
 //!
 //! // Per frame inside the dock TabViewer for the viewer tab:

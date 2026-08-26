@@ -6,7 +6,7 @@ use crate::state::CitizenState;
 /// A dock panel with persistent identity and lifecycle state.
 ///
 /// Implement this on each panel struct to give it a name, reactive state,
-/// and lifecycle hooks. The [`Registrar`](crate::Registrar) manages
+/// and lifecycle hooks. The [`Registry`](crate::Registry) manages
 /// activation and message routing across all citizens.
 ///
 /// # Minimal implementation

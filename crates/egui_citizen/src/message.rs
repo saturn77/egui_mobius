@@ -1,6 +1,6 @@
-//! Lifecycle messages emitted by the registrar.
+//! Lifecycle messages emitted by the registry.
 //!
-//! These messages flow through [`Registrar::drain_messages()`](crate::Registrar::drain_messages)
+//! These messages flow through [`Registry::drain_messages()`](crate::Registry::drain_messages)
 //! and are consumed by either other panels (for reactive UI updates) or
 //! backend threads (for I/O, computation, etc.).
 
@@ -9,7 +9,7 @@
 /// Route these in your update loop after `DockArea::show()`:
 ///
 /// ```text
-/// for msg in registrar.drain_messages() {
+/// for msg in registry.drain_messages() {
 ///     match msg {
 ///         CitizenMessage::Activated { id } => { /* panel became active */ }
 ///         CitizenMessage::Deactivated { id } => { /* panel lost focus */ }
@@ -54,6 +54,24 @@ pub struct CitizenId(pub String);
 impl CitizenId {
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
+    }
+}
+
+impl From<&str> for CitizenId {
+    fn from(id: &str) -> Self {
+        Self(id.to_owned())
+    }
+}
+
+impl From<String> for CitizenId {
+    fn from(id: String) -> Self {
+        Self(id)
+    }
+}
+
+impl From<&CitizenId> for CitizenId {
+    fn from(id: &CitizenId) -> Self {
+        id.clone()
     }
 }
 

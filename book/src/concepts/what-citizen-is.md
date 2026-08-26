@@ -1,7 +1,7 @@
 # What citizen is (and is not)
 
 By this point you have met the [`Citizen` trait](citizen.md), the
-[`Registrar`](registrar.md), and [`CitizenMessage`](messages.md), the
+[`Registry`](registry.md), and [`CitizenMessage`](messages.md), the
 backend bridge. This chapter steps back from the parts and asks what
 the pattern *is* — by contrasting it with the architecture people
 most often assume it to be.
@@ -20,7 +20,7 @@ through the one loop.
 Citizen takes the opposite stance, and it is best stated as a single
 phrase: **total observation, partial routing**.
 
-- **Total observation.** The `Registrar` always tracks the state of
+- **Total observation.** The `Registry` always tracks the state of
   every registered citizen. Nothing about a citizen's lifecycle is
   invisible to it.
 - **Partial routing.** Data is dispatched to the backend only when an
@@ -35,7 +35,7 @@ and forgets; it has no central state model. What citizen has is a
 
 The topology that results is a *graph*, not a tree: atoms and
 citizens are nodes, dispatch connections are edges, and the
-`Registrar` is the layer that makes the graph **observable** even
+`Registry` is the layer that makes the graph **observable** even
 though it does not make the graph **constrained**. This is why the
 neural-network framing fits — it is a graph of nodes with signal
 propagation, not a hierarchy.
@@ -48,18 +48,18 @@ makes Elm restrictive on purpose is the property citizen gives up.
 
 What saves citizen from that fate is the *other* half of the split.
 Communication is graph-shaped, but **state stays centrally legible**,
-because the `Registrar` observes everything.
+because the `Registry` observes everything.
 
 That yields one invariant, and it must be protected permanently:
 
-> **No atom shares data in a way the `Registrar` cannot see.**
+> **No atom shares data in a way the `Registry` cannot see.**
 
 The moment a back-channel is introduced — "for performance," "just
 this once" — the central legibility is gone. A graph topology
 *without* central observability is genuinely harder to reason about
 than an Elm tree. The flexibility of citizen is only safe because of
 the discipline of total observation. The pattern and the rule are
-inseparable: keep every data path visible to the registrar, or you
+inseparable: keep every data path visible to the registry, or you
 do not have the citizen pattern any more.
 
 ## The panel-oriented middle ground
@@ -99,14 +99,14 @@ builder is recursive**.
 The `egui_grafica` canvas — nodes with ports, edges between ports, a
 registry as the backend model — is structurally identical to
 "citizens with atoms, dispatch connections between atoms, a
-`Registrar` as the model." A RAD tool where you drag citizens into a
+`Registry` as the model." A RAD tool where you drag citizens into a
 dock layout and draw atom-to-atom wires would, structurally, be
 `egui_grafica` pointed at its own framework. The canvas built for
 diagrams *is* the panel builder's canvas.
 
 That is not a coincidence. Real abstractions tend to eat themselves
 like this — the same graph showing up at two scales (the fine-grained
-reactive value graph, and the coarse-grained citizen/registrar
+reactive value graph, and the coarse-grained citizen/registry
 graph) is evidence the abstraction describes something true rather
 than something arbitrary.
 
@@ -117,10 +117,10 @@ than something arbitrary.
 | State model | central, total | none | **central, total** |
 | Message routing | total (mandatory) | partial (fire-and-forget) | **partial (optional)** |
 | Topology | tree / loop | graph | **graph** |
-| Observability | inherent | absent | **inherent (via `Registrar`)** |
+| Observability | inherent | absent | **inherent (via `Registry`)** |
 | Failure mode | rigidity | unobservable spaghetti | spaghetti *if the invariant breaks* |
 
 Citizen keeps Elm's observability without Elm's rigidity, by
 separating *observing* state from *routing* data. The price of that
 flexibility is a single non-negotiable rule: every data path is
-visible to the `Registrar`.
+visible to the `Registry`.

@@ -4,22 +4,22 @@ Research notes gathered before writing `citizen_signal_async`. The
 goal of this file is to anchor the design in real APIs that exist in
 the workspace today, not in invented ones.
 
-## Registrar vs Dispatcher
+## Registry vs Dispatcher
 
 `egui_citizen` and `egui_mobius` export three distinct coordination
 types, and they have nothing to do with each other:
 
-- `egui_citizen::Registrar` — panel lifecycle. `register()` /
+- `egui_citizen::Registry` — panel lifecycle. `register()` /
   `activate()` / `drain_messages()`. Single-threaded, UI-side.
 - `egui_mobius::Dispatcher<E>` — synchronous signal-slot bus.
   `register_slot(channel, fn)` / `send(channel, event)`.
 - `egui_mobius::dispatching::AsyncDispatcher<E, R>` — the same idea
   but spins up a Tokio runtime and runs slots as async tasks.
 
-This example uses `egui_citizen::Registrar` for panel lifecycle and
+This example uses `egui_citizen::Registry` for panel lifecycle and
 `egui_mobius::dispatching::AsyncDispatcher` for backend work.
 (The citizen type was named `Dispatcher` when this note was first
-written; it was renamed to `Registrar` to leave "dispatcher" meaning
+written; it was renamed to `Registry` to leave "dispatcher" meaning
 only the machinery that sends events to the backend.)
 
 ## Signal / Slot
@@ -109,17 +109,17 @@ thread has the matching slot.
 
 ## egui_citizen integration surface
 
-`egui_citizen::Registrar` does not know about signals at all. The
+`egui_citizen::Registry` does not know about signals at all. The
 bridge between the two worlds happens in the UI update loop:
 
-1. UI thread calls `registrar.drain_messages()` once per
+1. UI thread calls `registry.drain_messages()` once per
    frame and routes any `CitizenMessage` it cares about through to
    `signal.send(...)`.
 2. Backend thread emits results via `signal.send(response)`; the UI
    thread's matching `Slot::start(...)` handler writes the response
    into `Dynamic<T>` cells (Path A) and/or appends a log line.
 
-In other words: `egui_citizen::Registrar` is the entry point on the
+In other words: `egui_citizen::Registry` is the entry point on the
 UI side; `Signal` / `AsyncDispatcher` are the cross-thread bus
 beyond that. There is no library-level glue — the glue is two
 function calls in `App::update`.
@@ -128,7 +128,7 @@ function calls in `App::update`.
 
 ```rust,ignore
 use egui_citizen::{
-    Registrar, CitizenId, CitizenMessage, CitizenState, Citizen,
+    Registry, CitizenId, CitizenMessage, CitizenState, Citizen,
 };
 use egui_mobius::{Signal, Slot};
 use egui_mobius::factory;
@@ -142,7 +142,7 @@ use egui_mobius_reactive::Dynamic;
   reading the same channel; for fan-out, emit on multiple signals.
 - **`AsyncDispatcher::new()` spins up a Tokio runtime.** Don't also
   call `#[tokio::main]` on `main` — single runtime per process.
-- **Panel `Registrar` clones share storage** (`egui_citizen` rule)
+- **Panel `Registry` clones share storage** (`egui_citizen` rule)
   but `Signal<T>` clones share *channel*, not value. Different
   semantics; don't mentally collapse them.
 - **One-frame latency from backend → UI.** The slot handler runs on

@@ -14,7 +14,7 @@ use crossbeam_channel::{Receiver, Sender, unbounded};
 use eframe::egui;
 use egui::Color32;
 use egui_citizen::message::CitizenId;
-use egui_citizen::{CitizenMessage, Registrar};
+use egui_citizen::{CitizenMessage, Registry};
 use egui_dock::{DockArea, DockState, NodeIndex};
 use std::time::{Duration, Instant};
 
@@ -91,7 +91,7 @@ impl Tab {
 // ── Tab viewer ──────────────────────────────────────────────────────────
 
 struct TabViewer<'a> {
-    registrar: &'a mut Registrar,
+    registry: &'a mut Registry,
     url: &'a mut String,
     request_tx: &'a Sender<FetchRequest>,
     response_body: &'a str,
@@ -116,7 +116,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         if response.clicked()
             && let Some(id) = tab.citizen_id()
         {
-            self.registrar.activate(&id);
+            self.registry.activate(&id);
         }
     }
 
@@ -295,7 +295,7 @@ impl TabViewer<'_> {
 
 struct FetchApp {
     dock_state: DockState<Tab>,
-    registrar: Registrar,
+    registry: Registry,
     url: String,
     response_body: String,
     response_status: String,
@@ -316,12 +316,12 @@ impl FetchApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
 
-        let mut registrar = Registrar::new();
-        registrar.register(CitizenId::new("fetch"));
-        registrar.register(CitizenId::new("image"));
-        registrar.register(CitizenId::new("response"));
-        registrar.activate(&CitizenId::new("fetch"));
-        let _ = registrar.drain_messages();
+        let mut registry = Registry::new();
+        registry.add().with_name("fetch");
+        registry.add().with_name("image");
+        registry.add().with_name("response");
+        registry.activate("fetch");
+        let _ = registry.drain_messages();
 
         // Layout:
         // ┌──────────┬───────────┐
@@ -430,7 +430,7 @@ impl FetchApp {
 
         Self {
             dock_state,
-            registrar,
+            registry,
             url: "https://httpbin.org/get".to_string(),
             response_body: String::new(),
             response_status: String::new(),
@@ -510,10 +510,10 @@ impl eframe::App for FetchApp {
 
         // Render dock
         let mut dock_state = self.dock_state.clone();
-        let mut registrar = std::mem::take(&mut self.registrar);
+        let mut registry = std::mem::take(&mut self.registry);
         {
             let mut viewer = TabViewer {
-                registrar: &mut registrar,
+                registry: &mut registry,
                 url: &mut self.url,
                 request_tx: &self.request_tx,
                 response_body: &self.response_body,
@@ -530,7 +530,7 @@ impl eframe::App for FetchApp {
         }
 
         // Drain citizen messages
-        for msg in registrar.drain_messages() {
+        for msg in registry.drain_messages() {
             match &msg {
                 CitizenMessage::Activated { id } => {
                     self.log.push(format!("[CITIZEN] Activated: {}", id));
@@ -542,7 +542,7 @@ impl eframe::App for FetchApp {
             }
         }
 
-        self.registrar = registrar;
+        self.registry = registry;
         self.dock_state = dock_state;
 
         // Keep repainting during fetch or auto-fetch

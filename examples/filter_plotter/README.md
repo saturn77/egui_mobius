@@ -3,7 +3,7 @@
 Citizen-pattern tutorial example: a biquad IIR filter backend driven
 by a settings panel, with results plotted in a second panel and
 events streamed to a logger panel. All three panels are docked via
-`egui_dock` and coordinated through `egui_citizen::Registrar`.
+`egui_dock` and coordinated through `egui_citizen::Registry`.
 
 The book walks through this example file by file.
 

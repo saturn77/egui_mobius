@@ -4,23 +4,23 @@ A single-page summary of the public API. For full signatures, doc
 comments, and version-tracked details, see
 [docs.rs/egui_citizen](https://docs.rs/egui_citizen).
 
-## `Registrar`
+## `Registry`
 
 ```rust,ignore
-use egui_citizen::Registrar;
+use egui_citizen::Registry;
 ```
 
 | Call                                          | What it does                                             |
 |-----------------------------------------------|----------------------------------------------------------|
-| `Registrar::new()`                           | Empty registrar.                                        |
-| `register(id) -> CitizenState`                | Register a citizen; return a `CitizenState` handle.      |
+| `Registry::new()`                           | Empty registry.                                        |
+| `add().with_name(name) -> CitizenState`       | Add a citizen; return its `CitizenState` handle.         |
 | `get(&id) -> Option<&CitizenState>`           | Look up a registered citizen's state.                    |
-| `activate(&id)`                               | One-hot: this one on, all others off. Emits messages.    |
+| `activate(name)`                               | One-hot: this one on, all others off. Emits messages.    |
 | `send(message)`                               | Push a `CitizenMessage` onto the queue without activating.|
 | `drain_messages() -> Vec<CitizenMessage>`     | Take all pending messages. Call once per frame.          |
 | `len()` / `is_empty()`                        | Citizen count / emptiness.                               |
 
-See [the registrar chapter](concepts/registrar.md) for the one-hot
+See [the registry chapter](concepts/registry.md) for the one-hot
 invariant and the canonical drain loop.
 
 ## `Citizen` trait
@@ -73,12 +73,12 @@ use egui_citizen::CitizenMessage;
 
 | Variant                                     | Emitted by                                                   |
 |---------------------------------------------|--------------------------------------------------------------|
-| `Activated { id }`                          | `Registrar::activate(&id)`                                  |
-| `Deactivated { id }`                        | `Registrar::activate(&id)` for the previously active citizen|
-| `Clicked { id }`                            | App code via `Registrar::send`                              |
-| `Selected { id, selected: bool }`           | App code via `Registrar::send`                              |
-| `Moved { id, location: [f32; 2] }`          | App code via `Registrar::send`                              |
-| `VisibilityChanged { id, visible: bool }`   | App code via `Registrar::send`                              |
+| `Activated { id }`                          | `Registry::activate(name)`                                  |
+| `Deactivated { id }`                        | `Registry::activate(name)` for the previously active citizen|
+| `Clicked { id }`                            | App code via `Registry::send`                              |
+| `Selected { id, selected: bool }`           | App code via `Registry::send`                              |
+| `Moved { id, location: [f32; 2] }`          | App code via `Registry::send`                              |
+| `VisibilityChanged { id, visible: bool }`   | App code via `Registry::send`                              |
 
 Derives: `Debug`, `Clone`. See [the messages chapter](concepts/messages.md).
 
@@ -105,9 +105,9 @@ const LOGGER_ID:  &str = "logger";
 ### Register and activate
 
 ```rust,ignore
-let mut registrar = Registrar::new();
-let plot_state = registrar.register(CitizenId::new("plot"));
-registrar.activate(&CitizenId::new("plot"));
+let mut registry = Registry::new();
+let plot_state = registry.add().with_name("plot");
+registry.activate("plot");
 ```
 
 ### Implement `Citizen` on a panel struct
@@ -146,7 +146,7 @@ for when to write the impl by hand instead.
 ```rust,ignore
 fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
     if response.clicked() {
-        self.registrar.activate(&tab.citizen_id());
+        self.registry.activate(&tab.citizen_id());
     }
 }
 ```
@@ -154,7 +154,7 @@ fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
 ### Drain messages once per frame
 
 ```rust,ignore
-for msg in self.registrar.drain_messages() {
+for msg in self.registry.drain_messages() {
     match msg {
         CitizenMessage::Activated { id } => { /* ... */ }
         CitizenMessage::Deactivated { id } => { /* ... */ }
@@ -171,7 +171,7 @@ pub enum AppMessage {
     /* domain variants ... */
 }
 
-for msg in self.registrar.drain_messages() {
+for msg in self.registry.drain_messages() {
     let _ = self.tx_backend.send(AppMessage::Citizen(msg));
 }
 ```

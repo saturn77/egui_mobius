@@ -14,15 +14,15 @@
 /// # Example
 ///
 /// ```rust
-/// use egui_citizen::{citizen_panel, Citizen, Registrar, CitizenId};
+/// use egui_citizen::{citizen_panel, Citizen, Registry};
 ///
 /// citizen_panel!(PlotPanel, "plot",
 ///     samples: Vec<f32> = Vec::new(),
 ///     autoscale: bool = true,
 /// );
 ///
-/// let mut registrar = Registrar::new();
-/// let state = registrar.register(CitizenId::new("plot"));
+/// let mut registry = Registry::new();
+/// let state = registry.add().with_name("plot");
 /// let panel = PlotPanel::new(state);
 ///
 /// assert_eq!(panel.id().0, "plot");

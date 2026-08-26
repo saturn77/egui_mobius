@@ -1,7 +1,7 @@
 //! filter_plotter — a citizen-pattern tutorial app.
 //!
 //! Three panels (Plot / Settings / Terminal) wired into `egui_dock` via a
-//! `TabViewer`, with `egui_citizen::Registrar` as the message hub
+//! `TabViewer`, with `egui_citizen::Registry` as the message hub
 //! between the settings panel and an in-process IIR filter backend.
 //!
 //! Click Generate in the Settings panel → AppMessage::Generate flows
@@ -19,7 +19,7 @@ mod theme;
 mod platform;
 
 use eframe::egui;
-use egui_citizen::Registrar;
+use egui_citizen::Registry;
 use egui_dock::{DockArea, DockState, NodeIndex};
 
 use backend::iir::InProcessIir;
@@ -30,7 +30,7 @@ use state::SharedState;
 use tabs::{Tab, TabKind, TabViewer};
 
 struct App {
-    registrar: Registrar,
+    registry: Registry,
     dock_state: DockState<Tab>,
     state: SharedState,
     plot: PlotPanel,
@@ -44,7 +44,7 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         theme::apply_visuals(&cc.egui_ctx);
 
-        let dispatcher_handle = Registrar::new();
+        let dispatcher_handle = Registry::new();
 
         // Dock layout:
         //   ┌──────────────────┬─────────────┐
@@ -73,7 +73,7 @@ impl App {
         dispatcher::append_log(&state, "filter_plotter started".into());
 
         Self {
-            registrar: dispatcher_handle,
+            registry: dispatcher_handle,
             dock_state,
             state,
             plot: PlotPanel::new(),
@@ -111,7 +111,7 @@ impl eframe::App for App {
             ui,
             &mut TabViewer {
                 state: &self.state,
-                registrar: &mut self.registrar,
+                registry: &mut self.registry,
                 plot: &mut self.plot,
                 settings: &mut self.settings,
                 logger: &mut self.logger,
@@ -121,7 +121,7 @@ impl eframe::App for App {
 
         // Drain pass — once per frame, after the dock has rendered and
         // any on_tab_button or in-panel events have queued.
-        dispatcher::drain_citizen(&mut self.registrar, &self.state);
+        dispatcher::drain_citizen(&mut self.registry, &self.state);
 
         let outbox = std::mem::take(&mut self.settings.outbox);
         for msg in outbox {

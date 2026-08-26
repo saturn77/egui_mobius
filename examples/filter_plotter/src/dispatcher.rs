@@ -1,26 +1,26 @@
-//! Registrar wiring: register citizens at startup, drain lifecycle
+//! Registry wiring: register citizens at startup, drain lifecycle
 //! messages each frame, route AppMessage events.
 //!
 //! Centralizing this in one module keeps main.rs to its job (eframe
-//! shell + dock layout) and gives the registrar code one place to
+//! shell + dock layout) and gives the registry code one place to
 //! evolve as the app grows.
 
-use egui_citizen::{CitizenMessage, Registrar};
+use egui_citizen::{CitizenMessage, Registry};
 use egui_lens::ReactiveEventLogger;
 
 use crate::backend::BackendKind;
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
-/// Drain citizen lifecycle messages from the registrar and route them
+/// Drain citizen lifecycle messages from the registry and route them
 /// into the shared lens-backed log. Call once per frame after
 /// `DockArea::show`.
 pub fn drain_citizen(
-    registrar: &mut Registrar,
+    registry: &mut Registry,
     state: &SharedState,
 ) {
     let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
-    for msg in registrar.drain_messages() {
+    for msg in registry.drain_messages() {
         logger.log_custom("citizen", &format_citizen(&msg));
     }
 }

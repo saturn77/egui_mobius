@@ -24,14 +24,14 @@ Elm-style update loop, eliminating frame-order dependencies entirely.
 | `Citizen` | Trait implemented by each dock panel to declare identity and respond to lifecycle events |
 | `CitizenState` | Reactive state (`Dynamic<T>`) tracking: active, clicked, selected, moved, location, visible |
 | `CitizenMessage` | Lifecycle events: Activated, Deactivated, Clicked, Selected, Moved, VisibilityChanged |
-| `Registrar` | Central registry managing all citizen panels and queueing lifecycle messages |
+| `Registry` | Central registry managing all citizen panels and queueing lifecycle messages |
 | `CitizenId` | Unique string identifier for a citizen panel |
 
 ## Message Flow
 
 ```
 ┌─────────────┐    on_tab_button     ┌──────────────────┐
-│  Tab Header  │ ──── clicked() ───> │    Registrar      │
+│  Tab Header  │ ──── clicked() ───> │    Registry      │
 │  (egui_dock) │                     │   .activate(id)   │
 └─────────────┘                      └────────┬─────────┘
                                               │
@@ -47,25 +47,25 @@ Elm-style update loop, eliminating frame-order dependencies entirely.
 ## Usage
 
 ```rust
-use egui_citizen::{Citizen, CitizenId, Registrar, CitizenState};
+use egui_citizen::{Citizen, CitizenId, Registry, CitizenState};
 
 // 1. Register citizens at app startup
-let mut registrar = Registrar::new();
-registrar.register(CitizenId::new("freq_watt"));
-registrar.register(CitizenId::new("volt_watt"));
-registrar.register(CitizenId::new("volt_var"));
+let mut registry = Registry::new();
+registry.add().with_name("freq_watt");
+registry.add().with_name("volt_watt");
+registry.add().with_name("volt_var");
 
 // 2. In your TabViewer, activate on click
 fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
     if response.clicked() {
         if let Some(id) = tab.citizen_id() {
-            self.registrar.activate(&id);  // one-hot: one active, rest deactivated
+            self.registry.activate(&id);  // one-hot: one active, rest deactivated
         }
     }
 }
 
 // 3. Consumers react to messages
-for msg in registrar.drain_messages() {
+for msg in registry.drain_messages() {
     match msg {
         CitizenMessage::Activated { id } => { /* update plot, notify backend */ }
         CitizenMessage::Deactivated { id } => { /* cleanup */ }

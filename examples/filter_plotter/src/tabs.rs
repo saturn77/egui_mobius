@@ -1,7 +1,7 @@
 //! Tab definitions and the `TabViewer` bridge into `egui_dock`.
 
 use eframe::egui;
-use egui_citizen::{CitizenId, Registrar};
+use egui_citizen::{CitizenId, Registry};
 
 use crate::panels::{
     editor::EditorPanel, logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel,
@@ -52,12 +52,12 @@ impl Tab {
 /// Bridge between `egui_dock` and the citizen layer.
 ///
 /// `ui()` routes to each panel's render method. `on_tab_button` forwards
-/// click events into `registrar.activate(...)` — the standard skeleton.
+/// click events into `registry.activate(...)` — the standard skeleton.
 /// This app doesn't drive behavior off activation, but registering the
-/// click is the canonical hook so the registrar's queue stays accurate.
+/// click is the canonical hook so the registry's queue stays accurate.
 pub struct TabViewer<'a> {
     pub state: &'a SharedState,
-    pub registrar: &'a mut Registrar,
+    pub registry: &'a mut Registry,
     pub plot: &'a mut PlotPanel,
     pub settings: &'a mut SettingsPanel,
     pub logger: &'a mut LoggerPanel,
@@ -82,7 +82,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
     fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
         if response.clicked() {
-            self.registrar.activate(&tab.citizen_id());
+            self.registry.activate(&tab.citizen_id());
         }
     }
 }

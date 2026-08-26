@@ -1,8 +1,8 @@
 # CitizenMessage — the backend bridge
 
-`CitizenMessage` is the discriminated lifecycle event the registrar
+`CitizenMessage` is the discriminated lifecycle event the registry
 emits and your code consumes. It is the data payload of
-[Path B](coupling.md#path-b--registrar-messages-panel-to-backend) —
+[Path B](coupling.md#path-b--registry-messages-panel-to-backend) —
 the UI-to-backend coupling channel.
 
 ## The variants
@@ -20,18 +20,18 @@ pub enum CitizenMessage {
 
 | Variant              | Fired by                                                | Payload                       |
 |----------------------|---------------------------------------------------------|-------------------------------|
-| `Activated`          | `Registrar::activate(&id)`                             | id that became active         |
-| `Deactivated`        | `Registrar::activate(&id)` for previously-active citizens | id that lost active        |
-| `Clicked`            | App code (via `Registrar::send`)                       | id that was clicked           |
+| `Activated`          | `Registry::activate(name)`                             | id that became active         |
+| `Deactivated`        | `Registry::activate(name)` for previously-active citizens | id that lost active        |
+| `Clicked`            | App code (via `Registry::send`)                       | id that was clicked           |
 | `Selected`           | App code (selection toggling)                           | id + new selection state      |
 | `Moved`              | App code (after a dock-layout move)                     | id + new `[x, y]` location    |
 | `VisibilityChanged`  | App code (after a tab is shown / hidden)                | id + new visibility           |
 
 Note the asymmetry. `Activated` and `Deactivated` are produced
-**automatically** by `Registrar::activate()`. The other four exist
+**automatically** by `Registry::activate()`. The other four exist
 so that app code can route the corresponding lifecycle facts through
 the same queue, but you must push them yourself via
-[`Registrar::send()`](registrar.md#sendmessage).
+[`Registry::send()`](registry.md#sendmessage).
 
 `CitizenMessage` derives `Clone` and `Debug`. It does *not* derive
 `PartialEq` — if you need to compare messages, match on the variants
@@ -55,7 +55,7 @@ The canonical loop:
 fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
     DockArea::new(&mut self.tabs).show(ctx, &mut self.tab_viewer);
 
-    for msg in self.registrar.drain_messages() {
+    for msg in self.registry.drain_messages() {
         match msg {
             CitizenMessage::Activated { id } => {
                 self.log.push(format!("[{id}] activated"));
@@ -70,14 +70,14 @@ fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 ```
 
 Drain once per frame, **after** `DockArea::show()` has had a chance
-to fire `on_tab_button` (and therefore `registrar.activate()`). If
+to fire `on_tab_button` (and therefore `registry.activate()`). If
 you drain *before* `show()`, you'll see one frame of latency on every
 activation — the message produced this frame won't be observed until
 next frame's drain.
 
 ## Forwarding to a backend thread
 
-The typical Path B shape: the UI drains the registrar and forwards
+The typical Path B shape: the UI drains the registry and forwards
 each message into a channel that a backend thread is reading.
 
 ```rust,ignore
@@ -100,7 +100,7 @@ std::thread::spawn(move || {
 });
 
 // In update():
-for msg in self.registrar.drain_messages() {
+for msg in self.registry.drain_messages() {
     let _ = tx.send(msg.clone());   // forward
     /* ... and process locally if needed ... */
 }
@@ -109,7 +109,7 @@ for msg in self.registrar.drain_messages() {
 The `_ = tx.send(...)` discards "receiver disconnected" errors,
 which can happen if the backend thread has exited. The backend
 thread's `match` decides what each message means in *its* domain —
-the registrar doesn't care.
+the registry doesn't care.
 
 Do not invoke egui or wgpu state from the backend thread. If the
 backend needs to surface results back to the UI, send them through a
@@ -171,7 +171,7 @@ pub enum Hotkey {
 
 Citizen lifecycle is one variant out of a dozen-plus. That ratio is
 typical: in any non-trivial app, lifecycle events are a *minority*
-of message traffic, and the registrar's drain point becomes the
+of message traffic, and the registry's drain point becomes the
 single funnel for *all* app-level events. Three patterns make the
 shape legible at scale.
 
@@ -217,7 +217,7 @@ between the two and consumers care about both endpoints.
 Long-running async work raises a third question alongside intent and
 outcome: **what cancels in-flight work when the user moves on?** The
 answer is already in the queue — it's the `Deactivated { id }` message
-that [`Registrar::activate()`](registrar.md#activateid) produces
+that [`Registry::activate()`](registry.md#activatename) produces
 automatically whenever the previously-active panel loses its slot.
 
 The pattern, drawn from the same forwarding loop above:
@@ -233,7 +233,7 @@ for msg in rx {
 }
 ```
 
-The registrar does not return a work handle from `send()`. It cannot —
+The registry does not return a work handle from `send()`. It cannot —
 it doesn't own any work. The backend thread that *does* own the work
 also owns its own in-flight state (a `JoinHandle`, a `CancellationToken`,
 an `AbortHandle`, whatever the runtime provides) and reacts to the
@@ -260,7 +260,7 @@ thread and must not block.
 Putting intent, outcome, and cancellation together yields a predictable
 shape for any unit of async work in a citizen app:
 
-1. **Intent message** — a user-initiated event lands in the registrar
+1. **Intent message** — a user-initiated event lands in the registry
    queue (`DrcRunRequested`, `ProjectOpenRequested`) and gets drained
    into the backend channel.
 2. **Backend dispatch** — the backend thread spawns the work and
@@ -299,7 +299,7 @@ sub-enum nested under one outer variant.
 
 ### Putting it together: the drain loop
 
-The registrar's queue still carries only `CitizenMessage`. The app
+The registry's queue still carries only `CitizenMessage`. The app
 wraps each citizen message as it drains, and non-citizen variants
 are produced by app code emitting them directly through the same
 backend channel:
@@ -309,7 +309,7 @@ fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
     DockArea::new(&mut self.tabs).show(ctx, &mut self.tab_viewer);
 
     // Drain citizen messages, wrap as AppMessage, forward.
-    for msg in self.registrar.drain_messages() {
+    for msg in self.registry.drain_messages() {
         let app_msg = AppMessage::Citizen(msg);
         self.event_log.push(app_msg.clone());
         let _ = self.tx_backend.send(app_msg);
@@ -330,7 +330,7 @@ One queue, many message families, one drain pass per frame.
 
 ## What `CitizenMessage` is *not*
 
-It is **not a general-purpose event bus.** The registrar does not
+It is **not a general-purpose event bus.** The registry does not
 provide subscriptions, filtering, prioritization, or replay. If you
 need those, build them on top — typically in your `AppMessage` layer
 or as a separate logger / event-store.
@@ -348,8 +348,8 @@ slider's `Dynamic<f32>` and read it; it should not subscribe to a
 
 - Six variants, all carrying at least a `CitizenId`.
 - `Activated` and `Deactivated` are emitted automatically by
-  `Registrar::activate()`. The other four require explicit
-  `registrar.send(...)`.
+  `Registry::activate()`. The other four require explicit
+  `registry.send(...)`.
 - Drain once per frame, after `DockArea::show()`.
 - Forward to backend threads via `crossbeam_channel`. Don't touch
   egui from the consumer side.

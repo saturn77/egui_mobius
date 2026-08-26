@@ -13,7 +13,7 @@
 
 - [The Citizen trait](concepts/citizen.md)
 - [Reactive lifecycle: CitizenState](concepts/state.md)
-- [The Registrar](concepts/registrar.md)
+- [The Registry](concepts/registry.md)
 - [CitizenMessage — the backend bridge](concepts/messages.md)
 - [What citizen is (and is not)](concepts/what-citizen-is.md)
 - [Coupling](concepts/coupling.md)

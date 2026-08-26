@@ -13,23 +13,23 @@
 //!
 //! Give each dock panel a persistent identity ([`CitizenId`]), lifecycle state
 //! ([`CitizenState`]), and route state transitions through a central
-//! [`Registrar`]. State changes happen exactly once, on click — not every frame.
+//! [`Registry`]. State changes happen exactly once, on click — not every frame.
 //!
 //! ## Quick start
 //!
 //! ```rust,no_run
-//! use egui_citizen::{Citizen, CitizenId, CitizenState, CitizenMessage, Registrar};
+//! use egui_citizen::{CitizenMessage, Registry};
 //!
-//! // 1. Create a registrar and register panels
-//! let mut registrar = Registrar::new();
-//! let alpha_state = registrar.register(CitizenId::new("alpha"));
-//! let beta_state = registrar.register(CitizenId::new("beta"));
+//! // 1. Create a registry and add panels
+//! let mut registry = Registry::new();
+//! let alpha_state = registry.add().with_name("alpha");
+//! let beta_state = registry.add().with_name("beta");
 //!
 //! // 2. Activate a citizen (one-hot: one active, rest off)
-//! registrar.activate(&CitizenId::new("alpha"));
+//! registry.activate("alpha");
 //!
 //! // 3. Drain messages after rendering
-//! for msg in registrar.drain_messages() {
+//! for msg in registry.drain_messages() {
 //!     match msg {
 //!         CitizenMessage::Activated { id } => println!("{} activated", id),
 //!         CitizenMessage::Deactivated { id } => println!("{} deactivated", id),
@@ -47,7 +47,7 @@
 //!   switch its display without any wiring.
 //!
 //! - **Backend threads** receive [`CitizenMessage`] via
-//!   [`Registrar::drain_messages()`] and route them over channels to serial
+//!   [`Registry::drain_messages()`] and route them over channels to serial
 //!   ports, network connections, or compute tasks.
 //!
 //! ## With egui_dock
@@ -60,7 +60,7 @@
 //!
 //!     fn on_tab_button(&mut self, tab: &mut MyTab, response: &egui::Response) {
 //!         if response.clicked() {
-//!             self.registrar.activate(&tab.citizen_id());
+//!             self.registry.activate(&tab.citizen_id());
 //!         }
 //!     }
 //!
@@ -70,7 +70,7 @@
 //! }
 //!
 //! // After DockArea::show(), drain messages:
-//! for msg in registrar.drain_messages() {
+//! for msg in registry.drain_messages() {
 //!     match msg {
 //!         CitizenMessage::Activated { id } => { /* update state, notify backend */ }
 //!         CitizenMessage::Deactivated { id } => { /* cleanup */ }
@@ -143,7 +143,7 @@
 //! });
 //!
 //! // In the update loop, after drain_messages():
-//! for msg in registrar.drain_messages() {
+//! for msg in registry.drain_messages() {
 //!     let _ = tx.send(msg.clone()); // forward to backend
 //! }
 //! ```
@@ -157,15 +157,15 @@
 //! - **Frame-order independent.** Because messages are queued and drained once
 //!   per frame, the order panels render in doesn't matter.
 //! - **No dependency on `egui_dock`.** The core crate provides the trait and
-//!   registrar — you wire it into whatever dock layout you use.
+//!   registry — you wire it into whatever dock layout you use.
 
 mod citizen;
 mod macros;
-pub mod registrar;
+pub mod registry;
 pub mod message;
 mod state;
 
 pub use citizen::Citizen;
-pub use registrar::Registrar;
+pub use registry::{CitizenBuilder, Registry};
 pub use message::{CitizenId, CitizenMessage};
 pub use state::CitizenState;

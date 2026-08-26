@@ -169,7 +169,7 @@ spawning a worker thread per `Dynamic`.
 The `Vec<Sender<()>>` only grows. Once you call `on_change`, the
 sender lives in the notifier list until the `Dynamic<T>` itself is
 dropped — which happens when the *last* outer `Arc` is released, and
-the registrar and panels typically hold those for the program's
+the registry and panels typically hold those for the program's
 lifetime.
 
 Dropping the returned `Arc<F>` does **not** tear down the worker
@@ -205,7 +205,7 @@ The legitimate jobs for a callback:
 
 - Push to a `crossbeam_channel::Sender` that the UI thread drains in
   its update loop.
-- Trigger a `Registrar::send(...)` if you have access to a
+- Trigger a `Registry::send(...)` if you have access to a
   thread-safe wrapper around it.
 - Do off-thread work (write to a log file, fire an HTTP request,
   recompute something heavy and stash the result for the UI to pick
@@ -230,14 +230,14 @@ Three coupling tools, three different jobs:
 | Tool                  | Best for                                         | Cost                          |
 |-----------------------|--------------------------------------------------|-------------------------------|
 | `.get()` in `ui()`    | UI-to-UI state sharing                           | One atomic read per frame     |
-| `registrar.send`     | UI-to-backend events with one drain point        | One queue push, drained once  |
+| `registry.send`     | UI-to-backend events with one drain point        | One queue push, drained once  |
 | `Dynamic::on_change`  | Off-thread reactions independent of the UI loop  | One OS thread per subscriber  |
 
 The default in `egui_citizen` is the top row. Reach for the bottom
 row only when something genuinely needs to react *outside* the UI's
-frame cycle — and even then, prefer routing through the registrar
+frame cycle — and even then, prefer routing through the registry
 rather than spawning per-`Dynamic` worker threads, since the
-registrar gives you one drain point instead of N callbacks.
+registry gives you one drain point instead of N callbacks.
 
 ## Summary
 
@@ -254,4 +254,4 @@ The simplicity of this notification subsystem is what makes
 `Dynamic<T>` cheap and predictable for the dominant use case
 (panel-side polling). It is also why callback-style subscriptions —
 while supported — are best used sparingly, off the UI thread, and
-ideally via the registrar rather than directly.
+ideally via the registry rather than directly.
