@@ -5,7 +5,7 @@
 > the editable monospace text area, the language picker, the theme
 > picker. Like every other citizen panel, it observes shared
 > reactive state through `Dynamic<T>` and participates in
-> dispatcher-coordinated activation.
+> registrar-coordinated activation.
 
 If "citizen" doesn't ring a bell yet, read [What is a
 citizen?](../background/what_is_a_citizen.md) first.

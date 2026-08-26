@@ -65,8 +65,8 @@ if self.freq_watt_state.active.get() {
 }
 ```
 
-`self.freq_watt_state` is a clone of the `CitizenState` the dispatcher
-registered. The dispatcher writes `.active.set(true)` once when the
+`self.freq_watt_state` is a clone of the `CitizenState` the registrar
+registered. The registrar writes `.active.set(true)` once when the
 user clicks the tab; from that moment onward, every clone of that state
 sees `true` on the next `.get()`. No diffing, no polling, no "last
 seen" cache.
@@ -89,40 +89,40 @@ same underlying value. Set on one, see it on the other. **This is what
 makes "reactive" work across panels and threads.**
 
 A `CitizenState` is therefore not "owned" by anyone in particular. It's
-a handle. The dispatcher holds one handle, your panel holds another,
+a handle. The registrar holds one handle, your panel holds another,
 and they refer to the same storage.
 
 ## The trap that bites everyone
 
 `CitizenState::new()` and `CitizenState::default()` are public. They
 look like ordinary constructors. They are not interchangeable with
-"obtain a state from the dispatcher."
+"obtain a state from the registrar."
 
 ```rust,ignore
-// WRONG — fresh storage, disconnected from the dispatcher
+// WRONG — fresh storage, disconnected from the registrar
 let state = CitizenState::new();
 let panel = MyPanel::new(state);
 
-dispatcher.activate(&CitizenId::new("my_panel"));
+registrar.activate(&CitizenId::new("my_panel"));
 
 panel.citizen_state.active.get(); // still false!
 ```
 
-Why: `dispatcher.activate()` writes to the `CitizenState` that *the
-dispatcher itself owns*, registered at `register()` time. A separately
-constructed `CitizenState` has its own fresh `Arc`s — the dispatcher
+Why: `registrar.activate()` writes to the `CitizenState` that *the
+registrar itself owns*, registered at `register()` time. A separately
+constructed `CitizenState` has its own fresh `Arc`s — the registrar
 has no idea it exists, and the writes go somewhere else entirely.
 
 The right way is always:
 
 ```rust,ignore
-let state = dispatcher.register(CitizenId::new("my_panel"));
+let state = registrar.register(CitizenId::new("my_panel"));
 let panel = MyPanel::new(state);
 ```
 
 `register()` builds a `CitizenState`, keeps one clone in the
-dispatcher's table, and hands the other clone back to you. Both point
-at the same storage. Now `dispatcher.activate()` and your panel see
+registrar's table, and hands the other clone back to you. Both point
+at the same storage. Now `registrar.activate()` and your panel see
 the same value.
 
 ## When `CitizenState::new()` is fine
@@ -133,7 +133,7 @@ activation isn't driving its UI — `CitizenState::default()` is
 harmless. You just have a panel with its own private reactive bag of
 bools.
 
-In practice that case is rare. Default to `dispatcher.register()`.
+In practice that case is rare. Default to `registrar.register()`.
 
 ## Summary
 
@@ -144,5 +144,5 @@ In practice that case is rare. Default to `dispatcher.register()`.
   and no callback wiring.
 - Cloning a `CitizenState` shares storage. Constructing a fresh one
   does not.
-- Always obtain a `CitizenState` from `dispatcher.register()` unless
+- Always obtain a `CitizenState` from `registrar.register()` unless
   you are certain no one outside the panel reads or writes it.

@@ -11,7 +11,7 @@ The app itself is small but realistic: a 50 Hz sine wave with
 filter, plotted with linked-axis subplots (matplotlib-style).
 Three panels — a stacked input/output plot, a settings panel with
 sliders, and a scrolling log panel — wired together by the
-dispatcher.
+registrar.
 
 > **Run it now**
 >
@@ -44,7 +44,7 @@ dispatcher.
 >
 > The release `dist/` directory is a self-contained static site —
 > drop it on any web host. Everything in this tutorial works in
-> the browser identically: the citizen pattern, the dispatcher,
+> the browser identically: the citizen pattern, the registrar,
 > the reactive cells, the IIR backend. The only platform-specific
 > code is the `#[cfg(target_arch = "wasm32")]` entrypoint in
 > `main.rs` that hands eframe a canvas instead of a native
@@ -58,7 +58,7 @@ what you're about to build *also fits the next app you build*.
 When you start the next citizen app, these files change very
 little:
 
-- `dispatcher.rs` — register citizens, drain messages, route AppMessage
+- `registrar.rs` — register citizens, drain messages, route AppMessage
 - `tabs.rs` — the TabKind enum, Tab struct, TabViewer impl
 - `messages.rs` — the AppMessage enum (specifically the Citizen variant)
 - `main.rs` — App struct + drain loop pattern
@@ -71,7 +71,7 @@ What does change app-to-app:
 - The backend (`backend/`)
 - The non-Citizen variants of `AppMessage`
 
-The dispatcher's plumbing is the part that scales sideways — write
+The registrar's plumbing is the part that scales sideways — write
 it once and you're 80% of the way through every future citizen app.
 
 ## Project layout
@@ -84,7 +84,7 @@ examples/filter_plotter/
     ├── theme.rs             # apply_visuals, apply_font_scale
     ├── tabs.rs              # TabKind, Tab, TabViewer
     ├── messages.rs          # AppMessage enum
-    ├── dispatcher.rs        # register / drain / handle
+    ├── registrar.rs        # register / drain / handle
     ├── state.rs             # SharedState, ParamsState
     ├── backend/
     │   ├── mod.rs           # BackendKind trait, FilterParams, Traces
@@ -97,7 +97,7 @@ examples/filter_plotter/
 ```
 
 Each file has one job. The settings panel doesn't know how the
-filter works; the backend doesn't know what egui is. The dispatcher
+filter works; the backend doesn't know what egui is. The registrar
 routes messages between them.
 
 ## The shape
@@ -267,7 +267,7 @@ tone for noise, applies a biquad lowpass, and returns both traces
 as `Traces<f32>`. A `SerialPort` impl would set
 `type Sample = i16;` (or whatever the ADC width is) and `run`
 would read samples off a port. **The rest of the app — settings
-panel, plot panel, dispatcher — does not change shape.** Swap the
+panel, plot panel, registrar — does not change shape.** Swap the
 backend type and the wiring stays.
 
 The one place that *commits* to a sample type is `SharedState`:
@@ -276,7 +276,7 @@ pub traces: Dynamic<Traces<f32>>,
 ```
 The reactive cell has to hold a concrete `T`. Using a different
 backend means changing this `f32` to match
-`Backend::Sample`, but the dispatcher's `handle` function uses
+`Backend::Sample`, but the registrar's `handle` function uses
 `B: BackendKind<Sample = f32>` to enforce the match at compile
 time, so the wiring stays honest.
 
@@ -320,7 +320,7 @@ pub struct SettingsPanel {
 ```
 
 Three fields. `citizen_id` and `citizen_state` are the boilerplate
-that lets the dispatcher route activation to this panel. The
+that lets the registrar route activation to this panel. The
 interesting one is `outbox`: a `Vec<AppMessage>` the panel pushes
 to when something interesting happens, drained each frame by
 `main.rs`.
@@ -335,9 +335,9 @@ if ui.add_sized([ui.available_width(), 28.0],
 ```
 
 The panel does not call `backend.run()` directly. It does not call
-`dispatcher.send()` either. It just enqueues an `AppMessage` for
+`registrar.send()` either. It just enqueues an `AppMessage` for
 the drain loop to handle. This keeps `show()` free of dependencies
-on the backend or the dispatcher's internals — the panel is
+on the backend or the registrar's internals — the panel is
 testable in isolation, the message is the contract.
 
 The sliders update reactive parameters via the standard get / set
@@ -439,8 +439,8 @@ impl LoggerPanel {
 
 The logger reads `state.log` (a `Dynamic<ReactiveEventLoggerState>`)
 and `state.log_colors` (a `Dynamic<LogColors>`); writes flow in
-through the dispatcher. The logger panel doesn't push entries
-itself — it just renders what the drain loop in `dispatcher.rs`
+through the registrar. The logger panel doesn't push entries
+itself — it just renders what the drain loop in `registrar.rs`
 puts there.
 
 > *Forward-looking note:* lens will eventually implement
@@ -454,7 +454,7 @@ puts there.
 
 Compared to a hand-rolled `Vec<String>` log:
 
-- **Per-type colors** via `Dynamic<LogColors>` — the dispatcher
+- **Per-type colors** via `Dynamic<LogColors>` — the registrar
   routes citizen lifecycle events through `log_custom("citizen",
   ...)` and backend events through `log_custom("backend", ...)`,
   each rendered in its own color (configured at app construction
@@ -474,22 +474,22 @@ Compared to a hand-rolled `Vec<String>` log:
   clone to any thread and call `ReactiveEventLogger::new(&clone)
   .log_info(...)` from anywhere.
 
-## The dispatcher module — `dispatcher.rs`
+## The registrar module — `registrar.rs`
 
 This is where the pattern earns its name. Three jobs:
 
 ```rust,ignore
-pub fn register_citizens(dispatcher: &mut Dispatcher) -> RegisteredCitizens {
-    let plot     = dispatcher.register(CitizenId::new(PLOT_ID));
-    let settings = dispatcher.register(CitizenId::new(SETTINGS_ID));
-    let logger   = dispatcher.register(CitizenId::new(LOGGER_ID));
-    dispatcher.activate(&CitizenId::new(PLOT_ID));
+pub fn register_citizens(registrar: &mut Registrar) -> RegisteredCitizens {
+    let plot     = registrar.register(CitizenId::new(PLOT_ID));
+    let settings = registrar.register(CitizenId::new(SETTINGS_ID));
+    let logger   = registrar.register(CitizenId::new(LOGGER_ID));
+    registrar.activate(&CitizenId::new(PLOT_ID));
     RegisteredCitizens { plot, settings, logger }
 }
 
-pub fn drain_citizen(dispatcher: &mut Dispatcher, state: &SharedState) {
+pub fn drain_citizen(registrar: &mut Registrar, state: &SharedState) {
     let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
-    for msg in dispatcher.drain_messages() {
+    for msg in registrar.drain_messages() {
         // "citizen" is a named custom log type — its color is
         // configured in state.rs and renders distinctly from
         // info/warning/error/debug.
@@ -533,7 +533,7 @@ visual signal in the panel.
 `register_citizens` runs once at startup. `drain_citizen` and
 `handle` run once per frame. `handle` is generic over backend
 shape (`B: BackendKind<Sample = f32>`), which is what makes the
-dispatcher app-agnostic at the *behavior* layer — the same module
+registrar app-agnostic at the *behavior* layer — the same module
 would work with a `SerialPort` backend, a `CsvImporter`, or
 anything else implementing `BackendKind` whose `Sample` matches
 what `SharedState::traces` holds. Pinning the sample type at the
@@ -592,21 +592,21 @@ moves.
 
 The `citizen_id()` method is what links `egui_dock`'s tab-click
 event back into the citizen layer — clicking the Settings tab needs
-to activate `CitizenId::new("settings")` so the dispatcher knows
+to activate `CitizenId::new("settings")` so the registrar knows
 that panel is now in focus. Keeping the IDs as `pub const` strings
-in this file means `dispatcher.rs` and `tabs.rs` agree by import,
+in this file means `registrar.rs` and `tabs.rs` agree by import,
 not by typo-prone string duplication.
 
 ### The `TabViewer` bridge
 
 `egui_dock::TabViewer` is the trait the dock area calls into to
 render each tab. Our impl is the *one place* in the app that holds
-mutable references to every panel and the dispatcher at once:
+mutable references to every panel and the registrar at once:
 
 ```rust,ignore
 pub struct TabViewer<'a> {
     pub state: &'a SharedState,
-    pub dispatcher: &'a mut Dispatcher,
+    pub registrar: &'a mut Registrar,
     pub plot: &'a mut PlotPanel,
     pub settings: &'a mut SettingsPanel,
     pub logger: &'a mut LoggerPanel,
@@ -622,14 +622,14 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
             TabKind::Plot     => self.plot.show(ui, self.state),
-            TabKind::Settings => self.settings.show(ui, self.state, self.dispatcher),
+            TabKind::Settings => self.settings.show(ui, self.state, self.registrar),
             TabKind::Logger   => self.logger.show(ui, self.state),
         }
     }
 
     fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
         if response.clicked() {
-            self.dispatcher.activate(&tab.citizen_id());
+            self.registrar.activate(&tab.citizen_id());
         }
     }
 }
@@ -642,15 +642,15 @@ Three methods, each doing one thing:
    enum.
 2. **`ui`** — `egui_dock` calls this once per visible tab per
    frame. We match on `tab.kind` and dispatch to the corresponding
-   panel's `show()`. Note that `settings.show` takes the dispatcher
+   panel's `show()`. Note that `settings.show` takes the registrar
    too — most panels won't need it, but the settings panel uses it
    for activation hooks. The other panels just need `&SharedState`.
 3. **`on_tab_button`** — fired when the user clicks a tab header.
-   We forward the click into `dispatcher.activate(...)`. This is
+   We forward the click into `registrar.activate(...)`. This is
    the canonical citizen hook: `egui_dock` knows about the click;
-   the dispatcher knows about activation; this method is the
+   the registrar knows about activation; this method is the
    bridge. Even if your app doesn't currently *do* anything on
-   activation, register the click — the dispatcher's queue stays
+   activation, register the click — the registrar's queue stays
    accurate, and adding behavior later doesn't require revisiting
    this file.
 
@@ -685,17 +685,17 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         DockArea::new(&mut self.dock_state).show(ctx, &mut TabViewer {
             state: &self.state,
-            dispatcher: &mut self.dispatcher,
+            registrar: &mut self.registrar,
             plot: &mut self.plot,
             settings: &mut self.settings,
             logger: &mut self.logger,
         });
 
-        dispatcher::drain_citizen(&mut self.dispatcher, &self.state.log);
+        registrar::drain_citizen(&mut self.registrar, &self.state.log);
 
         let outbox = std::mem::take(&mut self.settings.outbox);
         for msg in outbox {
-            dispatcher::handle(msg, &self.state, &mut self.backend, &self.state.log);
+            registrar::handle(msg, &self.state, &mut self.backend, &self.state.log);
         }
     }
 }
@@ -734,7 +734,7 @@ Concrete extensions, ordered by ambition:
   another `AppMessage::Save` / `Load`.
 
 Each of these is one or two new modules and zero changes to the
-`dispatcher.rs`, `tabs.rs`, or `main.rs` scaffolding. That's the
+`registrar.rs`, `tabs.rs`, or `main.rs` scaffolding. That's the
 citizen pattern's transplant value, made concrete.
 
 ## Source

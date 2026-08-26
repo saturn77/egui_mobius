@@ -1,18 +1,18 @@
-//! Central dispatcher for citizen lifecycle management and message routing.
+//! Central registrar for citizen lifecycle management and message routing.
 
 use std::collections::HashMap;
 
 use crate::message::{CitizenId, CitizenMessage};
 use crate::state::CitizenState;
 
-/// Manages citizen registration, activation, and message dispatch.
+/// Manages citizen registration, activation, and message routing.
 ///
-/// The dispatcher is the hub between the UI (panels reading shared state)
+/// The registrar is the hub between the UI (panels reading shared state)
 /// and the backend (threads receiving messages over channels).
 ///
 /// # Activation
 ///
-/// [`activate()`](Dispatcher::activate) is the core operation — an encoded
+/// [`activate()`](Registrar::activate) is the core operation — an encoded
 /// set/reset. When you activate citizen "alpha":
 /// - `alpha.active` is set to `true`
 /// - All other active citizens are set to `false`
@@ -23,40 +23,40 @@ use crate::state::CitizenState;
 ///
 /// ```text
 /// Tab click
-///   → dispatcher.activate("alpha")
+///   → registrar.activate("alpha")
 ///     → alpha.state.active = true        (reactive, immediate)
 ///     → beta.state.active = false
 ///     → queue ← [Activated, Deactivated]
-///   → dispatcher.drain_messages()
+///   → registrar.drain_messages()
 ///     → route to backend threads via channels
 /// ```
 ///
 /// # Example
 ///
 /// ```rust
-/// use egui_citizen::{Dispatcher, CitizenId, CitizenMessage};
+/// use egui_citizen::{Registrar, CitizenId, CitizenMessage};
 ///
-/// let mut dispatcher = Dispatcher::new();
-/// dispatcher.register(CitizenId::new("alpha"));
-/// dispatcher.register(CitizenId::new("beta"));
+/// let mut registrar = Registrar::new();
+/// registrar.register(CitizenId::new("alpha"));
+/// registrar.register(CitizenId::new("beta"));
 ///
-/// dispatcher.activate(&CitizenId::new("alpha"));
+/// registrar.activate(&CitizenId::new("alpha"));
 ///
-/// let messages = dispatcher.drain_messages();
+/// let messages = registrar.drain_messages();
 /// assert_eq!(messages.len(), 1); // Activated{alpha} only (beta was never active)
 ///
-/// dispatcher.activate(&CitizenId::new("beta"));
+/// registrar.activate(&CitizenId::new("beta"));
 ///
-/// let messages = dispatcher.drain_messages();
+/// let messages = registrar.drain_messages();
 /// assert_eq!(messages.len(), 2); // Deactivated{alpha} + Activated{beta}
 /// ```
-pub struct Dispatcher {
+pub struct Registrar {
     citizens: HashMap<CitizenId, CitizenState>,
     message_queue: Vec<CitizenMessage>,
 }
 
-impl Dispatcher {
-    /// Create an empty dispatcher.
+impl Registrar {
+    /// Create an empty registrar.
     pub fn new() -> Self {
         Self {
             citizens: HashMap::new(),
@@ -68,7 +68,7 @@ impl Dispatcher {
     ///
     /// The returned [`CitizenState`] can be cloned and handed to the panel
     /// struct. All clones share the same underlying `Dynamic<T>` fields,
-    /// so changes made by the dispatcher are visible to the panel immediately.
+    /// so changes made by the registrar are visible to the panel immediately.
     pub fn register(&mut self, id: CitizenId) -> CitizenState {
         let state = CitizenState::new();
         self.citizens.insert(id, state.clone());
@@ -121,13 +121,13 @@ impl Dispatcher {
         self.citizens.len()
     }
 
-    /// Whether the dispatcher has no citizens.
+    /// Whether the registrar has no citizens.
     pub fn is_empty(&self) -> bool {
         self.citizens.is_empty()
     }
 }
 
-impl Default for Dispatcher {
+impl Default for Registrar {
     fn default() -> Self {
         Self::new()
     }

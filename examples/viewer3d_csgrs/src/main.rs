@@ -15,7 +15,7 @@
 
 use eframe::egui;
 use egui_3d_viewer::ViewerCitizen;
-use egui_citizen::{CitizenId, Dispatcher};
+use egui_citizen::{CitizenId, Registrar};
 
 type Mesh = csgrs::mesh::Mesh<()>;
 
@@ -96,15 +96,15 @@ fn mesh_to_xyz_rgb(mesh: &Mesh, color: [f32; 3]) -> Vec<f32> {
 
 struct ViewerApp {
     viewer: ViewerCitizen,
-    /// Holds the dispatcher so its CitizenState handles stay alive,
+    /// Holds the registrar so its CitizenState handles stay alive,
     /// even though this demo doesn't activate or drain it.
-    _dispatcher: Dispatcher,
+    _registrar: Registrar,
 }
 
 impl ViewerApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        let mut dispatcher = Dispatcher::new();
-        let viewer_state = dispatcher.register(CitizenId::new("viewer"));
+        let mut registrar = Registrar::new();
+        let viewer_state = registrar.register(CitizenId::new("viewer"));
         let mut viewer = ViewerCitizen::new("viewer", viewer_state);
 
         // Build the plate, hand it to the viewer, frame the camera.
@@ -120,7 +120,7 @@ impl ViewerApp {
 
         Self {
             viewer,
-            _dispatcher: dispatcher,
+            _registrar: registrar,
         }
     }
 }

@@ -3,7 +3,7 @@
 //! The full pipeline, live: `app.mobius` is parsed, checked, lowered to the
 //! IR netlist, and wired into real `Dynamic<T>` values and signal queues.
 //! Every instance becomes an `egui_dock` tab registered with the
-//! `egui_citizen` `Dispatcher`. Registry citizens (`PlotPanel`, `LensLogger`)
+//! `egui_citizen` `Registrar`. Registry citizens (`PlotPanel`, `LensLogger`)
 //! are built by **plugins** that wrap the real `egui_plot` and `egui_lens`
 //! crates (see `plugins.rs`); the source-declared `ControlsPanel` is drawn
 //! generically from its IR widget tree by `mobius_lang_host::render_source`.
@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use eframe::egui;
-use egui_citizen::{CitizenId, Dispatcher};
+use egui_citizen::{CitizenId, Registrar};
 use egui_dock::{DockArea, DockState, NodeIndex};
 use mobius_lang::ir::InstanceKind;
 use mobius_lang::{Host, Registry, WiredApp, lower, parse, wire};
@@ -85,10 +85,10 @@ struct Tab {
     title: String,
 }
 
-fn build_dock(wired: &WiredApp) -> (DockState<Tab>, Dispatcher) {
-    let mut dispatcher = Dispatcher::new();
+fn build_dock(wired: &WiredApp) -> (DockState<Tab>, Registrar) {
+    let mut registrar = Registrar::new();
     for instance in &wired.instances {
-        dispatcher.register(CitizenId::new(instance.name.clone()));
+        registrar.register(CitizenId::new(instance.name.clone()));
     }
 
     let tab = |instance: usize| Tab {
@@ -103,7 +103,7 @@ fn build_dock(wired: &WiredApp) -> (DockState<Tab>, Dispatcher) {
         .map(|dock| dock.instance)
         .unwrap_or(0);
     let mut dock_state = DockState::new(vec![tab(center)]);
-    dispatcher.activate(&CitizenId::new(wired.instances[center].name.clone()));
+    registrar.activate(&CitizenId::new(wired.instances[center].name.clone()));
 
     // Horizontal strips (above/below) carve the full width first so the
     // logger spans the bottom; the surviving band takes the left/right
@@ -130,13 +130,13 @@ fn build_dock(wired: &WiredApp) -> (DockState<Tab>, Dispatcher) {
         }
     }
 
-    (dock_state, dispatcher)
+    (dock_state, registrar)
 }
 
 struct TabViewer<'a> {
     wired: &'a WiredApp,
     views: &'a mut [Option<Box<dyn CitizenView>>],
-    dispatcher: &'a mut Dispatcher,
+    registrar: &'a mut Registrar,
     events: &'a EventResolver<'a>,
 }
 
@@ -145,7 +145,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
     fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
         let active = self
-            .dispatcher
+            .registrar
             .get(&CitizenId::new(tab.title.clone()))
             .map(|state| state.active.get())
             .unwrap_or(false);
@@ -158,9 +158,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
     fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
         if response.clicked() {
-            // One-hot lifecycle activation through the citizen dispatcher.
-            self.dispatcher.activate(&CitizenId::new(tab.title.clone()));
-            let _ = self.dispatcher.drain_messages();
+            // One-hot lifecycle activation through the citizen registrar.
+            self.registrar.activate(&CitizenId::new(tab.title.clone()));
+            let _ = self.registrar.drain_messages();
         }
     }
 
@@ -230,7 +230,7 @@ struct DemoApp {
     wired: Option<WiredApp>,
     views: Vec<Option<Box<dyn CitizenView>>>,
     dock_state: Option<DockState<Tab>>,
-    dispatcher: Dispatcher,
+    registrar: Registrar,
     error: Option<String>,
     last_modified: Option<SystemTime>,
     reloads: u32,
@@ -264,7 +264,7 @@ impl DemoApp {
             wired: None,
             views: Vec::new(),
             dock_state: None,
-            dispatcher: Dispatcher::new(),
+            registrar: Registrar::new(),
             error: None,
             last_modified,
             reloads: 0,
@@ -273,7 +273,7 @@ impl DemoApp {
         app
     }
 
-    /// Build (or rebuild) the wired app, plugin views, dock, and dispatcher.
+    /// Build (or rebuild) the wired app, plugin views, dock, and registrar.
     fn elaborate(&mut self, is_reload: bool) {
         match build(&self.path, &self.plugins) {
             Ok(mut wired) => {
@@ -287,10 +287,10 @@ impl DemoApp {
                         InstanceKind::Source => None,
                     })
                     .collect();
-                let (dock_state, dispatcher) = build_dock(&wired);
+                let (dock_state, registrar) = build_dock(&wired);
                 self.wired = Some(wired);
                 self.dock_state = Some(dock_state);
-                self.dispatcher = dispatcher;
+                self.registrar = registrar;
                 self.error = None;
                 if is_reload {
                     self.reloads += 1;
@@ -334,7 +334,7 @@ impl eframe::App for DemoApp {
             wired,
             views,
             dock_state,
-            dispatcher,
+            registrar,
             ..
         } = self;
 
@@ -349,7 +349,7 @@ impl eframe::App for DemoApp {
             &mut TabViewer {
                 wired,
                 views,
-                dispatcher,
+                registrar,
                 events,
             },
         );

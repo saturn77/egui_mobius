@@ -1,14 +1,14 @@
 //! Getting Started — complete working example from docs/getting-started.md
 //!
 //! Three panels: Config, Display, Logger.
-//! Click a tab header → Dispatcher activates that citizen.
+//! Click a tab header → Registrar activates that citizen.
 //! Logger shows all lifecycle messages flowing through.
 //!
 //! Run: cargo run -p getting_started
 
 use eframe::egui;
 use egui::Color32;
-use egui_citizen::{Citizen, CitizenId, CitizenMessage, CitizenState, Dispatcher};
+use egui_citizen::{Citizen, CitizenId, CitizenMessage, CitizenState, Registrar};
 use egui_dock::{DockArea, DockState, NodeIndex};
 
 // ── Panel structs implementing Citizen ──────────────────────────────────
@@ -133,10 +133,10 @@ impl Tab {
     }
 }
 
-// ── TabViewer bridges egui_dock to the Dispatcher ───────────────────────
+// ── TabViewer bridges egui_dock to the Registrar ───────────────────────
 
 struct TabViewer<'a> {
-    dispatcher: &'a mut Dispatcher,
+    registrar: &'a mut Registrar,
     config: &'a mut ConfigPanel,
     display: &'a DisplayPanel,
     log: &'a mut Vec<String>,
@@ -153,7 +153,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         if response.clicked()
             && let Some(id) = tab.citizen_id()
         {
-            self.dispatcher.activate(&id);
+            self.registrar.activate(&id);
         }
     }
 
@@ -185,7 +185,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
 struct MyApp {
     dock_state: DockState<Tab>,
-    dispatcher: Dispatcher,
+    registrar: Registrar,
     config: ConfigPanel,
     display: DisplayPanel,
     log: Vec<String>,
@@ -193,14 +193,14 @@ struct MyApp {
 
 impl MyApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        // Step 1: Create Dispatcher and register citizens
-        let mut dispatcher = Dispatcher::new();
-        let config_state = dispatcher.register(CitizenId::new("config"));
-        let display_state = dispatcher.register(CitizenId::new("display"));
+        // Step 1: Create Registrar and register citizens
+        let mut registrar = Registrar::new();
+        let config_state = registrar.register(CitizenId::new("config"));
+        let display_state = registrar.register(CitizenId::new("display"));
 
         // Activate config by default
-        dispatcher.activate(&CitizenId::new("config"));
-        let _ = dispatcher.drain_messages();
+        registrar.activate(&CitizenId::new("config"));
+        let _ = registrar.drain_messages();
 
         // Create panel structs with their shared state handles
         let config = ConfigPanel::new(config_state);
@@ -227,7 +227,7 @@ impl MyApp {
 
         Self {
             dock_state,
-            dispatcher,
+            registrar,
             config,
             display,
             log: vec!["App started".to_string()],
@@ -239,10 +239,10 @@ impl eframe::App for MyApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // Step 2 + 3: Render dock, then drain messages
         let mut dock_state = self.dock_state.clone();
-        let mut dispatcher = std::mem::take(&mut self.dispatcher);
+        let mut registrar = std::mem::take(&mut self.registrar);
         {
             let mut viewer = TabViewer {
-                dispatcher: &mut dispatcher,
+                registrar: &mut registrar,
                 config: &mut self.config,
                 display: &self.display,
                 log: &mut self.log,
@@ -251,7 +251,7 @@ impl eframe::App for MyApp {
         }
 
         // Drain citizen lifecycle messages
-        for msg in dispatcher.drain_messages() {
+        for msg in registrar.drain_messages() {
             match &msg {
                 CitizenMessage::Activated { id } => {
                     self.log.push(format!("[CITIZEN] Activated: {}", id));
@@ -263,7 +263,7 @@ impl eframe::App for MyApp {
             }
         }
 
-        self.dispatcher = dispatcher;
+        self.registrar = registrar;
         self.dock_state = dock_state;
     }
 }

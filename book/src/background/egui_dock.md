@@ -41,7 +41,7 @@ like this:
 ```rust,ignore
 struct MyTabViewer<'a> {
     app: &'a mut App,                   // your app's shared state
-    dispatcher: &'a mut Dispatcher,     // egui_citizen's dispatcher
+    registrar: &'a mut Registrar,     // egui_citizen's registrar
 }
 
 impl egui_dock::TabViewer for MyTabViewer<'_> {
@@ -63,7 +63,7 @@ impl egui_dock::TabViewer for MyTabViewer<'_> {
     ) {
         // STATE TRANSITIONS. Fires once when the tab is clicked.
         if response.clicked() {
-            self.dispatcher.activate(&tab.citizen_id());
+            self.registrar.activate(&tab.citizen_id());
         }
     }
 }
@@ -120,7 +120,7 @@ fn on_tab_button(
     response: &egui::Response,
 ) {
     if response.clicked() {
-        self.dispatcher.activate(&tab.citizen_id());
+        self.registrar.activate(&tab.citizen_id());
     }
 }
 ```
@@ -156,14 +156,14 @@ precisely the distinction `egui_citizen` exists to enforce.
 `egui_citizen` makes the event-time / render-time distinction
 **concrete and unmissable**:
 
-- The dispatcher exposes one canonical state-transition primitive:
-  [`Dispatcher::activate(&id)`](dispatcher.md#activateid).
+- The registrar exposes one canonical state-transition primitive:
+  [`Registrar::activate(&id)`](registrar.md#activateid).
 - That primitive is **only** ever called from `on_tab_button` (or
   equivalent user-driven event hooks). It is never called from
   `ui()`.
 - `ui()` reads — `tab.show(ui, ...)`, `self.is_active()`,
   `self.state.active.get()` — but it never writes lifecycle state.
-- The dispatcher's queue means the consequences of an `activate()`
+- The registrar's queue means the consequences of an `activate()`
   call (the `Activated` / `Deactivated` messages, the reactive flag
   flips) propagate at well-defined boundaries: in the frame's drain
   pass, not partway through a render.
@@ -173,14 +173,14 @@ The integration shape becomes:
 | Callback          | Role                            | Allowed to do            |
 |-------------------|---------------------------------|--------------------------|
 | `ui()`            | Render the panel                | Read state. **Never write lifecycle state.** |
-| `on_tab_button`   | Detect tab clicks               | Call `dispatcher.activate(&id)` on click. |
+| `on_tab_button`   | Detect tab clicks               | Call `registrar.activate(&id)` on click. |
 | Drain loop        | Process state-change messages   | Mutate app-shared state, forward to backend. |
 
 That separation — events in `on_tab_button`, rendering in `ui()`,
 consequences drained once per frame — is what makes a multi-panel
 `egui_dock` app stop fighting itself. The rest of this book is the
 mechanics of how that works: identities, reactive state, the
-dispatcher, the message queue, the coupling paths.
+registrar, the message queue, the coupling paths.
 
 ## Summary
 
@@ -192,6 +192,6 @@ dispatcher, the message queue, the coupling paths.
   why most authors initially put state-transition code in `ui()` and
   hit the per-frame race. Discoverability is the foot-gun.
 - `egui_citizen` enforces the distinction by making
-  `Dispatcher::activate()` the canonical state-transition primitive
+  `Registrar::activate()` the canonical state-transition primitive
   and routing it exclusively through `on_tab_button`. `ui()` only
   reads.

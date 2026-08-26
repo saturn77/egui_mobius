@@ -1,6 +1,6 @@
 //! # egui_citizen
 //!
-//! Panel lifecycle and message dispatch for dockable egui applications.
+//! Panel lifecycle and message routing for dockable egui applications.
 //!
 //! ## The problem
 //!
@@ -13,23 +13,23 @@
 //!
 //! Give each dock panel a persistent identity ([`CitizenId`]), lifecycle state
 //! ([`CitizenState`]), and route state transitions through a central
-//! [`Dispatcher`]. State changes happen exactly once, on click — not every frame.
+//! [`Registrar`]. State changes happen exactly once, on click — not every frame.
 //!
 //! ## Quick start
 //!
 //! ```rust,no_run
-//! use egui_citizen::{Citizen, CitizenId, CitizenState, CitizenMessage, Dispatcher};
+//! use egui_citizen::{Citizen, CitizenId, CitizenState, CitizenMessage, Registrar};
 //!
-//! // 1. Create a dispatcher and register panels
-//! let mut dispatcher = Dispatcher::new();
-//! let alpha_state = dispatcher.register(CitizenId::new("alpha"));
-//! let beta_state = dispatcher.register(CitizenId::new("beta"));
+//! // 1. Create a registrar and register panels
+//! let mut registrar = Registrar::new();
+//! let alpha_state = registrar.register(CitizenId::new("alpha"));
+//! let beta_state = registrar.register(CitizenId::new("beta"));
 //!
 //! // 2. Activate a citizen (one-hot: one active, rest off)
-//! dispatcher.activate(&CitizenId::new("alpha"));
+//! registrar.activate(&CitizenId::new("alpha"));
 //!
 //! // 3. Drain messages after rendering
-//! for msg in dispatcher.drain_messages() {
+//! for msg in registrar.drain_messages() {
 //!     match msg {
 //!         CitizenMessage::Activated { id } => println!("{} activated", id),
 //!         CitizenMessage::Deactivated { id } => println!("{} deactivated", id),
@@ -47,7 +47,7 @@
 //!   switch its display without any wiring.
 //!
 //! - **Backend threads** receive [`CitizenMessage`] via
-//!   [`Dispatcher::drain_messages()`] and route them over channels to serial
+//!   [`Registrar::drain_messages()`] and route them over channels to serial
 //!   ports, network connections, or compute tasks.
 //!
 //! ## With egui_dock
@@ -60,7 +60,7 @@
 //!
 //!     fn on_tab_button(&mut self, tab: &mut MyTab, response: &egui::Response) {
 //!         if response.clicked() {
-//!             self.dispatcher.activate(&tab.citizen_id());
+//!             self.registrar.activate(&tab.citizen_id());
 //!         }
 //!     }
 //!
@@ -70,7 +70,7 @@
 //! }
 //!
 //! // After DockArea::show(), drain messages:
-//! for msg in dispatcher.drain_messages() {
+//! for msg in registrar.drain_messages() {
 //!     match msg {
 //!         CitizenMessage::Activated { id } => { /* update state, notify backend */ }
 //!         CitizenMessage::Deactivated { id } => { /* cleanup */ }
@@ -132,7 +132,7 @@
 //! });
 //!
 //! // In the update loop, after drain_messages():
-//! for msg in dispatcher.drain_messages() {
+//! for msg in registrar.drain_messages() {
 //!     let _ = tx.send(msg.clone()); // forward to backend
 //! }
 //! ```
@@ -146,14 +146,14 @@
 //! - **Frame-order independent.** Because messages are queued and drained once
 //!   per frame, the order panels render in doesn't matter.
 //! - **No dependency on `egui_dock`.** The core crate provides the trait and
-//!   dispatcher — you wire it into whatever dock layout you use.
+//!   registrar — you wire it into whatever dock layout you use.
 
 mod citizen;
-pub mod dispatcher;
+pub mod registrar;
 pub mod message;
 mod state;
 
 pub use citizen::Citizen;
-pub use dispatcher::Dispatcher;
+pub use registrar::Registrar;
 pub use message::{CitizenId, CitizenMessage};
 pub use state::CitizenState;

@@ -8,7 +8,7 @@ app SignalBench {
         enabled   : bool = true
         trace     : Vec<f32> = []
 
-        // dispatched data — push edge, drained by the dispatcher
+        // dispatched data — push edge, drained by the backend's drain slot
         commands  : signal BenchCmd
 
         // modports: each party's complete view of the boundary —

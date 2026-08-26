@@ -4,15 +4,15 @@ A single-page summary of the public API. For full signatures, doc
 comments, and version-tracked details, see
 [docs.rs/egui_citizen](https://docs.rs/egui_citizen).
 
-## `Dispatcher`
+## `Registrar`
 
 ```rust,ignore
-use egui_citizen::Dispatcher;
+use egui_citizen::Registrar;
 ```
 
 | Call                                          | What it does                                             |
 |-----------------------------------------------|----------------------------------------------------------|
-| `Dispatcher::new()`                           | Empty dispatcher.                                        |
+| `Registrar::new()`                           | Empty registrar.                                        |
 | `register(id) -> CitizenState`                | Register a citizen; return a `CitizenState` handle.      |
 | `get(&id) -> Option<&CitizenState>`           | Look up a registered citizen's state.                    |
 | `activate(&id)`                               | One-hot: this one on, all others off. Emits messages.    |
@@ -20,7 +20,7 @@ use egui_citizen::Dispatcher;
 | `drain_messages() -> Vec<CitizenMessage>`     | Take all pending messages. Call once per frame.          |
 | `len()` / `is_empty()`                        | Citizen count / emptiness.                               |
 
-See [the dispatcher chapter](concepts/dispatcher.md) for the one-hot
+See [the registrar chapter](concepts/registrar.md) for the one-hot
 invariant and the canonical drain loop.
 
 ## `Citizen` trait
@@ -73,12 +73,12 @@ use egui_citizen::CitizenMessage;
 
 | Variant                                     | Emitted by                                                   |
 |---------------------------------------------|--------------------------------------------------------------|
-| `Activated { id }`                          | `Dispatcher::activate(&id)`                                  |
-| `Deactivated { id }`                        | `Dispatcher::activate(&id)` for the previously active citizen|
-| `Clicked { id }`                            | App code via `Dispatcher::send`                              |
-| `Selected { id, selected: bool }`           | App code via `Dispatcher::send`                              |
-| `Moved { id, location: [f32; 2] }`          | App code via `Dispatcher::send`                              |
-| `VisibilityChanged { id, visible: bool }`   | App code via `Dispatcher::send`                              |
+| `Activated { id }`                          | `Registrar::activate(&id)`                                  |
+| `Deactivated { id }`                        | `Registrar::activate(&id)` for the previously active citizen|
+| `Clicked { id }`                            | App code via `Registrar::send`                              |
+| `Selected { id, selected: bool }`           | App code via `Registrar::send`                              |
+| `Moved { id, location: [f32; 2] }`          | App code via `Registrar::send`                              |
+| `VisibilityChanged { id, visible: bool }`   | App code via `Registrar::send`                              |
 
 Derives: `Debug`, `Clone`. See [the messages chapter](concepts/messages.md).
 
@@ -105,9 +105,9 @@ const LOGGER_ID:  &str = "logger";
 ### Register and activate
 
 ```rust,ignore
-let mut dispatcher = Dispatcher::new();
-let plot_state = dispatcher.register(CitizenId::new("plot"));
-dispatcher.activate(&CitizenId::new("plot"));
+let mut registrar = Registrar::new();
+let plot_state = registrar.register(CitizenId::new("plot"));
+registrar.activate(&CitizenId::new("plot"));
 ```
 
 ### Implement `Citizen` on a panel struct
@@ -132,7 +132,7 @@ impl Citizen for PlotPanel {
 ```rust,ignore
 fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
     if response.clicked() {
-        self.dispatcher.activate(&tab.citizen_id());
+        self.registrar.activate(&tab.citizen_id());
     }
 }
 ```
@@ -140,7 +140,7 @@ fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
 ### Drain messages once per frame
 
 ```rust,ignore
-for msg in self.dispatcher.drain_messages() {
+for msg in self.registrar.drain_messages() {
     match msg {
         CitizenMessage::Activated { id } => { /* ... */ }
         CitizenMessage::Deactivated { id } => { /* ... */ }
@@ -157,7 +157,7 @@ pub enum AppMessage {
     /* domain variants ... */
 }
 
-for msg in self.dispatcher.drain_messages() {
+for msg in self.registrar.drain_messages() {
     let _ = self.tx_backend.send(AppMessage::Citizen(msg));
 }
 ```

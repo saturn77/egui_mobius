@@ -11,7 +11,7 @@
 use eframe::egui;
 use egui::Color32;
 use egui_citizen::message::CitizenId;
-use egui_citizen::{CitizenMessage, Dispatcher};
+use egui_citizen::{CitizenMessage, Registrar};
 use egui_dock::{DockArea, DockState, NodeIndex};
 use egui_mobius_reactive::Dynamic;
 
@@ -70,7 +70,7 @@ impl Tab {
 // ---------------------------------------------------------------------------
 
 struct TabViewer<'a> {
-    dispatcher: &'a mut Dispatcher,
+    registrar: &'a mut Registrar,
     active_algo: &'a Dynamic<String>,
     log: &'a mut Vec<String>,
 }
@@ -86,11 +86,11 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         if response.clicked()
             && let Some(id) = tab.citizen_id()
         {
-            self.dispatcher.activate(&id);
+            self.registrar.activate(&id);
             self.active_algo.set(id.0.clone());
 
             // Drain messages into the log so we can see the one-hot activation
-            for msg in self.dispatcher.drain_messages() {
+            for msg in self.registrar.drain_messages() {
                 match &msg {
                     CitizenMessage::Activated { id } => {
                         self.log.push(format!("[CITIZEN] Activated: {id}"));
@@ -220,7 +220,7 @@ fn render_logger(ui: &mut egui::Ui, log: &[String]) {
 
 struct CitizenDockApp {
     dock_state: DockState<Tab>,
-    dispatcher: Dispatcher,
+    registrar: Registrar,
     active_algo: Dynamic<String>,
     log: Vec<String>,
 }
@@ -228,14 +228,14 @@ struct CitizenDockApp {
 impl CitizenDockApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         // Register citizens
-        let mut dispatcher = Dispatcher::new();
-        dispatcher.register(CitizenId::new(ALPHA));
-        dispatcher.register(CitizenId::new(BETA));
-        dispatcher.register(CitizenId::new(GAMMA));
+        let mut registrar = Registrar::new();
+        registrar.register(CitizenId::new(ALPHA));
+        registrar.register(CitizenId::new(BETA));
+        registrar.register(CitizenId::new(GAMMA));
 
         // Activate Alpha by default
         let active_algo = Dynamic::new(ALPHA.to_string());
-        dispatcher.activate(&CitizenId::new(ALPHA));
+        registrar.activate(&CitizenId::new(ALPHA));
 
         // Dock layout:
         // ┌──────────────┬──────────────┐
@@ -263,7 +263,7 @@ impl CitizenDockApp {
         );
 
         let mut log = vec!["[INFO] Citizen Dock example started".to_string()];
-        for msg in dispatcher.drain_messages() {
+        for msg in registrar.drain_messages() {
             if let CitizenMessage::Activated { id } = &msg {
                 log.push(format!("[CITIZEN] Activated: {id}"));
             }
@@ -271,7 +271,7 @@ impl CitizenDockApp {
 
         Self {
             dock_state,
-            dispatcher,
+            registrar,
             active_algo,
             log,
         }
@@ -283,7 +283,7 @@ impl eframe::App for CitizenDockApp {
         DockArea::new(&mut self.dock_state).show_inside(
             ui,
             &mut TabViewer {
-                dispatcher: &mut self.dispatcher,
+                registrar: &mut self.registrar,
                 active_algo: &self.active_algo,
                 log: &mut self.log,
             },

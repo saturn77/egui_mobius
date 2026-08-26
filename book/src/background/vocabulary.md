@@ -10,7 +10,7 @@ every chapter that follows leans on these:
 - **citizen-panel** — a dock panel that carries a persistent identity
   ([`CitizenId`](concepts/citizen.md)) and reactive lifecycle state
   ([`CitizenState`](concepts/state.md)), wired into a central
-  [`Dispatcher`](concepts/dispatcher.md). The citizen-panel is the
+  [`Registrar`](concepts/registrar.md). The citizen-panel is the
   unit of organization in an `egui_citizen` app.
 - **atom** — a single widget inside a citizen-panel: a slider, a
   button, a text field, a checkbox. Atoms are where user input
@@ -33,8 +33,8 @@ before the first chapter that uses them.
   same cell; one writes, the other reads on the next frame. Instant,
   in-frame, no queue. Carries *state*, not events. The default for
   panel-to-panel coordination.
-- **Path B** — dispatcher messages. A panel calls
-  [`dispatcher.send(...)`](concepts/dispatcher.md#sendmessage); the
+- **Path B** — registrar messages. A panel calls
+  [`registrar.send(...)`](concepts/registrar.md#sendmessage); the
   app's update loop drains the queue once per frame and forwards each
   message onward to a backend thread or logger. Queued, lands next
   drain. Carries *events*, not state. Use when the change needs to

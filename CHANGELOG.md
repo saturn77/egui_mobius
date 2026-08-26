@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Changed
+- **`egui_citizen::Dispatcher` renamed to `Registrar`.** The type registers citizens, tracks the one-hot active flag, and queues lifecycle messages — it never dispatched anything to the backend. "Dispatcher" now refers only to the machinery that actually routes events: `egui_mobius::dispatching::Dispatcher` and app-level message routing. Book, README, and examples updated to match. `egui_citizen` is workspace-only (unpublished), so no deprecation alias is provided.
+
 ## [0.5.0] - 2026-06-29
 
 ### Changed

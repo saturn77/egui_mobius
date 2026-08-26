@@ -1,6 +1,6 @@
 # What is a citizen?
 
-Before any of the trait, dispatcher, or reactive-state machinery,
+Before any of the trait, registrar, or reactive-state machinery,
 get the picture from the UI side first.
 
 > **A citizen is a panel.** A docked, movable, resizable region of
@@ -8,7 +8,7 @@ get the picture from the UI side first.
 > widgets inside it.
 
 That's the user-facing definition. Everything else — the `Citizen`
-trait, the `Dispatcher`, the reactive `CitizenState` — is the
+trait, the `Registrar`, the reactive `CitizenState` — is the
 plumbing that makes the behavior of those panels predictable across
 an application. The plumbing matters, but the panel is what the user
 actually sees and interacts with.
@@ -66,15 +66,15 @@ should be feeding fresh data to.
 
 The citizen pattern fills that gap by giving every panel its
 **own reactive state** (`CitizenState`) and routing tab clicks
-through a central `Dispatcher`. The dispatcher's `activate(...)`
+through a central `Registrar`. The registrar's `activate(...)`
 call is an atomic set/reset: when "alpha" becomes active, every
 other citizen's `active` cell flips to `false` in the same
 operation, and lifecycle messages (`Activated { id: alpha }`,
-`Deactivated { id: beta }`) drop into the dispatcher's queue.
+`Deactivated { id: beta }`) drop into the registrar's queue.
 
 This means:
 
-- A **backend thread** can poll the dispatcher (or observe each
+- A **backend thread** can poll the registrar (or observe each
   citizen's `active` `Dynamic<bool>`) and discern *which citizen
   is currently of interest* without holding a reference to any
   panel. Background work — fetching data, running computations,
@@ -89,7 +89,7 @@ This means:
   it manually.
 
 This separation — dock library handles geometry, citizen
-dispatcher handles *interest* — is the load-bearing distinction.
+registrar handles *interest* — is the load-bearing distinction.
 Without it, every app reinvents some ad-hoc "which panel did the
 user mean?" logic. With it, that's framework infrastructure you
 inherit for free.
@@ -98,7 +98,7 @@ inherit for free.
 
 The other consequence of the citizen contract is that **citizens
 become plug-ins**. Once a panel implements the `Citizen` trait,
-exposes its reactive state, and integrates with the dispatcher,
+exposes its reactive state, and integrates with the registrar,
 it doesn't need to know anything about the host app to drop in.
 The host app, conversely, just needs to:
 
@@ -110,7 +110,7 @@ The host app, conversely, just needs to:
 That's the whole integration. No glue code, no event-bus wiring,
 no manual subscription setup. The citizen pulls its weight as a
 self-contained unit. And the
-[Dispatcher](../concepts/dispatcher.md) is the **registry** those
+[Registrar](../concepts/registrar.md) is the **registry** those
 plug-ins register with — the same registry pattern familiar from
 backend systems, applied here to UI panels.
 
@@ -194,7 +194,7 @@ references to the others.
 - The [Citizen trait chapter](../concepts/citizen.md) is the code
   shape: what `impl Citizen for MyPanel` looks like, the lifecycle
   hooks, the `CitizenId` and `CitizenState` types.
-- The [Dispatcher chapter](../concepts/dispatcher.md) is the
+- The [Registrar chapter](../concepts/registrar.md) is the
   coordinator: how activation propagates and how messages drain.
 - The [`Dynamic<T>` background chapter](dynamic_type.md) is the
   reactive primitive every `CitizenState` field rests on.

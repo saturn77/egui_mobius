@@ -17,29 +17,29 @@ match tab.kind {
 ```
 
 **What goes wrong:** `CitizenState::default()` allocates fresh
-`Arc<Mutex<...>>` storage that the dispatcher knows nothing about.
-The dispatcher's `activate(&drc_id)` writes to *its* table; the panel
+`Arc<Mutex<...>>` storage that the registrar knows nothing about.
+The registrar's `activate(&drc_id)` writes to *its* table; the panel
 reads from *its* freshly-allocated state; the two never agree. The
 DRC tab still highlights when clicked (egui_dock handles its own
 visual state), but anything reading `drc_state.active.get()` from
 elsewhere in the app sees `false` forever. Reactivity is silently
 severed.
 
-**Fix:** obtain the `CitizenState` from `Dispatcher::register()`,
+**Fix:** obtain the `CitizenState` from `Registrar::register()`,
 store it somewhere durable (the app struct), and clone it into the
 per-frame panel:
 
 ```rust,ignore
 struct App {
-    dispatcher: Dispatcher,
+    registrar: Registrar,
     drc_state:  CitizenState,    // registered once, lives on the app
 }
 
 impl App {
     fn new(_: &eframe::CreationContext) -> Self {
-        let mut dispatcher = Dispatcher::new();
-        let drc_state = dispatcher.register(CitizenId::new("drc"));
-        Self { dispatcher, drc_state }
+        let mut registrar = Registrar::new();
+        let drc_state = registrar.register(CitizenId::new("drc"));
+        Self { registrar, drc_state }
     }
 }
 
@@ -61,12 +61,12 @@ Panels can be stateless; their `CitizenState` cannot. See
 ```rust,ignore
 fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
     DockArea::new(&mut self.tabs).show(ctx, &mut self.tab_viewer);
-    // (no dispatcher.drain_messages() anywhere)
+    // (no registrar.drain_messages() anywhere)
 }
 ```
 
-**What goes wrong:** `Dispatcher::activate()` and any explicit
-`Dispatcher::send()` calls push into an internal `Vec<CitizenMessage>`
+**What goes wrong:** `Registrar::activate()` and any explicit
+`Registrar::send()` calls push into an internal `Vec<CitizenMessage>`
 that has no upper bound. If nothing drains it, the vec grows
 forever. The app keeps running, the UI keeps rendering, but RSS
 climbs every minute the user holds the app open. No panic, no error
@@ -78,15 +78,15 @@ log — just a slow leak.
 fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
     DockArea::new(&mut self.tabs).show(ctx, &mut self.tab_viewer);
 
-    for msg in self.dispatcher.drain_messages() {
+    for msg in self.registrar.drain_messages() {
         // process or forward
     }
 }
 ```
 
 If you have nothing to do with the messages yet, drain into an
-ignored binding (`let _ = self.dispatcher.drain_messages();`) so the
-queue still empties. Don't leave the dispatcher's queue
+ignored binding (`let _ = self.registrar.drain_messages();`) so the
+queue still empties. Don't leave the registrar's queue
 unattended — ever.
 
 ## 3. Calling `activate()` every frame unconditionally
@@ -96,7 +96,7 @@ unattended — ever.
 ```rust,ignore
 fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Tab) {
     // The author wanted "this tab is rendering, mark it active":
-    self.dispatcher.activate(&tab.citizen_id());
+    self.registrar.activate(&tab.citizen_id());
     tab.show(ui, self.app);
 }
 ```
@@ -118,7 +118,7 @@ deactivates the other, so consumers see a flood of
 ```rust,ignore
 fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {
     if response.clicked() {
-        self.dispatcher.activate(&tab.citizen_id());
+        self.registrar.activate(&tab.citizen_id());
     }
 }
 
@@ -160,7 +160,7 @@ struct LoggerPanel {
 `Dynamic<T>` fields with library-defined semantics (active, clicked,
 selected, moved, location, visible). Reusing those fields to mean
 something domain-specific (e.g. `active` = "showing project X")
-breaks the dispatcher's invariants the moment you call
+breaks the registrar's invariants the moment you call
 `activate()`, which clobbers your overload.
 
 The variant is treating *every* panel-local field as reactive
@@ -216,7 +216,7 @@ message:
 ```rust,ignore
 // Detect close in TabViewer:
 fn on_close(&mut self, tab: &mut Tab) -> bool {
-    self.dispatcher.send(CitizenMessage::VisibilityChanged {
+    self.registrar.send(CitizenMessage::VisibilityChanged {
         id: tab.citizen_id(),
         visible: false,
     });
@@ -224,9 +224,9 @@ fn on_close(&mut self, tab: &mut Tab) -> bool {
 }
 
 // In the drain loop, sync the reactive flag:
-for msg in self.dispatcher.drain_messages() {
+for msg in self.registrar.drain_messages() {
     if let CitizenMessage::VisibilityChanged { id, visible } = &msg {
-        if let Some(state) = self.dispatcher.get(id) {
+        if let Some(state) = self.registrar.get(id) {
             state.visible.set(*visible);
         }
     }
@@ -238,41 +238,41 @@ message variant). The plumbing from egui_dock's tab-close into that
 vocabulary is your code's responsibility, by design — it's the
 boundary that keeps `egui_citizen` independent of the dock crate.
 
-## 6. Two dispatchers in one app
+## 6. Two registrars in one app
 
 **Broken:**
 
 ```rust,ignore
 struct App {
-    plot_dispatcher:     Dispatcher,
-    settings_dispatcher: Dispatcher,
+    plot_registrar:     Registrar,
+    settings_registrar: Registrar,
     /* ... */
 }
 ```
 
 **What goes wrong:** the one-hot activation invariant is
-**per-dispatcher**. `plot_dispatcher.activate(&plot_id)` deactivates
-every other citizen registered with `plot_dispatcher` — but it
-cannot deactivate a citizen registered with `settings_dispatcher`,
-because the two dispatchers maintain entirely separate
+**per-registrar**. `plot_registrar.activate(&plot_id)` deactivates
+every other citizen registered with `plot_registrar` — but it
+cannot deactivate a citizen registered with `settings_registrar`,
+because the two registrars maintain entirely separate
 `HashMap<CitizenId, CitizenState>` tables. Two panels — one
-registered to each dispatcher — can both be "active" simultaneously,
+registered to each registrar — can both be "active" simultaneously,
 which the rest of the codebase does not expect.
 
-**Fix:** one `Dispatcher` per app. Always.
+**Fix:** one `Registrar` per app. Always.
 
 ```rust,ignore
 struct App {
-    dispatcher: Dispatcher,    // exactly one
+    registrar: Registrar,    // exactly one
     /* ... */
 }
 ```
 
-If you find yourself wanting a second dispatcher because "these
+If you find yourself wanting a second registrar because "these
 panels are unrelated to those panels," the right answer is still one
-dispatcher with all panels registered. Citizen ids are namespaced
+registrar with all panels registered. Citizen ids are namespaced
 strings — use `"editor.plot"`, `"sidebar.settings"`, etc., to
-disambiguate. The dispatcher does not care about logical grouping;
+disambiguate. The registrar does not care about logical grouping;
 it only enforces the one-hot invariant across everything it knows
 about.
 
@@ -283,5 +283,5 @@ error, just behavior that drifts from what the author expected. The
 defenses are vocabulary-level: hold the `CitizenState` somewhere
 durable, drain the queue every frame, never write lifecycle state in
 `ui()`, keep panel-local data out of `CitizenState`, drive `visible`
-yourself, and never run two dispatchers in one app. Once these
+yourself, and never run two registrars in one app. Once these
 become habits, the rest of `egui_citizen` works out of the box.

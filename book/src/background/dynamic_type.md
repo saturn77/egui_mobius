@@ -101,8 +101,8 @@ a.active.set(true);
 assert!(b.active.get());  // true — same Arc<Mutex<bool>>
 ```
 
-The dispatcher keeps one clone of each citizen's state; your panel
-holds another. When the dispatcher writes `.active.set(true)`, your
+The registrar keeps one clone of each citizen's state; your panel
+holds another. When the registrar writes `.active.set(true)`, your
 panel sees `true` on its next `.get()`. No event bus, no subscription
 to wire up, no polling loop — just a shared `Arc`.
 
@@ -116,15 +116,15 @@ who writes.
 
 | Field                         | Canonical writer                  |
 |-------------------------------|-----------------------------------|
-| `active`                      | The `Dispatcher` (via `activate`) |
+| `active`                      | The `Registrar` (via `activate`) |
 | `clicked`                     | The panel's `on_click` hook       |
 | `selected`, `visible`, `moved`| The panel or app-level code       |
 | `location`                    | The dock-integration layer        |
 
 Readers are unrestricted: any panel, any backend thread. Writers are
-by convention, not enforcement. This is why the dispatcher is central
+by convention, not enforcement. This is why the registrar is central
 (it's the one place that serializes activation writes across all
-citizens), and why the [pitfall on two dispatchers in one
+citizens), and why the [pitfall on two registrars in one
 app](pitfalls.md) exists — two writers to the same logical field break
 the one-hot invariant.
 
@@ -250,7 +250,7 @@ own documentation is the next stop.
 The chapter on [reactive lifecycle](../concepts/state.md) builds on
 this foundation and walks through the trap that bites users who
 construct a `CitizenState` with `CitizenState::default()` instead of
-obtaining one from `Dispatcher::register()`. The [Inside
+obtaining one from `Registrar::register()`. The [Inside
 `Dynamic<T>`](../concepts/inside-dynamic.md) chapter opens up the
 notifier mechanism in detail — read it before writing code that
 subscribes to a `Dynamic<T>`.

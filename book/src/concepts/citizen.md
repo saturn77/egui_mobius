@@ -11,7 +11,7 @@ gives the panel three things:
    `is_selected`).
 
 This chapter covers the trait surface, the way state flows between
-the dispatcher and the panel, where panel-author state lives across
+the registrar and the panel, where panel-author state lives across
 the three structs that any non-trivial app uses, and the runtime
 story for how the trait actually gets exercised.
 
@@ -42,7 +42,7 @@ That is the whole trait.
 The trait's three required methods (`id`, `citizen_state`,
 `citizen_state_mut`) are pure plumbing — they hand the trait
 references back to the fields you store on the struct. They're
-required because the dispatcher and the defaulted hooks need a
+required because the registrar and the defaulted hooks need a
 uniform way to reach into your panel; that's the entire purpose.
 
 What the trait actually *buys* you is the rest of the contract:
@@ -66,11 +66,11 @@ impl PlotPanel {
         }
     }
 
-    fn show(&mut self, ui: &mut egui::Ui, dispatcher: &mut Dispatcher) {
+    fn show(&mut self, ui: &mut egui::Ui, registrar: &mut Registrar) {
         ui.heading("Plot");
 
-        // Read direction: dispatcher → panel.
-        // The dispatcher's activate() writes self.citizen_state.active
+        // Read direction: registrar → panel.
+        // The registrar's activate() writes self.citizen_state.active
         // through the shared Arc; we observe it reactively via
         // is_active(). No method call from this side is needed.
         if self.is_active() {
@@ -80,10 +80,10 @@ impl PlotPanel {
             ui.label("(inactive — paused)");
         }
 
-        // Write direction: panel → dispatcher.
+        // Write direction: panel → registrar.
         // The panel can hand control to a sibling citizen explicitly.
         if ui.button("Switch to settings").clicked() {
-            dispatcher.activate(&CitizenId::new("settings"));
+            registrar.activate(&CitizenId::new("settings"));
         }
     }
 }
@@ -107,23 +107,23 @@ activation. The accessor boilerplate is the price; the readers
 and hooks are what you actually buy.
 
 The two state-flow directions are intentionally asymmetric.
-**Dispatcher → panel happens reactively** — the dispatcher writes
+**Registrar → panel happens reactively** — the registrar writes
 through the `Arc` underneath `citizen_state.active`, and the panel
 sees the new value the next time `is_active()` reads it. No
-method call from the panel side is needed. **Panel → dispatcher
-requires a method-call surface**, which is what `&mut Dispatcher`
+method call from the panel side is needed. **Panel → registrar
+requires a method-call surface**, which is what `&mut Registrar`
 in the `show()` signature provides — the panel can call
-`dispatcher.activate(...)` to hand control to a sibling, or
-`dispatcher.send(...)` to push a custom message. Some apps wrap
-the dispatcher and shared services in a `PanelCtx` struct
+`registrar.activate(...)` to hand control to a sibling, or
+`registrar.send(...)` to push a custom message. Some apps wrap
+the registrar and shared services in a `PanelCtx` struct
 (`fn show(&mut self, ui: &mut egui::Ui, ctx: &mut PanelCtx)`) to
 keep the parameter list short; either shape works.
 
 The `state` argument to `PlotPanel::new` should always come from
-[`Dispatcher::register()`](dispatcher.md#registerid---citizenstate),
+[`Registrar::register()`](registrar.md#registerid---citizenstate),
 **never** from `CitizenState::new()` or `CitizenState::default()`.
 The latter allocate fresh disconnected storage and silently sever
-the reactive link with the dispatcher (see
+the reactive link with the registrar (see
 [the trap in the state chapter](state.md#the-trap-that-bites-everyone)).
 
 ## Atoms — widget state alongside `CitizenState`
@@ -304,14 +304,14 @@ the app level and gets passed by reference into each panel's
 ```rust,ignore
 struct App {
     services: Arc<SharedServices>,
-    dispatcher: Dispatcher,
+    registrar: Registrar,
     logger: LoggerPanel,
     bom: BomPanel,
 }
 
 // And inside each panel's show():
-self.logger.show(ui, &mut self.dispatcher, &self.services);
-self.bom.show(ui, &mut self.dispatcher, &self.services);
+self.logger.show(ui, &mut self.registrar, &self.services);
+self.bom.show(ui, &mut self.registrar, &self.services);
 ```
 
 Whether the shared bits are themselves reactive (`Dynamic<T>`
@@ -386,11 +386,11 @@ A `CitizenId` is a stable string identifier. The same id must be used
 consistently across:
 
 - `CitizenId::new("plot")` when constructing the panel.
-- `dispatcher.register(CitizenId::new("plot"))` at startup.
-- `dispatcher.activate(&CitizenId::new("plot"))` when the user
+- `registrar.register(CitizenId::new("plot"))` at startup.
+- `registrar.activate(&CitizenId::new("plot"))` when the user
   clicks the corresponding tab.
 
-If the strings disagree, the dispatcher silently treats them as
+If the strings disagree, the registrar silently treats them as
 different citizens — `activate("plt")` will do nothing visible to a
 panel registered as `"plot"`, and you'll burn an evening debugging
 why a click does nothing.
@@ -401,10 +401,10 @@ Define ids as constants once and reference them everywhere:
 const PLOT_ID:     &str = "plot";
 const SETTINGS_ID: &str = "settings";
 
-dispatcher.register(CitizenId::new(PLOT_ID));
-dispatcher.register(CitizenId::new(SETTINGS_ID));
+registrar.register(CitizenId::new(PLOT_ID));
+registrar.register(CitizenId::new(SETTINGS_ID));
 
-dispatcher.activate(&CitizenId::new(PLOT_ID));
+registrar.activate(&CitizenId::new(PLOT_ID));
 ```
 
 This turns a typo into a compile error rather than a silent runtime
@@ -432,7 +432,7 @@ impl Citizen for FetchPanel {
 ```
 
 In practice, most apps **do not** override the hooks. They let the
-dispatcher do the flag flip and route side-effect logic through
+registrar do the flag flip and route side-effect logic through
 [`CitizenMessage`](messages.md) instead — backend threads receive
 `Activated { id: "fetch" }` and start the fetch from there. Override
 the hooks only when the response is genuinely synchronous and
@@ -442,15 +442,15 @@ panel-local.
 
 The `Citizen` trait is a **contract**, not a polymorphism mechanism:
 
-- The dispatcher does *not* hold trait objects. It stores
+- The registrar does *not* hold trait objects. It stores
   `CitizenState` clones in a `HashMap<CitizenId, CitizenState>`.
 - Your `TabViewer` impl pulls panels by tab kind and calls each
   panel's own `show()` (or whatever you named it). The trait gives
   you uniform access to `id()` and `is_active()` if rendering needs
-  it, but the dispatcher never walks an array of `dyn Citizen`.
+  it, but the registrar never walks an array of `dyn Citizen`.
 - The hooks exist so panel code can call them on its own (e.g. from
   inside `show()` when a button is clicked), not because the
-  dispatcher fires them.
+  registrar fires them.
 
 The trait earns its keep by giving consistent shape across panels —
 not by enabling runtime polymorphism over them.
@@ -460,7 +460,7 @@ not by enabling runtime polymorphism over them.
 - Three required methods (`id`, `citizen_state`, `citizen_state_mut`),
   three defaulted hooks, two defaulted readers.
 - Always obtain the `CitizenState` field from
-  [`Dispatcher::register()`](dispatcher.md). Constructing it directly
+  [`Registrar::register()`](registrar.md). Constructing it directly
   severs reactivity.
 - Define citizen ids as `const`s so typos become compile errors.
 - Override hooks only when the panel itself does synchronous extra

@@ -1,6 +1,6 @@
-//! Lifecycle messages emitted by the dispatcher.
+//! Lifecycle messages emitted by the registrar.
 //!
-//! These messages flow through [`Dispatcher::drain_messages()`](crate::Dispatcher::drain_messages)
+//! These messages flow through [`Registrar::drain_messages()`](crate::Registrar::drain_messages)
 //! and are consumed by either other panels (for reactive UI updates) or
 //! backend threads (for I/O, computation, etc.).
 
@@ -9,7 +9,7 @@
 /// Route these in your update loop after `DockArea::show()`:
 ///
 /// ```text
-/// for msg in dispatcher.drain_messages() {
+/// for msg in registrar.drain_messages() {
 ///     match msg {
 ///         CitizenMessage::Activated { id } => { /* panel became active */ }
 ///         CitizenMessage::Deactivated { id } => { /* panel lost focus */ }

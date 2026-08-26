@@ -13,7 +13,7 @@ about twenty lines.
 ## Citizen pattern
 
 - `getting_started` — three panels (Config, Display, Logger) wired
-  through a dispatcher. Clicking a tab activates the citizen and the
+  through a registrar. Clicking a tab activates the citizen and the
   logger shows the lifecycle messages flowing through.
 - `citizen_dock` — citizen + `egui_dock` with three algorithm tabs
   (Alpha, Beta, Gamma); the plot panel reacts to whichever tab is

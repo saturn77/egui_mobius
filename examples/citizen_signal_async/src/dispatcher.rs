@@ -1,4 +1,4 @@
-//! Dispatcher wiring: register citizens at startup, drain lifecycle
+//! Registrar wiring: register citizens at startup, drain lifecycle
 //! messages each frame, route AppMessage events to the work signal.
 //!
 //! Mirrors `filter_plotter::dispatcher` deliberately. The difference is
@@ -6,7 +6,7 @@
 //! async via `egui_mobius`'s signal/slot bus) rather than a synchronous
 //! `BackendKind` trait object run inline on the UI thread.
 
-use egui_citizen::{CitizenMessage, Dispatcher};
+use egui_citizen::{CitizenMessage, Registrar};
 use egui_mobius::Signal;
 use egui_mobius_reactive::Dynamic;
 
@@ -15,8 +15,8 @@ use crate::state::{SharedState, WorkRequest};
 
 /// Drain citizen lifecycle messages and append them to the shared log.
 /// Call once per frame after `DockArea::show`.
-pub fn drain_citizen(dispatcher: &mut Dispatcher, log: &Dynamic<Vec<String>>) {
-    for msg in dispatcher.drain_messages() {
+pub fn drain_citizen(registrar: &mut Registrar, log: &Dynamic<Vec<String>>) {
+    for msg in registrar.drain_messages() {
         append_log(log, format_citizen(&msg));
     }
 }

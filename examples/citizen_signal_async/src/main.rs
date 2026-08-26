@@ -2,7 +2,7 @@
 //!
 //! Phase 3 — three docked citizens (Control / Result / Logger) wired
 //! through `egui_dock`'s `TabViewer`. Tab clicks forward to
-//! `Dispatcher::activate` so citizen lifecycle messages flow through
+//! `Registrar::activate` so citizen lifecycle messages flow through
 //! the drain loop and end up in the Logger panel.
 //!
 //! Click Compute on the Control panel → AppMessage::Compute hits the
@@ -19,7 +19,7 @@ mod state;
 mod tabs;
 
 use eframe::egui;
-use egui_citizen::Dispatcher as CitizenDispatcher;
+use egui_citizen::Registrar;
 use egui_dock::{DockArea, DockState, NodeIndex};
 use egui_mobius::signals::Signal;
 
@@ -28,7 +28,7 @@ use crate::state::{SharedState, WorkRequest};
 use crate::tabs::{Tab, TabKind, TabViewer};
 
 struct App {
-    dispatcher: CitizenDispatcher,
+    registrar: Registrar,
     dock_state: DockState<Tab>,
     state: SharedState,
     work_signal: Signal<WorkRequest>,
@@ -43,7 +43,7 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let state = SharedState::new();
 
-        let dispatcher = CitizenDispatcher::new();
+        let registrar = Registrar::new();
 
         // Dock layout:
         //   ┌──────────────┬─────────────┐
@@ -87,7 +87,7 @@ impl App {
         dispatcher::append_log(&state.log, "[INFO] citizen_signal_async started".into());
 
         Self {
-            dispatcher,
+            registrar,
             dock_state,
             state,
             work_signal,
@@ -105,7 +105,7 @@ impl eframe::App for App {
             ui,
             &mut TabViewer {
                 state: &self.state,
-                dispatcher: &mut self.dispatcher,
+                registrar: &mut self.registrar,
                 control: &mut self.control,
                 result: &mut self.result,
                 logger: &mut self.logger,
@@ -113,7 +113,7 @@ impl eframe::App for App {
         );
 
         // Drain pass — once per frame, after the dock has rendered.
-        dispatcher::drain_citizen(&mut self.dispatcher, &self.state.log);
+        dispatcher::drain_citizen(&mut self.registrar, &self.state.log);
 
         let outbox = std::mem::take(&mut self.control.outbox);
         for msg in outbox {
