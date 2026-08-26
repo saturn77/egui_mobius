@@ -64,7 +64,7 @@ Both are `Send + 'static` (required for the signal bus).
 
 ```rust,ignore
 // At app construction:
-let citizen_dispatcher = CitizenDispatcher::new();
+let registrar = Registrar::new();
 // Register three citizens, get back CitizenStates …
 
 let async_dispatcher = AsyncDispatcher::<WorkRequest, WorkResponse>::new();
@@ -142,7 +142,7 @@ The new material is `backend.rs` and the additional wiring in
   second signal/slot pair; (a) is shorter. Default to (a) for the
   first cut, mention (b) in a comment.
 - **Citizen activation hookup.** Tab clicks should call
-  `citizen_dispatcher.activate(&id)` per the standard pattern.
+  `registrar.activate(&id)` per the standard pattern.
   Drained `Activated` / `Deactivated` messages append to the log
   alongside backend events — proves both worlds compose in one
   Logger panel.
