@@ -127,6 +127,20 @@ impl Citizen for PlotPanel {
 }
 ```
 
+### Or generate the panel with `citizen_panel!`
+
+```rust,ignore
+// Struct + new(citizen_state) + Citizen impl, one declaration.
+// Extra fields become pub members initialized to their defaults.
+citizen_panel!(PlotPanel, "plot",
+    samples: Vec<f32> = Vec::new(),
+);
+```
+
+See [the macro section of the Citizen trait
+chapter](concepts/citizen.md#skipping-the-boilerplate-citizen_panel)
+for when to write the impl by hand instead.
+
 ### Wire activation through `egui_dock::TabViewer`
 
 ```rust,ignore

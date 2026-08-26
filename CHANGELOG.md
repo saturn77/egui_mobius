@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Added
+- **`egui_citizen::citizen_panel!`** — generates a citizen panel's struct, `new(citizen_state)` constructor, and `Citizen` impl from one declaration. Canonicalizes the macro previously copy-pasted (and diverging) across CopperForge, CopperTrace, and forgePM; uses `$crate::` paths so callers need no imports in scope. Covered in the book's Citizen trait chapter and reference cheat sheet.
+
 ### Changed
 - **`egui_citizen::Dispatcher` renamed to `Registrar`.** The type registers citizens, tracks the one-hot active flag, and queues lifecycle messages — it never dispatched anything to the backend. "Dispatcher" now refers only to the machinery that actually routes events: `egui_mobius::dispatching::Dispatcher` and app-level message routing. Book, README, and examples updated to match. `egui_citizen` is workspace-only (unpublished), so no deprecation alias is provided.
 

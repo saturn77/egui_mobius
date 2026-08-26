@@ -126,6 +126,47 @@ The latter allocate fresh disconnected storage and silently sever
 the reactive link with the registrar (see
 [the trap in the state chapter](state.md#the-trap-that-bites-everyone)).
 
+## Skipping the boilerplate: `citizen_panel!`
+
+The struct definition, the `new(citizen_state)` constructor, and the
+three-accessor trait impl above are identical for every panel that
+doesn't override the lifecycle hooks. The `citizen_panel!` macro
+generates all three from one declaration:
+
+```rust,ignore
+use egui_citizen::citizen_panel;
+
+citizen_panel!(PlotPanel, "plot",
+    samples: Vec<f32> = Vec::new(),
+    autoscale: bool = true,
+);
+```
+
+This expands to exactly the shape shown in the previous section: a
+`PlotPanel` struct holding `citizen_id` (initialized from `"plot"`)
+and `citizen_state`, plus the extra fields as `pub` members with
+their defaults; a `new(citizen_state: CitizenState)` constructor;
+and the `Citizen` impl wired to those fields. Your `impl PlotPanel`
+block with `show()` and any other methods lives alongside the macro
+call as usual — the macro only owns the struct and the trait
+plumbing.
+
+The construction rule from the previous section still applies
+unchanged: the `CitizenState` you pass to the generated `new()`
+must come from `Registrar::register()`, never from
+`CitizenState::new()`.
+
+Two cases still call for writing the impl by hand:
+
+- **Custom lifecycle hooks.** The macro emits the trait impl with
+  the default `on_activate` / `on_deactivate` / `on_click`
+  bodies. A panel that needs to do real work on activation — start
+  a fetch, reset a cache — implements `Citizen` itself.
+- **A constructor that does more than store defaults.** The
+  generated `new()` only assigns the declared defaults. If
+  construction needs arguments beyond `CitizenState`, write the
+  struct by hand.
+
 ## Atoms — widget state alongside `CitizenState`
 
 A citizen-panel almost always carries its own widget state: slider

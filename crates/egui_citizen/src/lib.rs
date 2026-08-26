@@ -108,6 +108,17 @@
 //! }
 //! ```
 //!
+//! Panels that keep the default lifecycle hooks can generate all of the
+//! above with the [`citizen_panel!`] macro instead:
+//!
+//! ```rust,no_run
+//! use egui_citizen::citizen_panel;
+//!
+//! citizen_panel!(SettingsPanel, "settings",
+//!     dark_mode: bool = false,
+//! );
+//! ```
+//!
 //! ## Threading example
 //!
 //! Route citizen messages to a backend thread via a channel:
@@ -149,6 +160,7 @@
 //!   registrar — you wire it into whatever dock layout you use.
 
 mod citizen;
+mod macros;
 pub mod registrar;
 pub mod message;
 mod state;
