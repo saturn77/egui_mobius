@@ -1,10 +1,10 @@
 # Introduction
 
-> **Book version:** 0.5.0 &nbsp;·&nbsp; **Last updated:** 2026-08-26 &nbsp;·&nbsp; tracks `egui_mobius` v0.5.0 (egui 0.35)
+> **Book version:** 0.6.0 &nbsp;·&nbsp; **Last updated:** 2026-08-27 &nbsp;·&nbsp; tracks `egui_mobius` v0.6.0 (egui 0.36)
 >
 > The book is *live* — it evolves alongside the framework. Each
 > chapter footer notes the date of its last substantive revision.
-> When egui_mobius ships v0.6.0, this book becomes 0.6.0.
+> When egui_mobius ships v0.7.0, this book becomes 0.7.0.
 
 This book is the know-how for building solid, professional GUI
 applications in Rust on top of `egui` and the `egui_mobius`

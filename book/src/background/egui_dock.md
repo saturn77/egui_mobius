@@ -51,6 +51,11 @@ impl egui_dock::TabViewer for MyTabViewer<'_> {
         tab.title.clone().into()
     }
 
+    fn id(&mut self, tab: &mut Self::Tab) -> egui::Id {
+        // Required since egui_dock 0.21: a stable identity per tab.
+        egui::Id::new(tab.title.clone())
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         // RENDERING. Runs every frame, for every visible tab.
         tab.show(ui, self.app);

@@ -226,7 +226,7 @@ fn make_pipeline(
     shader: &wgpu::ShaderModule,
     entries: [&str; 2],
     target: &wgpu::ColorTargetState,
-    buffers: &[wgpu::VertexBufferLayout],
+    buffers: &[Option<wgpu::VertexBufferLayout>],
 ) -> wgpu::RenderPipeline {
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some(label),
@@ -327,11 +327,11 @@ impl GraficaRenderer {
             &node_shader,
             ["vs_node", "fs_node"],
             &target,
-            &[wgpu::VertexBufferLayout {
+            &[Some(wgpu::VertexBufferLayout {
                 array_stride: std::mem::size_of::<NodeInstance>() as u64,
                 step_mode: wgpu::VertexStepMode::Instance,
                 attributes: &NODE_ATTRS,
-            }],
+            })],
         );
         let edge_pipeline = make_pipeline(
             device,
@@ -340,11 +340,11 @@ impl GraficaRenderer {
             &edge_shader,
             ["vs_edge", "fs_edge"],
             &target,
-            &[wgpu::VertexBufferLayout {
+            &[Some(wgpu::VertexBufferLayout {
                 array_stride: std::mem::size_of::<EdgeInstance>() as u64,
                 step_mode: wgpu::VertexStepMode::Instance,
                 attributes: &EDGE_ATTRS,
-            }],
+            })],
         );
 
         Self {

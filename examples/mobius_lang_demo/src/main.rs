@@ -156,6 +156,12 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         }
     }
 
+    fn id(&mut self, tab: &mut Self::Tab) -> egui::Id {
+        // Stable id from the citizen name — title() decorates the active
+        // tab with a bullet, so it can't serve as the identity.
+        egui::Id::new(tab.title.clone())
+    }
+
     fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
         if response.clicked() {
             // One-hot lifecycle activation through the citizen registry.

@@ -15,7 +15,7 @@
 
 use eframe::egui;
 use egui_3d_viewer::ViewerCitizen;
-use egui_citizen::{CitizenId, Registry};
+use egui_citizen::Registry;
 
 type Mesh = csgrs::mesh::Mesh<()>;
 

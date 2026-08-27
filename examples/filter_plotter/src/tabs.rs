@@ -71,6 +71,10 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         tab.title().into()
     }
 
+    fn id(&mut self, tab: &mut Self::Tab) -> egui::Id {
+        egui::Id::new(tab.title())
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
             TabKind::Plot => self.plot.show(ui, self.state),

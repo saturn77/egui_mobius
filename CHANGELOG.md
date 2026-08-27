@@ -1,4 +1,12 @@
-## [Unreleased]
+## [0.6.0] - 2026-08-27
+
+### Changed
+- **Bumped to egui 0.36** (from 0.35) and the surrounding ecosystem: `eframe`, `egui-winit`, `egui_extras`, `egui-wgpu`, `egui_glow` → 0.36; `egui_plot` → 0.37; `egui_dock` → 0.21; `wgpu` → 30.
+- **Family-wide version bump to 0.6.0.** The egui major bump is a breaking change for downstreams, so every workspace crate moves together.
+- Migrated to the new APIs: `wgpu` 30's `VertexState::buffers` takes `&[Option<VertexBufferLayout>]` (egui_grafica pipelines), and `egui_dock` 0.21 makes `TabViewer::id` a required method — every example now derives a stable per-tab `egui::Id` from the tab's identity string, never from decorated display text.
+
+### Notes
+- `egui_taffy` 0.14 supports egui 0.36, so the parked `clock_async` / `clock_reactive` examples could return.
 
 ### Added
 - **`egui_citizen::citizen_panel!`** — generates a citizen panel's struct, `new(citizen_state)` constructor, and `Citizen` impl from one declaration. Canonicalizes the macro previously copy-pasted (and diverging) across CopperForge, CopperTrace, and forgePM; uses `$crate::` paths so callers need no imports in scope. Covered in the book's Citizen trait chapter and reference cheat sheet.

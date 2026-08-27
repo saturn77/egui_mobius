@@ -58,6 +58,10 @@
 //! impl egui_dock::TabViewer for MyTabViewer<'_> {
 //!     type Tab = MyTab;
 //!
+//!     fn id(&mut self, tab: &mut MyTab) -> egui::Id {
+//!         egui::Id::new(tab.title())   // required since egui_dock 0.21
+//!     }
+//!
 //!     fn on_tab_button(&mut self, tab: &mut MyTab, response: &egui::Response) {
 //!         if response.clicked() {
 //!             self.registry.activate(&tab.citizen_id());

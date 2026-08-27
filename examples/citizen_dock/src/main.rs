@@ -82,6 +82,10 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         tab.title().into()
     }
 
+    fn id(&mut self, tab: &mut Self::Tab) -> egui::Id {
+        egui::Id::new(tab.title())
+    }
+
     fn on_tab_button(&mut self, tab: &mut Self::Tab, response: &egui::Response) {
         if response.clicked()
             && let Some(id) = tab.citizen_id()

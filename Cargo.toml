@@ -28,7 +28,7 @@ members = [ "crates/egui_mobius", "crates/egui_mobius_widgets",
 exclude = [
     # has its own workspace
     "examples/egui_crux_example",
-    # egui_taffy has no egui-0.35 release yet — parked until it does
+    # egui_taffy 0.14 supports egui 0.36 — the clock examples could return
     "examples/clock_async",
     "examples/clock_reactive",
 ]
@@ -39,35 +39,35 @@ resolver = "2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
-version = "0.5.0"
+version = "0.6.0"
 
 [workspace.dependencies]
 # egui mobius related crates
-egui_mobius   = { version = "0.5.0", path = "crates/egui_mobius" }
-egui_mobius_widgets = { version = "0.5.0", path = "crates/egui_mobius_widgets" }
-egui_mobius_reactive = { version = "0.5.0", path = "crates/egui_mobius_reactive" }
-egui_mobius_components = { version = "0.5.0", path = "crates/egui_mobius_components" }
-egui_citizen = { version = "0.5.0", path = "crates/egui_citizen" }
-egui_lens = { version = "0.5.0", path = "crates/egui_lens" }
-egui_quill = { version = "0.5.0", path = "crates/egui_quill" }
-egui_grafica = { version = "0.5.0", path = "crates/egui_grafica" }
-egui_3d_viewer = { version = "0.5.0", path = "crates/egui_3d_viewer" }
+egui_mobius   = { version = "0.6.0", path = "crates/egui_mobius" }
+egui_mobius_widgets = { version = "0.6.0", path = "crates/egui_mobius_widgets" }
+egui_mobius_reactive = { version = "0.6.0", path = "crates/egui_mobius_reactive" }
+egui_mobius_components = { version = "0.6.0", path = "crates/egui_mobius_components" }
+egui_citizen = { version = "0.6.0", path = "crates/egui_citizen" }
+egui_lens = { version = "0.6.0", path = "crates/egui_lens" }
+egui_quill = { version = "0.6.0", path = "crates/egui_quill" }
+egui_grafica = { version = "0.6.0", path = "crates/egui_grafica" }
+egui_3d_viewer = { version = "0.6.0", path = "crates/egui_3d_viewer" }
 
 # Exact-geometry kernel — the geometry foundation for egui_grafica's
 # routing and shapes (timschmidt's hyper ecosystem).
 hypercurve = "0.2"
 
 # egui and eframe
-egui_plot = "0.36.0"
-egui = "0.35"
-eframe = { version = "0.35", default-features = false }
-egui-winit = { version = "0.35", features = ["accesskit"] }
-egui_extras = "0.35.0"
-egui_dock = "0.20"
+egui_plot = "0.37"
+egui = "0.36"
+eframe = { version = "0.36", default-features = false }
+egui-winit = { version = "0.36", features = ["accesskit"] }
+egui_extras = "0.36"
+egui_dock = "0.21"
 
 # wgpu rendering backend for egui_grafica's GPU pipeline
-egui-wgpu = "0.35"
-wgpu = "29"
+egui-wgpu = "0.36"
+wgpu = "30"
 bytemuck = { version = "1", features = ["derive"] }
 
 # random number generation, useful for testing and examples

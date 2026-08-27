@@ -619,10 +619,14 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         tab.title().into()
     }
 
+    fn id(&mut self, tab: &mut Self::Tab) -> egui::Id {
+        egui::Id::new(tab.title())
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         match tab.kind {
             TabKind::Plot     => self.plot.show(ui, self.state),
-            TabKind::Settings => self.settings.show(ui, self.state, self.registry),
+            TabKind::Settings => self.settings.show(ui, self.state),
             TabKind::Logger   => self.logger.show(ui, self.state),
         }
     }
@@ -635,17 +639,19 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 }
 ```
 
-Three methods, each doing one thing:
+Four methods, each doing one thing:
 
 1. **`title`** — return whatever the tab strip should display.
    We delegate to `Tab::title()` so the strings live next to the
    enum.
-2. **`ui`** — `egui_dock` calls this once per visible tab per
+2. **`id`** — a stable identity per tab, required since
+   `egui_dock` 0.21. Derive it from the same string `title()`
+   uses — but never from decorated display text.
+3. **`ui`** — `egui_dock` calls this once per visible tab per
    frame. We match on `tab.kind` and dispatch to the corresponding
-   panel's `show()`. Note that `settings.show` takes the registry
-   too — most panels won't need it, but the settings panel uses it
-   for activation hooks. The other panels just need `&SharedState`.
-3. **`on_tab_button`** — fired when the user clicks a tab header.
+   panel's `show()`. Every panel sees `&SharedState` and nothing
+   else — the registry stays up here at the app layer.
+4. **`on_tab_button`** — fired when the user clicks a tab header.
    We forward the click into `registry.activate(...)`. This is
    the canonical citizen hook: `egui_dock` knows about the click;
    the registry knows about activation; this method is the
@@ -670,8 +676,8 @@ chapter. `tabs.rs` is on it because:
 - The `Tab` struct, `title()`, `citizen_id()` pattern is verbatim
   across apps.
 - The `TabViewer` impl gains/loses fields as panels come and go,
-  but the three methods (`title`, `ui`, `on_tab_button`) are always
-  the same three methods doing the same three jobs.
+  but the four methods (`title`, `id`, `ui`, `on_tab_button`) are
+  always the same four methods doing the same four jobs.
 
 Adding a panel is mechanical: new const, new `TabKind` variant,
 new title, new `citizen_id` arm, new `&mut Panel` field on
