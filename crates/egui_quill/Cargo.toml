@@ -1,5 +1,6 @@
 [package]
 name                   = "egui_quill"
+publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "Reactive syntax-highlighted text editor citizen for egui_mobius applications"

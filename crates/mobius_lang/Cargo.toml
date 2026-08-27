@@ -1,5 +1,6 @@
 [package]
 name                   = "mobius_lang"
+publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "Application composition language for egui_mobius — lexer, AST, and parser"

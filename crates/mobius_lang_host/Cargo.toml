@@ -1,5 +1,6 @@
 [package]
 name                   = "mobius_lang_host"
+publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "egui plugin host for mobius_lang — wrap real egui_mobius citizens and render wired apps"

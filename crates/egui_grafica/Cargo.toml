@@ -1,5 +1,6 @@
 [package]
 name                   = "egui_grafica"
+publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "Programmable graphics canvas citizen for egui_mobius — system block diagrams and node graphs, authored in a declarative DSL"

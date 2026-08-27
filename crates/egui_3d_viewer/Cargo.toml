@@ -1,5 +1,6 @@
 [package]
 name                   = "egui_3d_viewer"
+publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "Reactive 3D viewer citizen for egui_mobius applications — glow-based, wasm-portable via WebGL2"

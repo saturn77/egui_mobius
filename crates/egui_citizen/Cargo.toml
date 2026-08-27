@@ -1,5 +1,6 @@
 [package]
 name                   = "egui_citizen"
+publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "First-class dock panel lifecycle and state tracking for egui"
