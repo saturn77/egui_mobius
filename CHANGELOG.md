@@ -1,19 +1,21 @@
 ## [0.6.0] - 2026-08-27
 
-### Changed
-- **Bumped to egui 0.36** (from 0.35) and the surrounding ecosystem: `eframe`, `egui-winit`, `egui_extras`, `egui-wgpu`, `egui_glow` → 0.36; `egui_plot` → 0.37; `egui_dock` → 0.21; `wgpu` → 30.
-- **Family-wide version bump to 0.6.0.** The egui major bump is a breaking change for downstreams, so every workspace crate moves together.
-- Migrated to the new APIs: `wgpu` 30's `VertexState::buffers` takes `&[Option<VertexBufferLayout>]` (egui_grafica pipelines), and `egui_dock` 0.21 makes `TabViewer::id` a required method — every example now derives a stable per-tab `egui::Id` from the tab's identity string, never from decorated display text.
-
-### Notes
-- `egui_taffy` 0.14 supports egui 0.36, so the parked `clock_async` / `clock_reactive` examples could return.
-
 ### Added
 - **`egui_citizen::citizen_panel!`** — generates a citizen panel's struct, `new(citizen_state)` constructor, and `Citizen` impl from one declaration. Canonicalizes the macro previously copy-pasted (and diverging) across CopperForge, CopperTrace, and forgePM; uses `$crate::` paths so callers need no imports in scope. Covered in the book's Citizen trait chapter and reference cheat sheet.
 
 ### Changed
+- **Bumped to egui 0.36** (from 0.35) and the surrounding ecosystem: `eframe`, `egui-winit`, `egui_extras`, `egui-wgpu`, `egui_glow` → 0.36; `egui_plot` → 0.37; `egui_dock` → 0.21; `wgpu` → 30.
+- **Family-wide version bump to 0.6.0.** The egui major bump is a breaking change for downstreams, so every workspace crate moves together.
+- Migrated to the new APIs: `wgpu` 30's `VertexState::buffers` takes `&[Option<VertexBufferLayout>]` (egui_grafica pipelines), and `egui_dock` 0.21 makes `TabViewer::id` a required method — every example now derives a stable per-tab `egui::Id` from the tab's identity string, never from decorated display text.
 - **`egui_citizen::Dispatcher` renamed to `Registry`.** The type registers citizens, tracks the one-hot active flag, and queues lifecycle messages — it never dispatched anything to the backend. "Dispatcher" now refers only to the machinery that actually routes events: `egui_mobius::dispatching::Dispatcher` and app-level message routing. Book, README, and examples updated to match. `egui_citizen` is workspace-only (unpublished), so no deprecation alias is provided.
 - **Builder-style registration: `registry.add().with_name("plot")`** replaces `register(CitizenId::new("plot"))`. `add()` returns a `CitizenBuilder` so per-citizen options can chain before the `with_name()` finisher as the API grows. `activate()` and `get()` now take `impl Into<CitizenId>` — a plain `"name"` works; `CitizenId` converts from `&str`, `String`, and `&CitizenId`.
+
+### Fixed
+- **Fresh clones can resolve the workspace again.** csgrs 0.20.1 (`viewer3d_csgrs`) requires `core2 ^0.4`, whose every published version is yanked and whose upstream repository is gone — only the committed lockfile kept builds working. core2 0.4.0 is now vendored verbatim (Apache-2.0 OR MIT) under `vendor/core2` with a `[patch.crates-io]` entry; drop both when csgrs ships a core2-free release (its git tree already dropped it at 0.23).
+
+### Notes
+- Publishing is now explicit: workspace-only crates (`egui_citizen`, `egui_quill`, `egui_grafica`, `egui_3d_viewer`, `mobius_lang`, `mobius_lang_host`) and all examples carry `publish = false`, so a root `cargo publish` ships exactly the five public crates: `egui_mobius`, `egui_mobius_reactive`, `egui_mobius_widgets`, `egui_mobius_components`, `egui_lens`.
+- `egui_taffy` 0.14 supports egui 0.36, so the parked `clock_async` / `clock_reactive` examples could return.
 
 ## [0.5.0] - 2026-06-29
 
