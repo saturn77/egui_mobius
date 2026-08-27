@@ -6,13 +6,12 @@ use eframe::egui;
 
 use crate::state::SharedState;
 
-pub struct LoggerPanel {}
+use crate::tabs::LOGGER_ID;
+use egui_citizen::citizen_panel;
+
+citizen_panel!(LoggerPanel, LOGGER_ID);
 
 impl LoggerPanel {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
         ui.heading("Log");
         ui.add_space(4.0);

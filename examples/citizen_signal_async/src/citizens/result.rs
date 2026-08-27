@@ -7,13 +7,12 @@ use eframe::egui;
 
 use crate::state::SharedState;
 
-pub struct ResultPanel {}
+use crate::tabs::RESULT_ID;
+use egui_citizen::citizen_panel;
+
+citizen_panel!(ResultPanel, RESULT_ID);
 
 impl ResultPanel {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
         ui.heading("Result");
         ui.add_space(8.0);

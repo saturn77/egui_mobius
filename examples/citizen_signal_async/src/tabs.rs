@@ -3,7 +3,7 @@
 use eframe::egui;
 use egui_citizen::{CitizenId, Registry};
 
-use crate::panels::{control::ControlPanel, logger::LoggerPanel, result::ResultPanel};
+use crate::citizens::{control::ControlPanel, logger::LoggerPanel, result::ResultPanel};
 use crate::state::SharedState;
 
 pub const CONTROL_ID: &str = "control";

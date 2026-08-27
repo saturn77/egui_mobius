@@ -27,7 +27,7 @@ impl ParamsState {
     }
 }
 
-/// Everything the panels read from. Control reads/writes `params`,
+/// Everything the citizens read from. Control reads/writes `params`,
 /// Result reads `last_result` and `in_flight`, Logger reads `log`.
 pub struct SharedState {
     pub params: ParamsState,

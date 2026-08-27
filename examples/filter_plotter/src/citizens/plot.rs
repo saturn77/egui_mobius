@@ -23,13 +23,12 @@ use crate::state::SharedState;
 const INPUT_STRIDE: usize = 1;
 const FILTERED_STRIDE: usize = 50;
 
-pub struct PlotPanel {}
+use crate::tabs::PLOT_ID;
+use egui_citizen::citizen_panel;
+
+citizen_panel!(PlotPanel, PLOT_ID);
 
 impl PlotPanel {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
         let traces = state.traces.get();
 

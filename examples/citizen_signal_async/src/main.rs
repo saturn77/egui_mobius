@@ -12,9 +12,9 @@
 //! requests a UI repaint.
 
 mod backend;
-mod dispatcher;
+mod control_actions;
 mod messages;
-mod panels;
+mod citizens;
 mod state;
 mod tabs;
 
@@ -23,7 +23,7 @@ use egui_citizen::Registry;
 use egui_dock::{DockArea, DockState, NodeIndex};
 use egui_mobius::signals::Signal;
 
-use crate::panels::{control::ControlPanel, logger::LoggerPanel, result::ResultPanel};
+use crate::citizens::{control::ControlPanel, logger::LoggerPanel, result::ResultPanel};
 use crate::state::{SharedState, WorkRequest};
 use crate::tabs::{Tab, TabKind, TabViewer};
 
@@ -43,7 +43,13 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let state = SharedState::new();
 
-        let registry = Registry::new();
+        // Register every citizen up front; panels hold the CitizenState
+        // handles the registry gives back (never CitizenState::new()).
+        let mut registry = Registry::new();
+        let control_state = registry.add().with_name(tabs::CONTROL_ID);
+        let result_state  = registry.add().with_name(tabs::RESULT_ID);
+        let logger_state  = registry.add().with_name(tabs::LOGGER_ID);
+        registry.activate(tabs::CONTROL_ID);
 
         // Dock layout:
         //   ┌──────────────┬─────────────┐
@@ -74,7 +80,7 @@ impl App {
         result_slot.start(move |resp| {
             last_result.set(resp.value);
             in_flight.set(false);
-            dispatcher::append_log(
+            citizens::append_log(
                 &log,
                 format!(
                     "[backend] result: value={:.4} elapsed_ms={}",
@@ -84,7 +90,7 @@ impl App {
             ctx.request_repaint();
         });
 
-        dispatcher::append_log(&state.log, "[INFO] citizen_signal_async started".into());
+        citizens::append_log(&state.log, "[INFO] citizen_signal_async started".into());
 
         Self {
             registry,
@@ -92,9 +98,9 @@ impl App {
             state,
             work_signal,
             _backend: backend_handle,
-            control: ControlPanel::new(),
-            result: ResultPanel::new(),
-            logger: LoggerPanel::new(),
+            control: ControlPanel::new(control_state),
+            result: ResultPanel::new(result_state),
+            logger: LoggerPanel::new(logger_state),
         }
     }
 }
@@ -113,11 +119,11 @@ impl eframe::App for App {
         );
 
         // Drain pass — once per frame, after the dock has rendered.
-        dispatcher::drain_citizen(&mut self.registry, &self.state.log);
+        citizens::drain_citizen(&mut self.registry, &self.state.log);
 
         let outbox = std::mem::take(&mut self.control.outbox);
         for msg in outbox {
-            dispatcher::handle(msg, &self.state, &self.work_signal, &self.state.log);
+            control_actions::handle(msg, &self.state, &self.work_signal, &self.state.log);
         }
     }
 }

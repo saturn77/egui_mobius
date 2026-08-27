@@ -1,23 +1,20 @@
 //! Control panel — duration / seed sliders and the Compute button.
 //! Click pushes `AppMessage::Compute` onto the outbox; main.rs drains
-//! it and forwards through `dispatcher::handle` to the work signal.
+//! it and forwards through `control_actions::handle` to the work signal.
 
 use eframe::egui;
 
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
-pub struct ControlPanel {
-    /// Outgoing app-level messages. Populated by show() and drained by
-    /// main.rs each frame.
-    pub outbox: Vec<AppMessage>,
-}
+use crate::tabs::CONTROL_ID;
+use egui_citizen::citizen_panel;
+
+// `outbox` — outgoing app-level intents. Populated by show(); main.rs
+// drains it each frame into `control_actions::handle`.
+citizen_panel!(ControlPanel, CONTROL_ID, outbox: Vec<AppMessage> = Vec::new());
 
 impl ControlPanel {
-    pub fn new() -> Self {
-        Self { outbox: Vec::new() }
-    }
-
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
         ui.heading("Control");
         ui.add_space(8.0);

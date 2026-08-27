@@ -1,23 +1,20 @@
-//! Filter parameter sliders + Generate button. Sends `AppMessage::Generate`
-//! through the registry; the drain loop in main.rs picks it up and runs
-//! the backend.
+//! Filter parameter sliders + Generate button. Pushes
+//! `AppMessage::Generate` onto its outbox; main.rs drains it and
+//! forwards through `settings_actions::handle` to the backend.
 
 use eframe::egui;
 
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
-pub struct SettingsPanel {
-    /// Outgoing app-level messages routed through the registry.
-    /// Populated by show() and drained by main.rs each frame.
-    pub outbox: Vec<AppMessage>,
-}
+use crate::tabs::SETTINGS_ID;
+use egui_citizen::citizen_panel;
+
+// `outbox` — outgoing app-level intents. Populated by show(); main.rs
+// drains it each frame into `settings_actions::handle`.
+citizen_panel!(SettingsPanel, SETTINGS_ID, outbox: Vec<AppMessage> = Vec::new());
 
 impl SettingsPanel {
-    pub fn new() -> Self {
-        Self { outbox: Vec::new() }
-    }
-
     pub fn show(&mut self, ui: &mut egui::Ui, state: &SharedState) {
         ui.heading("Filter parameters");
         ui.add_space(8.0);

@@ -3,7 +3,7 @@
 use eframe::egui;
 use egui_citizen::{CitizenId, Registry};
 
-use crate::panels::{
+use crate::citizens::{
     editor::EditorPanel, logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel,
 };
 use crate::state::SharedState;

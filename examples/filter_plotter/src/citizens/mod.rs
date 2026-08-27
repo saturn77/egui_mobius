@@ -1,51 +1,25 @@
-//! Registry wiring: register citizens at startup, drain lifecycle
-//! messages each frame, route AppMessage events.
-//!
-//! Centralizing this in one module keeps main.rs to its job (eframe
-//! shell + dock layout) and gives the registry code one place to
-//! evolve as the app grows.
+//! The citizens of the app — one module per citizen — plus the registry
+//! wiring they share: registration ids, the lifecycle drain, and log
+//! helpers. Everything here is registry-side; routing a citizen's
+//! outbox messages to the backend lives in `src/<citizen>_actions.rs`.
+
+pub mod editor;
+pub mod logger;
+pub mod plot;
+pub mod settings;
 
 use egui_citizen::{CitizenMessage, Registry};
 use egui_lens::ReactiveEventLogger;
 
-use crate::backend::BackendKind;
-use crate::messages::AppMessage;
 use crate::state::SharedState;
 
 /// Drain citizen lifecycle messages from the registry and route them
 /// into the shared lens-backed log. Call once per frame after
 /// `DockArea::show`.
-pub fn drain_citizen(
-    registry: &mut Registry,
-    state: &SharedState,
-) {
+pub fn drain_citizen(registry: &mut Registry, state: &SharedState) {
     let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
     for msg in registry.drain_messages() {
         logger.log_custom("citizen", &format_citizen(&msg));
-    }
-}
-
-/// Route an app-level message. `Generate` runs the backend synchronously
-/// and stores the resulting traces in shared state; the others log.
-pub fn handle<B>(
-    msg: AppMessage,
-    state: &SharedState,
-    backend: &mut B,
-) where
-    B: BackendKind<Sample = f32>,
-{
-    let logger = ReactiveEventLogger::with_colors(&state.log, &state.log_colors);
-    match msg {
-        AppMessage::Generate => {
-            let params = state.params.snapshot();
-            let traces = backend.run(&params);
-            let n = traces.input.len();
-            state.traces.set(traces);
-            logger.log_custom(
-                "backend",
-                &format!("{} produced {} samples", backend.name(), n),
-            );
-        }
     }
 }
 

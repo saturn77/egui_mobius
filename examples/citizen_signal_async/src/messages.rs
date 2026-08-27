@@ -1,6 +1,8 @@
-//! App-level messages. `AppMessage::Citizen` wraps citizen lifecycle
-//! events from the dispatcher; the rest are domain events the panels
-//! and drain loop produce.
+//! App-level messages — the intents citizens push onto their outboxes,
+//! routed to the backend signal by the per-citizen
+//! `<citizen>_actions.rs` modules. Citizen lifecycle events are
+//! separate: the registry queues those and `citizens::drain_citizen`
+//! logs them.
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {

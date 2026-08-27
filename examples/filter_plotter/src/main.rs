@@ -9,9 +9,9 @@
 //! land in SharedState → plot panel renders them on the next frame.
 
 mod backend;
-mod dispatcher;
+mod settings_actions;
 mod messages;
-mod panels;
+mod citizens;
 mod state;
 mod tabs;
 mod theme;
@@ -23,7 +23,7 @@ use egui_citizen::Registry;
 use egui_dock::{DockArea, DockState, NodeIndex};
 
 use backend::iir::InProcessIir;
-use panels::{
+use citizens::{
     editor::EditorPanel, logger::LoggerPanel, plot::PlotPanel, settings::SettingsPanel,
 };
 use state::SharedState;
@@ -44,7 +44,14 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         theme::apply_visuals(&cc.egui_ctx);
 
-        let dispatcher_handle = Registry::new();
+        // Register every citizen up front; panels hold the CitizenState
+        // handles the registry gives back (never CitizenState::new()).
+        let mut registry = Registry::new();
+        let plot_state     = registry.add().with_name(tabs::PLOT_ID);
+        let settings_state = registry.add().with_name(tabs::SETTINGS_ID);
+        let logger_state   = registry.add().with_name(tabs::LOGGER_ID);
+        let editor_state   = registry.add().with_name(tabs::EDITOR_ID);
+        registry.activate(tabs::PLOT_ID);
 
         // Dock layout:
         //   ┌──────────────────┬─────────────┐
@@ -70,16 +77,16 @@ impl App {
                 .split_below(right, 0.55, vec![Tab::new(TabKind::Logger)]);
 
         let state = SharedState::new();
-        dispatcher::append_log(&state, "filter_plotter started".into());
+        citizens::append_log(&state, "filter_plotter started".into());
 
         Self {
-            registry: dispatcher_handle,
+            registry,
             dock_state,
             state,
-            plot: PlotPanel::new(),
-            settings: SettingsPanel::new(),
-            logger: LoggerPanel::new(),
-            editor: EditorPanel::new(),
+            plot: PlotPanel::new(plot_state),
+            settings: SettingsPanel::new(settings_state),
+            logger: LoggerPanel::new(logger_state),
+            editor: EditorPanel::new(editor_state),
             backend: InProcessIir::new(),
         }
     }
@@ -104,7 +111,7 @@ impl eframe::App for App {
 
             let mut details = platform::details::Details::new();
             let text = details.format_os();
-            dispatcher::append_log(&self.state, text);
+            citizens::append_log(&self.state, text);
         }
 
         DockArea::new(&mut self.dock_state).show_inside(
@@ -121,11 +128,11 @@ impl eframe::App for App {
 
         // Drain pass — once per frame, after the dock has rendered and
         // any on_tab_button or in-panel events have queued.
-        dispatcher::drain_citizen(&mut self.registry, &self.state);
+        citizens::drain_citizen(&mut self.registry, &self.state);
 
         let outbox = std::mem::take(&mut self.settings.outbox);
         for msg in outbox {
-            dispatcher::handle(msg, &self.state, &mut self.backend);
+            settings_actions::handle(msg, &self.state, &mut self.backend);
         }
     }
 }
