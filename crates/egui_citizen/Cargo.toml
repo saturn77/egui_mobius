@@ -1,6 +1,5 @@
 [package]
 name                   = "egui_citizen"
-publish                = false
 version.workspace      = true
 authors                = ["James Bonanno <atlantix-eda@proton.me>"]
 description            = "First-class dock panel lifecycle and state tracking for egui"
@@ -9,9 +8,10 @@ rust-version.workspace = true
 homepage               = "https://github.com/saturn77/egui_mobius"
 license.workspace      = true
 repository             = "https://github.com/saturn77/egui_mobius"
+readme                 = "README.md"
 categories             = ["gui", "development-tools"]
 keywords               = ["egui", "dock", "citizen", "reactive", "state-machine"]
-include                = ["LICENSE", "**/*.rs", "Cargo.toml"]
+include                = ["README.md", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
 egui_mobius_reactive = { workspace = true }
