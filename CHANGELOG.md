@@ -14,7 +14,7 @@
 - **Fresh clones can resolve the workspace again.** csgrs 0.20.1 (`viewer3d_csgrs`) requires `core2 ^0.4`, whose every published version is yanked and whose upstream repository is gone — only the committed lockfile kept builds working. core2 0.4.0 is now vendored verbatim (Apache-2.0 OR MIT) under `vendor/core2` with a `[patch.crates-io]` entry; drop both when csgrs ships a core2-free release (its git tree already dropped it at 0.23).
 
 ### Notes
-- Publishing is now explicit: workspace-only crates (`egui_citizen`, `egui_quill`, `egui_grafica`, `egui_3d_viewer`, `mobius_lang`, `mobius_lang_host`) and all examples carry `publish = false`, so a root `cargo publish` ships exactly the five public crates: `egui_mobius`, `egui_mobius_reactive`, `egui_mobius_widgets`, `egui_mobius_components`, `egui_lens`.
+- Publishing is now explicit: workspace-only crates and all examples carry `publish = false`, so a root `cargo publish` ships exactly the public set: `egui_mobius`, `egui_mobius_reactive`, `egui_mobius_widgets`, `egui_mobius_components`, `egui_lens` — joined post-release by **`egui_citizen`, published for the first time at 0.6.0** in response to user demand. `egui_quill`, `egui_grafica`, `egui_3d_viewer`, `mobius_lang`, and `mobius_lang_host` remain workspace-only.
 - `egui_taffy` 0.14 supports egui 0.36, so the parked `clock_async` / `clock_reactive` examples could return.
 
 ## [0.5.0] - 2026-06-29
