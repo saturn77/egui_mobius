@@ -134,3 +134,13 @@ unsafe_op_in_unsafe_fn = "warn"                         # `unsafe_op_in_unsafe_f
 unused_extern_crates = "warn"
 unused_import_braces = "warn"
 unused_lifetimes = "warn"
+
+# core2 0.4.0 (Apache-2.0 OR MIT), vendored verbatim from the crates.io
+# source cache. csgrs 0.20.1 requires `core2 ^0.4`, but every published
+# core2 version is yanked and its upstream repo is gone — without this
+# patch a fresh clone of the workspace cannot resolve dependencies at
+# all. Drop the patch (and vendor/core2) when viewer3d_csgrs moves to a
+# csgrs release that no longer depends on core2 (csgrs git already
+# dropped it at 0.23).
+[patch.crates-io]
+core2 = { path = "vendor/core2" }
