@@ -1,0 +1,14 @@
+[package]
+name = "serial_monitor"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+egui_mobius_reactive = { workspace = true }
+egui_citizen         = { workspace = true }
+egui                 = { workspace = true }
+egui_dock            = { workspace = true }
+eframe               = { workspace = true, features = ["default"] }
+# Cross-platform serial I/O. Needs libudev on Linux (`sudo apt install libudev-dev`).
+serialport           = "4"

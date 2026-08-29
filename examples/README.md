@@ -24,6 +24,9 @@ about twenty lines.
   (WASM) — see `examples/filter_plotter/README.md`.
 - `citizen_fetch` — backend thread doing HTTP fetches off the UI
   thread; image and response panels read the result reactively.
+- `serial_monitor` — the citizen pattern against real hardware: a
+  dockable serial monitor. The worker thread writes received lines
+  into `Dynamic` cells; Path A delivers them to the console panel.
 
 ## Reactive primitives
 
