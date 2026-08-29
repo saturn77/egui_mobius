@@ -189,10 +189,13 @@ Step back from the mechanism for a moment. What shape does an
 `egui_mobius` application actually have at runtime?
 
 It's a **graph**. Citizens are the nodes; `Dynamic<T>` cells are
-the edges; the registry is a registry that knows about every
-node but does not itself carry data between them.
+the edges. Off to the side sit two coordinators with sharply
+different jobs: the **registry** knows which citizen is active and
+carries no data at all, while the **dispatcher** — the aggregate of
+the outbox drain and the actions modules — is the outbound hub that
+carries events to the backend.
 
-![Citizens as a propagation graph — three citizen nodes linked by Dynamic cells, with Derived auto-recomputing forward, the Registry as a registry, and a backend thread connected through Path B.](../images/Propagation_Graph.drawio.png)
+![Citizens as a propagation graph — three citizen nodes linked by Dynamic cells, with Derived auto-recomputing forward, the Dispatcher as the outbound hub, and a backend thread connected to it through Path B.](../images/Propagation_Graph.drawio.png)
 
 Three propagation modes ride this graph:
 
@@ -214,11 +217,13 @@ Three propagation modes ride this graph:
 
 - **Outbound.** A citizen pushes onto its outbox; the app drains
   it and the actions module dispatches over a channel or signal to
-  a backend thread. Async, queued, next-drain. This is Path B. The
-  graph extends past the UI thread out to whatever does the heavy
-  lifting — IO, compute, network — and the backend's responses
-  come back separately: a slot handler or the backend itself
-  writes into `Dynamic<T>` cells the UI reads next frame.
+  a backend thread. Async, queued, next-drain. This is Path B —
+  drawn in the figure as the **dispatcher** block, the aggregate of
+  drain plus actions. The graph extends past the UI thread out to
+  whatever does the heavy lifting — IO, compute, network — and the
+  backend's responses come back the same way: through the
+  dispatcher boundary, landing as writes into `Dynamic<T>` cells
+  the UI reads next frame.
 
 The combination matters. Most reactive frameworks bind state to a
 component lifetime: state lives inside the widget tree, and
@@ -233,9 +238,11 @@ Plotter to a Tokio task.
 The neural-network analogy is approximate but useful. A citizen
 graph propagates values to adjacent neighbours through cells and
 forward through derived chains. The registry is more like a
-directory than a layer; it doesn't compute, it doesn't transform,
-it just knows who's plugged in and routes lifecycle and outbound
-events. The actual data movement happens through the cells.
+directory than a layer — it doesn't compute or carry data, it just
+knows who's plugged in and which node is active. The dispatcher is
+the graph's edge to the outside world: outbound events flow through
+it to the backend and results flow back. The actual data movement
+inside the graph happens through the cells.
 
 ## Summary
 
