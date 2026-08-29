@@ -47,11 +47,11 @@ Three things that don't fall out of shared `Dynamic<T>` alone:
   in a single call. Doing this with shared state alone means wiring
   each panel to clear every other panel's flag — N² coordination and
   a new wire every time a panel is added.
-- **Lookup by stable id.** Panels and backend threads address each
-  other by `CitizenId`, not by holding pointers to one another's
-  structs. The registry is the directory; backend threads in
-  particular have no other way to find the right reactive cell to
-  write to.
+- **Lookup by stable id.** Panels are addressed by `CitizenId`, not
+  by pointers to one another's structs, and the registry is the
+  UI-side directory for that lookup. (Backend threads never query
+  it — the registry stays on the UI thread; a backend gets its
+  `Dynamic<T>` clones handed to it at spawn.)
 - **Frame-aligned event buffering.** `activate()` and `send()` push
   lifecycle events into a queue that `drain_messages()` consumes once
   per frame. This is the seam between event-time (a tab was clicked

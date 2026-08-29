@@ -1,9 +1,11 @@
 # CitizenMessage — the backend bridge
 
 `CitizenMessage` is the discriminated lifecycle event the registry
-emits and your code consumes. It is the data payload of
-[Path B](coupling.md#path-b--registry-messages-panel-to-backend) —
-the UI-to-backend coupling channel.
+emits and your code consumes. It is the lifecycle half of the
+backend bridge: the drain loop pulls these from the registry once
+per frame and forwards them over channels, alongside the app-level
+messages citizens push onto their outboxes
+([Path B](coupling.md#path-b--outbox-messages-panel-to-backend-opt-in)).
 
 ## The variants
 

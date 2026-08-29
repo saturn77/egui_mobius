@@ -33,9 +33,9 @@ before the first chapter that uses them.
   same cell; one writes, the other reads on the next frame. Instant,
   in-frame, no queue. Carries *state*, not events. The default for
   panel-to-panel coordination.
-- **Path B** — registry messages. A panel calls
-  [`registry.send(...)`](concepts/registry.md#sendmessage); the
-  app's update loop drains the queue once per frame and forwards each
-  message onward to a backend thread or logger. Queued, lands next
-  drain. Carries *events*, not state. Use when the change needs to
+- **Path B** — outbox messages. A citizen pushes an `AppMessage`
+  onto its outbox; the app's update loop drains it once per frame
+  and the citizen's actions module forwards each message onward to
+  a backend thread or logger. Queued, lands next drain. Carries
+  *events*, not state. Use when the change needs to
   leave the UI thread.

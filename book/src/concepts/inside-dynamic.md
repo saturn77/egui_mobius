@@ -230,12 +230,12 @@ Three coupling tools, three different jobs:
 | Tool                  | Best for                                         | Cost                          |
 |-----------------------|--------------------------------------------------|-------------------------------|
 | `.get()` in `ui()`    | UI-to-UI state sharing                           | One atomic read per frame     |
-| `registry.send`     | UI-to-backend events with one drain point        | One queue push, drained once  |
+| Outbox + actions      | UI-to-backend events with one drain point        | One queue push, drained once  |
 | `Dynamic::on_change`  | Off-thread reactions independent of the UI loop  | One OS thread per subscriber  |
 
 The default in `egui_citizen` is the top row. Reach for the bottom
 row only when something genuinely needs to react *outside* the UI's
-frame cycle — and even then, prefer routing through the registry
+frame cycle — and even then, prefer routing through the outbox
 rather than spawning per-`Dynamic` worker threads, since the
 registry gives you one drain point instead of N callbacks.
 
