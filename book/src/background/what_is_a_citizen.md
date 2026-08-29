@@ -74,11 +74,14 @@ operation, and lifecycle messages (`Activated { id: alpha }`,
 
 This means:
 
-- A **backend thread** can poll the registry (or observe each
-  citizen's `active` `Dynamic<bool>`) and discern *which citizen
-  is currently of interest* without holding a reference to any
-  panel. Background work — fetching data, running computations,
-  reading hardware — knows where to direct its results.
+- A **backend thread** can discern *which citizen is currently of
+  interest* without holding a reference to any panel — either by
+  observing a citizen's `active` `Dynamic<bool>` (clones share the
+  `Arc`, so the flag is readable off-thread) or by receiving the
+  drained lifecycle messages the app forwards over a channel. The
+  registry itself stays on the UI thread. Background work —
+  fetching data, running computations, reading hardware — knows
+  where to direct its results.
 - A **sibling panel** can react to another panel becoming active
   without any per-frame polling: the reactive cell delivers the
   change, the rendering panel re-reads on its next frame.

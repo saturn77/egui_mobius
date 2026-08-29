@@ -33,8 +33,9 @@ than just architecturally tidy.
 *[CopperForge](https://github.com/Atlantix-EDA/CopperForge) — a
 real-world `egui_citizen` + `egui_dock` application for PCB gerber
 inspection. Each docked region is a citizen-panel; the panels share
-state through reactive cells, and the 3D rendering thread is
-coordinated through the registry.*
+state through reactive cells, and the 3D rendering runs on a backend
+thread fed through the dispatcher. The registry handles panel
+lifecycle only — it never touches the render thread.*
 
 ## Three levels of mobius-citizen apps
 
