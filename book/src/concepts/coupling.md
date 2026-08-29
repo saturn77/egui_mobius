@@ -195,7 +195,7 @@ carries no data at all, while the **dispatcher** — the aggregate of
 the outbox drain and the actions modules — is the outbound hub that
 carries events to the backend.
 
-![Citizens as a propagation graph — three citizen nodes linked by Dynamic cells, with Derived auto-recomputing forward, the Dispatcher as the outbound hub, and a backend thread connected to it through Path B.](../images/Propagation_Graph.drawio.png)
+![Citizens as a propagation graph — three citizen nodes linked by Dynamic cells with one writer per cell, Derived auto-recomputing forward, unidirectional outbox edges from citizens into the Dispatcher, a queued round-trip between Dispatcher and backend thread, and a results edge from the Dispatcher writing into a Dynamic cell, from which Path A carries the value onward to reading citizens.](../images/Propagation_Graph.drawio.png)
 
 Three propagation modes ride this graph:
 

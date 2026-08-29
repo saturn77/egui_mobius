@@ -78,7 +78,7 @@ And three things it does *not* do, each a common confusion:
   activations for you. Give it an event, it routes; don't give it an
   event, it sits idle.
 
-![Six panels (Project, Settings, Plotter 1, Plotter 2, Logger, Terminal/Shell) in a 2×2 dock layout. Each panel contains a labelled state cloud — ProjectState, SettingsState, Plotter1State, Plotter2State, LoggerState, TerminalState. Arrows from every state cloud converge on a single DISPATCHER block on the right.](../images/Basic_App_State.drawio.png)
+![Six citizen tabs (Project, Settings, Plotter 1, Plotter 2, Logger, Terminal/Shell) in a dock layout, each with one line from its tab header into a single REGISTRY block on the right. The panels' state clouds — ProjectState, SettingsState, Plotter1State, Plotter2State, LoggerState, TerminalState — connect to nothing: app state is invisible to the registry.](../images/Basic_App_State.drawio.png)
 
 *Registration topology. Every panel hands its `CitizenState` to the
 one registry; the registry keeps a clone in its table while the
