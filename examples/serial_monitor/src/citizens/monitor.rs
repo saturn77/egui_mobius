@@ -5,6 +5,7 @@
 
 use eframe::egui;
 
+use crate::backend::LineEnding;
 use crate::messages::AppMessage;
 use crate::state::SharedState;
 
@@ -86,6 +87,22 @@ impl MonitorPanel {
                         baud: self.baud,
                     });
                 }
+            }
+        });
+
+        // ── TX line ending ────────────────────────────────────────────
+        ui.horizontal(|ui| {
+            let mut ending = state.line_ending.get();
+            let before = ending;
+            egui::ComboBox::from_label("line end")
+                .selected_text(ending.label())
+                .show_ui(ui, |ui| {
+                    for e in LineEnding::ALL {
+                        ui.selectable_value(&mut ending, e, e.label());
+                    }
+                });
+            if ending != before {
+                state.line_ending.set(ending);
             }
         });
 

@@ -8,7 +8,7 @@
 //! the next frame. No egui state is touched off-thread; the worker only
 //! calls `ctx.request_repaint()` to wake the UI.
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{Read, Write};
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -18,10 +18,44 @@ use egui_mobius_reactive::Dynamic;
 /// Cap on the console buffer so long sessions stay bounded.
 const MAX_RX_LINES: usize = 2000;
 
+/// TX line terminator, selectable in the Monitor panel — the standard
+/// serial-console foursome.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum LineEnding {
+    #[default]
+    Lf,
+    Cr,
+    CrLf,
+    None,
+}
+
+impl LineEnding {
+    pub const ALL: [LineEnding; 4] =
+        [LineEnding::Lf, LineEnding::Cr, LineEnding::CrLf, LineEnding::None];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            LineEnding::Lf => "LF (\\n)",
+            LineEnding::Cr => "CR (\\r)",
+            LineEnding::CrLf => "CRLF (\\r\\n)",
+            LineEnding::None => "none",
+        }
+    }
+
+    pub fn bytes(self) -> &'static [u8] {
+        match self {
+            LineEnding::Lf => b"\n",
+            LineEnding::Cr => b"\r",
+            LineEnding::CrLf => b"\r\n",
+            LineEnding::None => b"",
+        }
+    }
+}
+
 /// Commands from the UI to the worker.
 pub enum SerialCommand {
-    /// Write the line plus a trailing newline to the port.
-    Line(String),
+    /// Write the line plus the chosen terminator to the port.
+    Line(String, LineEnding),
 }
 
 /// UI-side handle to the worker. Owns the command sender; dropping it
@@ -70,9 +104,9 @@ impl SerialBackend {
     }
 
     /// Queue one line for transmission. Returns false if not connected.
-    pub fn send(&self, line: String) -> bool {
+    pub fn send(&self, line: String, ending: LineEnding) -> bool {
         match &self.cmd_tx {
-            Some(tx) => tx.send(SerialCommand::Line(line)).is_ok(),
+            Some(tx) => tx.send(SerialCommand::Line(line, ending)).is_ok(),
             None => false,
         }
     }
@@ -118,8 +152,7 @@ fn worker_loop(
         }
     };
 
-    // Read and write independently: clone the port handle for the
-    // writer, wrap the original in a BufReader for line reads.
+    // Read and write independently: clone the port handle for the writer.
     let mut writer = match port.try_clone() {
         Ok(w) => w,
         Err(e) => {
@@ -129,8 +162,9 @@ fn worker_loop(
             return;
         }
     };
-    let mut reader = BufReader::new(port);
-    let mut line_buf = String::new();
+    let mut reader = port;
+    let mut chunk = [0u8; 512];
+    let mut acc: Vec<u8> = Vec::new();
 
     let finish = |why: String| {
         connected.set(false);
@@ -141,10 +175,10 @@ fn worker_loop(
     loop {
         // Transmit anything the UI queued.
         match cmd_rx.try_recv() {
-            Ok(SerialCommand::Line(line)) => {
+            Ok(SerialCommand::Line(line, ending)) => {
                 match writer
                     .write_all(line.as_bytes())
-                    .and_then(|_| writer.write_all(b"\n"))
+                    .and_then(|_| writer.write_all(ending.bytes()))
                 {
                     // Echo the transmitted line into the scrollback so the
                     // console reads like a terminal session. The worker is
@@ -162,21 +196,30 @@ fn worker_loop(
             Err(mpsc::TryRecvError::Empty) => {}
         }
 
-        // Read one line; the 90 ms timeout keeps the loop responsive to
-        // commands and shutdown even on a silent port.
-        line_buf.clear();
-        match reader.read_line(&mut line_buf) {
+        // Read raw bytes; the 90 ms timeout keeps the loop responsive to
+        // commands and shutdown even on a silent port. Lines split on
+        // \n, \r, or \r\n so CR-only firmware consoles work too.
+        match reader.read(&mut chunk) {
             Ok(0) => {
                 finish("port closed (EOF)".into());
                 return;
             }
-            Ok(_) => {
-                let trimmed = line_buf.trim_end();
-                if trimmed.is_empty() {
-                    continue;
+            Ok(n) => {
+                acc.extend_from_slice(&chunk[..n]);
+                let mut emitted = false;
+                while let Some(pos) = acc.iter().position(|&b| b == b'\n' || b == b'\r') {
+                    let line: Vec<u8> = acc.drain(..=pos).collect();
+                    let text = String::from_utf8_lossy(&line[..line.len() - 1]);
+                    // Empty segments are the second half of \r\n pairs
+                    // (or blank lines) — skip them.
+                    if !text.is_empty() {
+                        push_capped(&rx_lines, text.into_owned());
+                        emitted = true;
+                    }
                 }
-                push_capped(&rx_lines, trimmed.to_string());
-                ctx.request_repaint();
+                if emitted {
+                    ctx.request_repaint();
+                }
             }
             Err(e) if e.kind() == std::io::ErrorKind::TimedOut => continue,
             // Some platforms surface the timeout as WouldBlock instead.

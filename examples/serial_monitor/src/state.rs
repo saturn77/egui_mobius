@@ -7,8 +7,11 @@
 //! - `status`    — written by the serial worker, read by Monitor.
 //! - `rx_lines`  — written by the serial worker, read by Console.
 //! - `log`       — written by the drain loop and actions, read by Logger.
+//! - `line_ending` — written by Monitor, read by `monitor_actions` at send.
 
 use egui_mobius_reactive::Dynamic;
+
+use crate::backend::LineEnding;
 
 pub struct SharedState {
     /// Serial ports discovered by the last RefreshPorts.
@@ -21,6 +24,8 @@ pub struct SharedState {
     pub rx_lines: Dynamic<Vec<String>>,
     /// App log — citizen lifecycle + TX/RX events, capped.
     pub log: Dynamic<Vec<String>>,
+    /// TX line terminator — written by the Monitor panel, read at send.
+    pub line_ending: Dynamic<LineEnding>,
 }
 
 impl SharedState {
@@ -31,6 +36,7 @@ impl SharedState {
             status: Dynamic::new("disconnected".into()),
             rx_lines: Dynamic::new(Vec::new()),
             log: Dynamic::new(Vec::new()),
+            line_ending: Dynamic::new(LineEnding::default()),
         }
     }
 }

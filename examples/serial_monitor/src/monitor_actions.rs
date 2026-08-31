@@ -39,7 +39,8 @@ pub fn handle(msg: AppMessage, state: &SharedState, backend: &mut SerialBackend)
             backend.disconnect();
         }
         AppMessage::Send(line) => {
-            if backend.send(line.clone()) {
+            let ending = state.line_ending.get();
+            if backend.send(line.clone(), ending) {
                 append_log(&state.log, format!("[tx] {line}"));
             } else {
                 append_log(&state.log, "[tx] dropped — not connected".into());
