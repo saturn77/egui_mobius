@@ -142,13 +142,17 @@ fn worker_loop(
         // Transmit anything the UI queued.
         match cmd_rx.try_recv() {
             Ok(SerialCommand::Line(line)) => {
-                if let Err(e) = writer
+                match writer
                     .write_all(line.as_bytes())
                     .and_then(|_| writer.write_all(b"\n"))
                 {
-                    push_capped(&rx_lines, format!("[tx error] {e}"));
-                    ctx.request_repaint();
+                    // Echo the transmitted line into the scrollback so the
+                    // console reads like a terminal session. The worker is
+                    // the sole writer of rx_lines, TX echo included.
+                    Ok(()) => push_capped(&rx_lines, format!("> {line}")),
+                    Err(e) => push_capped(&rx_lines, format!("[tx error] {e}")),
                 }
+                ctx.request_repaint();
             }
             Err(mpsc::TryRecvError::Disconnected) => {
                 // UI dropped the sender — orderly shutdown.

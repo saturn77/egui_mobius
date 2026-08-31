@@ -1,6 +1,7 @@
-//! Monitor citizen — port picker, baud, connect/disconnect, and the TX
-//! line entry. Every intent goes onto the outbox; main.rs drains it and
-//! forwards through `monitor_actions::handle` to the serial backend.
+//! Monitor citizen — port picker, baud, connect/disconnect. Every
+//! intent goes onto the outbox; main.rs drains it and forwards through
+//! `monitor_actions::handle` to the serial backend. Sending lives in
+//! the Console, terminal-style.
 
 use eframe::egui;
 
@@ -10,12 +11,11 @@ use crate::state::SharedState;
 use crate::tabs::MONITOR_ID;
 use egui_citizen::citizen_panel;
 
-// `selected_port` / `baud` — the panel's atoms; `tx_buf` — the line
-// being typed; `outbox` — outgoing intents drained by main.rs.
+// `selected_port` / `baud` — the panel's atoms; `outbox` — outgoing
+// intents drained by main.rs.
 citizen_panel!(MonitorPanel, MONITOR_ID,
     selected_port: String = String::new(),
     baud: u32 = 115_200,
-    tx_buf: String = String::new(),
     outbox: Vec<AppMessage> = Vec::new(),
 );
 
@@ -94,27 +94,11 @@ impl MonitorPanel {
 
         ui.add_space(8.0);
         ui.separator();
-
-        // ── Transmit ──────────────────────────────────────────────────
         ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            let edit = ui.add_enabled(
-                connected,
-                egui::TextEdit::singleline(&mut self.tx_buf)
-                    .hint_text("line to send…")
-                    .desired_width(ui.available_width() - 70.0),
-            );
-            let submitted =
-                edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            let clicked = ui
-                .add_enabled(connected, egui::Button::new("Send"))
-                .clicked();
-            if (submitted || clicked) && !self.tx_buf.is_empty() {
-                self.outbox
-                    .push(AppMessage::Send(std::mem::take(&mut self.tx_buf)));
-                edit.request_focus();
-            }
-        });
+        ui.label(
+            egui::RichText::new("type in the Console tab to transmit — Enter sends, ↑/↓ recall")
+                .weak(),
+        );
 
         ui.add_space(4.0);
         if ui.button("Clear console").clicked() {

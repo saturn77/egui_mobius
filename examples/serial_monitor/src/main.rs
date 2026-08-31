@@ -22,6 +22,7 @@ mod messages;
 mod monitor_actions;
 mod state;
 mod tabs;
+mod theme;
 
 use eframe::egui;
 use egui_citizen::Registry;
@@ -44,6 +45,8 @@ struct App {
 
 impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        theme::apply(&cc.egui_ctx);
+
         let state = SharedState::new();
         let mut backend = backend::SerialBackend::new(cc.egui_ctx.clone());
 
@@ -104,7 +107,13 @@ impl eframe::App for App {
         // Drain pass — once per frame, after the dock has rendered.
         citizens::drain_citizen(&mut self.registry, &self.state.log);
 
+        // Both emitting citizens drain through the same actions funnel —
+        // the Monitor's connection intents and the Console's TX lines.
         let outbox = std::mem::take(&mut self.monitor.outbox);
+        for msg in outbox {
+            monitor_actions::handle(msg, &self.state, &mut self.backend);
+        }
+        let outbox = std::mem::take(&mut self.console.outbox);
         for msg in outbox {
             monitor_actions::handle(msg, &self.state, &mut self.backend);
         }
@@ -123,4 +132,5 @@ fn main() -> Result<(), eframe::Error> {
         Box::new(|cc| Ok(Box::new(App::new(cc)))),
     )
 }
+
 
