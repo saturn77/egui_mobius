@@ -165,6 +165,9 @@ fn worker_loop(
     let mut reader = port;
     let mut chunk = [0u8; 512];
     let mut acc: Vec<u8> = Vec::new();
+    // A \r at the end of one chunk must absorb a \n at the start of
+    // the next, so CRLF split across reads still counts as one newline.
+    let mut pending_lf_absorb = false;
 
     let finish = |why: String| {
         connected.set(false);
@@ -205,16 +208,25 @@ fn worker_loop(
                 return;
             }
             Ok(n) => {
-                acc.extend_from_slice(&chunk[..n]);
                 let mut emitted = false;
-                while let Some(pos) = acc.iter().position(|&b| b == b'\n' || b == b'\r') {
-                    let line: Vec<u8> = acc.drain(..=pos).collect();
-                    let text = String::from_utf8_lossy(&line[..line.len() - 1]);
-                    // Empty segments are the second half of \r\n pairs
-                    // (or blank lines) — skip them.
-                    if !text.is_empty() {
-                        push_capped(&rx_lines, text.into_owned());
-                        emitted = true;
+                for &b in &chunk[..n] {
+                    if pending_lf_absorb {
+                        pending_lf_absorb = false;
+                        if b == b'\n' {
+                            continue; // second half of a CRLF pair
+                        }
+                    }
+                    match b {
+                        b'\n' | b'\r' => {
+                            // Every LF or CR advances the console one
+                            // line — blank lines included.
+                            let text = String::from_utf8_lossy(&acc).into_owned();
+                            acc.clear();
+                            push_capped(&rx_lines, text);
+                            emitted = true;
+                            pending_lf_absorb = b == b'\r';
+                        }
+                        _ => acc.push(b),
                     }
                 }
                 if emitted {

@@ -35,6 +35,11 @@ impl ConsolePanel {
                 .stick_to_bottom(true)
                 .show(ui, |ui| {
                     for line in &lines {
+                        if line.is_empty() {
+                            // A blank line from a bare LF/CR — hold the row.
+                            ui.label(egui::RichText::new(" ").monospace());
+                            continue;
+                        }
                         let rich = if line.starts_with("> ") {
                             // TX echo, written by the worker at transmit time.
                             egui::RichText::new(line).color(TokyoNight::GREEN)
