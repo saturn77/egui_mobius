@@ -10,5 +10,7 @@ egui_citizen         = { workspace = true }
 egui                 = { workspace = true }
 egui_dock            = { workspace = true }
 eframe               = { workspace = true, features = ["default"] }
-# Cross-platform serial I/O. Needs libudev on Linux (`sudo apt install libudev-dev`).
-serialport           = "4"
+# Cross-platform serial I/O. default-features = false drops the libudev
+# requirement on Linux (same choice as blaze2-gui) — port enumeration
+# falls back to sysfs, and CI runners need no system packages.
+serialport           = { version = "4", default-features = false }

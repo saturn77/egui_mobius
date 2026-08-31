@@ -36,6 +36,6 @@ while true; do echo "tick $(date +%T)" > /dev/pts/M; sleep 1; done
 
 Lines appear in the Console; anything you Send lands on the other pty.
 
-On Linux, `serialport` needs libudev (`sudo apt install libudev-dev`),
-and your user typically needs to be in the `dialout` group for real
-devices.
+`serialport` is built with `default-features = false`, so no system
+packages are needed on Linux (port enumeration uses sysfs). Your user
+typically needs to be in the `dialout` group for real devices.
