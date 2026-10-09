@@ -142,6 +142,8 @@ pub struct CanvasCitizen {
     pub node_action_label: Option<String>,
     /// The node whose host action was chosen this frame — the host `take()`s it.
     pub node_action: Option<NodeId>,
+    /// Node whose floating Style window (full colour pickers + typography) is open.
+    style_node: Option<NodeId>,
     /// `Some(id)` when the named node is in inline text-edit mode —
     /// a TextEdit is overlaid on the node's centre and other canvas
     /// gestures are suppressed until edit ends.
@@ -187,7 +189,6 @@ enum ContextAction {
     DeletePivot(EdgeId, usize),
     AddPort(NodeId, (f32, f32)),
     SetEdgeOverlay(EdgeId, EdgeOverlay),
-    SetNodeOverlay(NodeId, Overlay),
     DuplicateNode(NodeId),
     AlignSelection(Align),
     DistributeSelection(Distribute),
@@ -211,6 +212,15 @@ fn hex_to_rgb(hex: &str) -> [u8; 3] {
     let s = hex.trim_start_matches('#');
     let byte = |i: usize| u8::from_str_radix(s.get(i..i + 2).unwrap_or("00"), 16).unwrap_or(0);
     [byte(0), byte(2), byte(4)]
+}
+
+fn hex_alpha_to_color32(hex: &str, alpha: f32) -> Color32 {
+    let [r, g, b] = hex_to_rgb(hex);
+    Color32::from_rgba_unmultiplied(r, g, b, (alpha.clamp(0.0, 1.0) * 255.0) as u8)
+}
+
+fn color32_to_hex(c: Color32) -> String {
+    format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())
 }
 
 fn rgb_to_hex(rgb: [u8; 3]) -> String {
@@ -268,6 +278,7 @@ impl CanvasCitizen {
             context_world: None,
             node_action_label: None,
             node_action: None,
+            style_node: None,
             editing_node: None,
             edit_buffer: String::new(),
             show_page_modal: false,
@@ -1589,21 +1600,14 @@ impl CanvasCitizen {
                         action = Some(ContextAction::AddPort(nid.clone(), ctx.unwrap_or_default()));
                         ui.close();
                     }
-                    if let Some(overlay) = &node_overlay {
-                        ui.separator();
-                        ui.menu_button("Border", |ui| {
-                            let mut next = overlay.clone();
-                            let mut rgb = hex_to_rgb(&next.border.color);
-                            inline_color_editor(ui, &mut rgb);
-                            next.border.color = rgb_to_hex(rgb);
-                            ui.add(
-                                egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("Width"),
-                            );
-                            if next != *overlay {
-                                action = Some(ContextAction::SetNodeOverlay(nid.clone(), next));
-                            }
-                        });
+                    ui.separator();
+                    // A real colour picker + typography, in a floating window —
+                    // popups inside menus fight auto-close, a window doesn't.
+                    if ui.button("🎨 Style…").clicked() {
+                        self.style_node = Some(nid.clone());
+                        ui.close();
                     }
+                    let _ = &node_overlay;
                 } else if let Some(eid) = &hit_edge {
                     if ui.button("Delete segment").clicked() {
                         action = Some(ContextAction::DeleteSegment(
@@ -1724,6 +1728,9 @@ impl CanvasCitizen {
             );
         }
 
+        // ── Floating per-node Style window ──
+        self.render_style_window(ui.ctx());
+
         // ── Inline text-edit overlay ──
         //
         // Sits on top of the canvas paint, takes keyboard focus, and
@@ -1739,6 +1746,87 @@ impl CanvasCitizen {
                 self.edit_buffer.clear();
                 self.registry.end_undo_batch();
             }
+        }
+    }
+
+    /// The current scene as canvas-DSL text — hosts persist layouts with their
+    /// project ("is the drawing persistent if I save the project?" — yes, via this).
+    pub fn to_dsl(&self) -> String {
+        self.registry.with_scene(crate::lang::pretty)
+    }
+
+    /// The floating Style window for one node: REAL colour pickers (fill, border,
+    /// text) plus typography — font family, size, bold/italic. Live-applied.
+    fn render_style_window(&mut self, ctx: &egui::Context) {
+        let Some(nid) = self.style_node.clone() else { return };
+        let Some(overlay) = self
+            .registry
+            .with_scene(|s| s.nodes.iter().find(|n| n.id == nid).map(|n| n.overlay.clone()))
+        else {
+            self.style_node = None;
+            return;
+        };
+        let mut open = true;
+        egui::Window::new(format!("🎨 Style — {}", nid.0))
+            .id(egui::Id::new(("grafica-style", nid.0.clone())))
+            .collapsible(false)
+            .resizable(false)
+            .open(&mut open)
+            .show(ctx, |ui| {
+                let mut next = overlay.clone();
+                ui.horizontal(|ui| {
+                    ui.label("Fill");
+                    let mut c = hex_alpha_to_color32(&next.fill.color, next.fill.alpha);
+                    if ui.color_edit_button_srgba(&mut c).changed() {
+                        next.fill.color = color32_to_hex(c);
+                        next.fill.alpha = c.a() as f32 / 255.0;
+                    }
+                    ui.add_space(12.0);
+                    ui.label("Border");
+                    let mut b = hex_alpha_to_color32(&next.border.color, 1.0);
+                    if ui.color_edit_button_srgba(&mut b).changed() {
+                        next.border.color = color32_to_hex(b);
+                    }
+                    ui.add(egui::Slider::new(&mut next.border.width, 0.0..=8.0).text("px"));
+                });
+                ui.separator();
+                let text = next.text.get_or_insert_with(|| crate::model::TextLabel {
+                    value: nid.0.clone(),
+                    anchor: crate::model::TextAnchor::Center,
+                    font_family: String::new(),
+                    font_size: 12.0,
+                    bold: false,
+                    italic: false,
+                    color: "#111827".into(),
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Font");
+                    let shown = if text.font_family == "monospace" { "Monospace" } else { "Proportional" };
+                    egui::ComboBox::from_id_salt(("grafica-style-font", &nid.0))
+                        .selected_text(shown)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut text.font_family, String::new(), "Proportional");
+                            ui.selectable_value(&mut text.font_family, "monospace".to_string(), "Monospace");
+                        });
+                    ui.add(
+                        egui::DragValue::new(&mut text.font_size).range(6.0..=48.0).suffix(" pt"),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Text");
+                    let mut t = hex_alpha_to_color32(&text.color, 1.0);
+                    if ui.color_edit_button_srgba(&mut t).changed() {
+                        text.color = color32_to_hex(t);
+                    }
+                    ui.checkbox(&mut text.bold, "Bold");
+                    ui.checkbox(&mut text.italic, "Italic");
+                });
+                if next != overlay {
+                    self.registry.update_node_overlay(&nid, next);
+                }
+            });
+        if !open {
+            self.style_node = None;
         }
     }
 
@@ -2250,9 +2338,6 @@ impl CanvasCitizen {
             }
             ContextAction::SetEdgeOverlay(eid, overlay) => {
                 self.registry.update_edge_overlay(&eid, overlay);
-            }
-            ContextAction::SetNodeOverlay(nid, overlay) => {
-                self.registry.update_node_overlay(&nid, overlay);
             }
             ContextAction::DuplicateNode(nid) => {
                 let new_ids = self.clone_nodes_with_offset(&[nid], (20.0, 20.0));
