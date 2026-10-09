@@ -190,7 +190,6 @@ enum ContextAction {
     DeleteSegment(EdgeId, (f32, f32)),
     DeletePivot(EdgeId, usize),
     AddPort(NodeId, (f32, f32)),
-    SetEdgeOverlay(EdgeId, EdgeOverlay),
     DuplicateNode(NodeId),
     AlignSelection(Align),
     DistributeSelection(Distribute),
@@ -225,9 +224,6 @@ fn color32_to_hex(c: Color32) -> String {
     format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())
 }
 
-fn rgb_to_hex(rgb: [u8; 3]) -> String {
-    format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2])
-}
 
 
 fn line_style_label(s: crate::model::LineStyle) -> &'static str {
@@ -2346,9 +2342,6 @@ impl CanvasCitizen {
                         },
                     );
                 }
-            }
-            ContextAction::SetEdgeOverlay(eid, overlay) => {
-                self.registry.update_edge_overlay(&eid, overlay);
             }
             ContextAction::DuplicateNode(nid) => {
                 let new_ids = self.clone_nodes_with_offset(&[nid], (20.0, 20.0));
