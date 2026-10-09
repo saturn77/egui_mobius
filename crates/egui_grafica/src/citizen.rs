@@ -135,6 +135,13 @@ pub struct CanvasCitizen {
     status: String,
     /// World position of the last right-click — what the context menu acts on.
     context_world: Option<(f32, f32)>,
+    /// HOST hook: when set, the node context menu's FIRST entry carries this label
+    /// ("⤷ Code", "Open source", …) and a click records the node in
+    /// [`Self::node_action`]. Left-click stays pure canvas gesture (select / move /
+    /// resize / port-slide) — navigation is a deliberate right-click, Simulink-style.
+    pub node_action_label: Option<String>,
+    /// The node whose host action was chosen this frame — the host `take()`s it.
+    pub node_action: Option<NodeId>,
     /// `Some(id)` when the named node is in inline text-edit mode —
     /// a TextEdit is overlaid on the node's centre and other canvas
     /// gestures are suppressed until edit ends.
@@ -259,6 +266,8 @@ impl CanvasCitizen {
             loaded_comments: Vec::new(),
             status: String::new(),
             context_world: None,
+            node_action_label: None,
+            node_action: None,
             editing_node: None,
             edit_buffer: String::new(),
             show_page_modal: false,
@@ -1522,6 +1531,15 @@ impl CanvasCitizen {
                         ui.close();
                     }
                 } else if let Some(nid) = &hit_node {
+                    // The host's action first (e.g. "⤷ Code") — the deliberate
+                    // navigation gesture; plain clicks never leave the canvas.
+                    if let Some(label) = self.node_action_label.clone() {
+                        if ui.button(label).clicked() {
+                            self.node_action = Some(nid.clone());
+                            ui.close();
+                        }
+                        ui.separator();
+                    }
                     // Label editing isn't on the context menu — it
                     // lives on double-click of the node body. Style
                     // edits live in the Inspector. The menu only
