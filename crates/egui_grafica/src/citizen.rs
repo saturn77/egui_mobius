@@ -1732,7 +1732,10 @@ impl CanvasCitizen {
         egui::Window::new(format!("🎨 Style — {}", nid.0))
             .id(egui::Id::new(("grafica-style", nid.0.clone())))
             .collapsible(false)
-            .resizable(false)
+            .resizable(true)
+            .default_width(420.0)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.content_rect().center())
             .open(&mut open)
             .show(ctx, |ui| {
                 let mut next = overlay.clone();
@@ -1806,7 +1809,10 @@ impl CanvasCitizen {
         egui::Window::new(format!("🎨 Wire — {}", eid.0))
             .id(egui::Id::new(("grafica-edge-style", eid.0.clone())))
             .collapsible(false)
-            .resizable(false)
+            .resizable(true)
+            .default_width(380.0)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(ctx.content_rect().center())
             .open(&mut open)
             .show(ctx, |ui| {
                 let mut next = overlay.clone();

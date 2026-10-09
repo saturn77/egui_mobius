@@ -499,11 +499,10 @@ fn paint_node_text(painter: &Painter, text: &TextLabel, screen_rect: Rect, viewp
     // Bold/italic aren't expressible through FontFamily alone — egui resolves
     // those through font definitions. For now we accept the family-name as-is
     // and rely on the default proportional/monospace fallback chain.
-    let family = if text.font_family.is_empty() {
-        FontFamily::Proportional
+    let family = if text.font_family == "monospace" {
+        FontFamily::Monospace
     } else {
-        // Fall back to proportional if the named family isn't registered.
-        // (egui will use its default font; this avoids panics on unknown names.)
+        // Unknown family names fall back to proportional (avoids panics).
         FontFamily::Proportional
     };
 
