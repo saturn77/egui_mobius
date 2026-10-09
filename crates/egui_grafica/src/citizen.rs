@@ -1721,10 +1721,9 @@ impl CanvasCitizen {
     /// text) plus typography — font family, size, bold/italic. Live-applied.
     fn render_style_window(&mut self, ctx: &egui::Context) {
         let Some(nid) = self.style_node.clone() else { return };
-        let Some(overlay) = self
-            .registry
-            .with_scene(|s| s.nodes.iter().find(|n| n.id == nid).map(|n| n.overlay.clone()))
-        else {
+        let Some((overlay, node_icon)) = self.registry.with_scene(|s| {
+            s.nodes.iter().find(|n| n.id == nid).map(|n| (n.overlay.clone(), n.icon))
+        }) else {
             self.style_node = None;
             return;
         };
@@ -1785,6 +1784,50 @@ impl CanvasCitizen {
                     }
                     ui.checkbox(&mut text.bold, "Bold");
                     ui.checkbox(&mut text.italic, "Italic");
+                });
+                ui.separator();
+                // The MASK: role glyph + placement (corner badge vs centred
+                // watermark) — assign or change it right here.
+                ui.horizontal(|ui| {
+                    ui.label("Mask");
+                    use crate::model::{NodeIcon, NodeIconSpec};
+                    let mut kind = node_icon.map(|i| i.kind);
+                    let shown = match kind {
+                        None => "— none —",
+                        Some(NodeIcon::Chip) => "Chip (QFP)",
+                        Some(NodeIcon::Power) => "Power (bolt)",
+                        Some(NodeIcon::Analog) => "Analog (sine)",
+                        Some(NodeIcon::Buffer) => "Buffer (triangle)",
+                        Some(NodeIcon::Connector) => "Connector (header)",
+                    };
+                    let mut changed = false;
+                    egui::ComboBox::from_id_salt(("grafica-style-mask", &nid.0))
+                        .selected_text(shown)
+                        .show_ui(ui, |ui| {
+                            for (val, label) in [
+                                (None, "— none —"),
+                                (Some(NodeIcon::Chip), "Chip (QFP)"),
+                                (Some(NodeIcon::Power), "Power (bolt)"),
+                                (Some(NodeIcon::Analog), "Analog (sine)"),
+                                (Some(NodeIcon::Buffer), "Buffer (triangle)"),
+                                (Some(NodeIcon::Connector), "Connector (header)"),
+                            ] {
+                                if ui.selectable_label(kind == val, label).clicked() {
+                                    kind = val;
+                                    changed = true;
+                                }
+                            }
+                        });
+                    let mut center = node_icon.map(|i| i.center).unwrap_or(true);
+                    if ui.checkbox(&mut center, "Centered watermark").changed() {
+                        changed = true;
+                    }
+                    if changed {
+                        self.registry.set_node_icon(
+                            &nid,
+                            kind.map(|kind| NodeIconSpec { kind, center }),
+                        );
+                    }
                 });
                 if next != overlay {
                     self.registry.update_node_overlay(&nid, next);

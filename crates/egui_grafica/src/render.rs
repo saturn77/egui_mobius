@@ -452,6 +452,7 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
     if let Some(icon) = node.icon {
         paint_node_icon(painter, icon, screen_rect, stroke.color, viewport);
     }
+    // (center icons paint before text, so the label reads over the watermark)
     if let Some(text) = &node.overlay.text {
         paint_node_text(painter, text, screen_rect, viewport);
     }
@@ -462,16 +463,33 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
 /// in the node's border colour.
 fn paint_node_icon(
     painter: &Painter,
-    icon: crate::model::NodeIcon,
+    spec: crate::model::NodeIconSpec,
     rect: Rect,
     color: Color32,
     viewport: &Viewport,
 ) {
     use crate::model::NodeIcon;
-    let s = (16.0 * viewport.zoom).clamp(8.0, 28.0);
-    let pad = 6.0 * viewport.zoom;
-    let origin = Pos2::new(rect.left() + pad, rect.top() + pad);
-    let stroke = Stroke::new((1.4 * viewport.zoom).clamp(0.8, 2.5), color);
+    // CENTER: a large, faded watermark behind the label — the Simulink mask read.
+    // CORNER: a small crisp badge, top-left.
+    let (s, origin, color) = if spec.center {
+        let s = (rect.width().min(rect.height()) * 0.55).max(12.0);
+        let origin = Pos2::new(rect.center().x - s * 0.5, rect.center().y - s * 0.5);
+        let faded = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 46);
+        (s, origin, faded)
+    } else {
+        let s = (16.0 * viewport.zoom).clamp(8.0, 28.0);
+        let pad = 6.0 * viewport.zoom;
+        (s, Pos2::new(rect.left() + pad, rect.top() + pad), color)
+    };
+    let icon = spec.kind;
+    let stroke = Stroke::new(
+        if spec.center {
+            (s * 0.06).clamp(1.2, 6.0)
+        } else {
+            (1.4 * viewport.zoom).clamp(0.8, 2.5)
+        },
+        color,
+    );
     let p = |fx: f32, fy: f32| Pos2::new(origin.x + fx * s, origin.y + fy * s);
     match icon {
         NodeIcon::Chip => {

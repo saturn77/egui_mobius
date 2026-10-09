@@ -719,17 +719,22 @@ impl Parser {
         Ok(Port { id: PortId(name.clone()), name, kind, anchor, data_type })
     }
 
-    fn parse_node_icon(&mut self) -> Result<crate::model::NodeIcon, ParseError> {
-        use crate::model::NodeIcon;
+    fn parse_node_icon(&mut self) -> Result<crate::model::NodeIconSpec, ParseError> {
+        use crate::model::{NodeIcon, NodeIconSpec};
         let k = self.ident()?;
-        match k.as_str() {
-            "chip" => Ok(NodeIcon::Chip),
-            "power" => Ok(NodeIcon::Power),
-            "analog" => Ok(NodeIcon::Analog),
-            "buffer" => Ok(NodeIcon::Buffer),
-            "connector" => Ok(NodeIcon::Connector),
-            other => self.err(format!("unknown icon '{other}'")),
+        let kind = match k.as_str() {
+            "chip" => NodeIcon::Chip,
+            "power" => NodeIcon::Power,
+            "analog" => NodeIcon::Analog,
+            "buffer" => NodeIcon::Buffer,
+            "connector" => NodeIcon::Connector,
+            other => return self.err(format!("unknown icon '{other}'")),
+        };
+        let center = matches!(self.peek(), Some(Tok::Ident(w)) if w == "center");
+        if center {
+            self.pos += 1;
         }
+        Ok(NodeIconSpec { kind, center })
     }
 
     fn parse_port_kind(&mut self) -> Result<PortKind, ParseError> {
@@ -1062,7 +1067,8 @@ impl<'a> Printer<'a> {
             self.line(2, &format!("fill {} {}", quote(&f.color), num(f.alpha)));
         }
         if let Some(icon) = node.icon {
-            self.line(2, &format!("icon {}", icon_kw(icon)));
+            let place = if icon.center { " center" } else { "" };
+            self.line(2, &format!("icon {}{place}", icon_kw(icon.kind)));
         }
 
         if let Some(text) = &node.overlay.text {

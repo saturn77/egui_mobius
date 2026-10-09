@@ -432,6 +432,15 @@ impl Registry {
     /// Only meaningful when the side is currently `EdgeEnd::Free`. The
     /// new end may be either a port (reconnecting the wire through the
     /// preserved waypoint) or a fresh free point further out.
+    /// Set (or clear) a node's role icon — the Style window's mask selector.
+    pub fn set_node_icon(&self, id: &NodeId, icon: Option<crate::model::NodeIconSpec>) {
+        self.mutate(|scene| {
+            if let Some(n) = scene.nodes.iter_mut().find(|n| &n.id == id) {
+                n.icon = icon;
+            }
+        });
+    }
+
     /// Reattach one end of an edge IN PLACE — no waypoint is preserved (that's
     /// [`Self::extend_free_end`]'s job). Used when a repositioned port CAPTURES a
     /// dangling free end that sits on it: the end simply becomes the port.

@@ -233,6 +233,14 @@ pub enum NodeIcon {
     Connector,
 }
 
+/// An icon plus its placement: `Corner` is a small badge top-left; `Center` paints a
+/// LARGE faded watermark behind the label — the Simulink mask read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NodeIconSpec {
+    pub kind: NodeIcon,
+    pub center: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
@@ -240,9 +248,9 @@ pub struct Node {
     pub transform: Transform,
     pub overlay: Overlay,
     pub ports: Vec<Port>,
-    /// Role glyph, if any ( in the DSL).
+    /// Role glyph, if any (`icon chip` / `icon chip center` in the DSL).
     #[serde(default)]
-    pub icon: Option<NodeIcon>,
+    pub icon: Option<NodeIconSpec>,
     /// Name of the style class this node references in the DSL,
     /// if any. Purely a serialisation hint — the node's `overlay`
     /// and `ports` already carry the fully-resolved values.
