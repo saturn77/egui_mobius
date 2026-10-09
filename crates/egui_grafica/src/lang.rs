@@ -587,6 +587,7 @@ impl Parser {
             overlay,
             ports,
             style_ref,
+            icon: None,
         };
 
         while !matches!(self.peek(), Some(Tok::RBrace)) {
@@ -598,6 +599,7 @@ impl Parser {
                 "border" => node.overlay.border = self.parse_border()?,
                 "fill" => node.overlay.fill = self.parse_fill()?,
                 "text" => node.overlay.text = Some(self.parse_text()?),
+                "icon" => node.icon = Some(self.parse_node_icon()?),
                 "port" => {
                     // Inline ports override style ports with the same id.
                     let p = self.parse_port()?;
@@ -715,6 +717,19 @@ impl Parser {
             None
         };
         Ok(Port { id: PortId(name.clone()), name, kind, anchor, data_type })
+    }
+
+    fn parse_node_icon(&mut self) -> Result<crate::model::NodeIcon, ParseError> {
+        use crate::model::NodeIcon;
+        let k = self.ident()?;
+        match k.as_str() {
+            "chip" => Ok(NodeIcon::Chip),
+            "power" => Ok(NodeIcon::Power),
+            "analog" => Ok(NodeIcon::Analog),
+            "buffer" => Ok(NodeIcon::Buffer),
+            "connector" => Ok(NodeIcon::Connector),
+            other => self.err(format!("unknown icon '{other}'")),
+        }
     }
 
     fn parse_port_kind(&mut self) -> Result<PortKind, ParseError> {
@@ -1046,6 +1061,9 @@ impl<'a> Printer<'a> {
         if style_fill.as_ref() != Some(f) {
             self.line(2, &format!("fill {} {}", quote(&f.color), num(f.alpha)));
         }
+        if let Some(icon) = node.icon {
+            self.line(2, &format!("icon {}", icon_kw(icon)));
+        }
 
         if let Some(text) = &node.overlay.text {
             if style_text.as_ref() != Some(text) {
@@ -1216,6 +1234,17 @@ fn num(v: f32) -> String {
         format!("{}", v as i64)
     } else {
         format!("{v}")
+    }
+}
+
+fn icon_kw(i: crate::model::NodeIcon) -> &'static str {
+    use crate::model::NodeIcon::*;
+    match i {
+        Chip => "chip",
+        Power => "power",
+        Analog => "analog",
+        Buffer => "buffer",
+        Connector => "connector",
     }
 }
 
@@ -1400,6 +1429,7 @@ mod tests {
                         },
                     ],
                     style_ref: None,
+                    icon: None,
                 },
                 Node {
                     id: NodeId("b".into()),
@@ -1418,6 +1448,7 @@ mod tests {
                         data_type: None,
                     }],
                     style_ref: None,
+                    icon: None,
                 },
             ],
             edges: vec![Edge {
@@ -1477,6 +1508,7 @@ mod tests {
                 data_type: None,
             }],
             style_ref: None,
+            icon: None,
         };
         let scene = Scene {
             nodes: vec![make("a", 0.0, 0.0), make("b", 100.0, 0.0), make("c", 200.0, 0.0)],

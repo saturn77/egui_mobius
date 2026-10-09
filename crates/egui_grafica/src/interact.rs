@@ -825,6 +825,7 @@ mod tests {
             overlay: Overlay::default(),
             ports: vec![],
             style_ref: None,
+            icon: None,
         }
     }
 

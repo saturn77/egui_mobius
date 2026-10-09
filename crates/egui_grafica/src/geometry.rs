@@ -189,6 +189,7 @@ mod tests {
             overlay: Overlay::default(),
             ports: vec![],
             style_ref: None,
+            icon: None,
         };
         // Interior of the parallelogram.
         assert!(contour_contains(&node, (50.0, 50.0)));

@@ -449,8 +449,76 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
         }
     }
 
+    if let Some(icon) = node.icon {
+        paint_node_icon(painter, icon, screen_rect, stroke.color, viewport);
+    }
     if let Some(text) = &node.overlay.text {
         paint_node_text(painter, text, screen_rect, viewport);
+    }
+}
+
+/// Role iconography, painter-drawn in the node's top-left corner — an MCU's QFP
+/// outline, a power bolt, a sine, a buffer triangle, a pin header. Zoom-scaled,
+/// in the node's border colour.
+fn paint_node_icon(
+    painter: &Painter,
+    icon: crate::model::NodeIcon,
+    rect: Rect,
+    color: Color32,
+    viewport: &Viewport,
+) {
+    use crate::model::NodeIcon;
+    let s = (16.0 * viewport.zoom).clamp(8.0, 28.0);
+    let pad = 6.0 * viewport.zoom;
+    let origin = Pos2::new(rect.left() + pad, rect.top() + pad);
+    let stroke = Stroke::new((1.4 * viewport.zoom).clamp(0.8, 2.5), color);
+    let p = |fx: f32, fy: f32| Pos2::new(origin.x + fx * s, origin.y + fy * s);
+    match icon {
+        NodeIcon::Chip => {
+            // QFP: square body, pin stubs on all four sides.
+            let body = Rect::from_min_size(p(0.22, 0.22), Vec2::splat(s * 0.56));
+            painter.rect(body, CornerRadius::same(1), Color32::TRANSPARENT, stroke, StrokeKind::Inside);
+            for k in 0..3 {
+                let f = (k as f32 + 0.5) / 3.0;
+                let tx = body.left() + body.width() * f;
+                let ty = body.top() + body.height() * f;
+                painter.line_segment([Pos2::new(tx, origin.y), Pos2::new(tx, body.top())], stroke);
+                painter.line_segment([Pos2::new(tx, body.bottom()), Pos2::new(tx, origin.y + s)], stroke);
+                painter.line_segment([Pos2::new(origin.x, ty), Pos2::new(body.left(), ty)], stroke);
+                painter.line_segment([Pos2::new(body.right(), ty), Pos2::new(origin.x + s, ty)], stroke);
+            }
+        }
+        NodeIcon::Power => {
+            painter.add(egui::Shape::closed_line(
+                vec![p(0.55, 0.0), p(0.2, 0.55), p(0.45, 0.55), p(0.35, 1.0), p(0.8, 0.4), p(0.52, 0.4)],
+                stroke,
+            ));
+        }
+        NodeIcon::Analog => {
+            let mut pts = Vec::new();
+            for k in 0..=16 {
+                let t = k as f32 / 16.0;
+                pts.push(Pos2::new(
+                    origin.x + t * s,
+                    origin.y + s * 0.5 - (t * std::f32::consts::TAU).sin() * s * 0.35,
+                ));
+            }
+            painter.add(egui::Shape::line(pts, stroke));
+        }
+        NodeIcon::Buffer => {
+            painter.add(egui::Shape::closed_line(vec![p(0.1, 0.1), p(0.1, 0.9), p(0.9, 0.5)], stroke));
+        }
+        NodeIcon::Connector => {
+            let body = Rect::from_min_size(origin, Vec2::new(s, s * 0.66));
+            painter.rect(body, CornerRadius::same(1), Color32::TRANSPARENT, stroke, StrokeKind::Inside);
+            for r in 0..2 {
+                for c in 0..3 {
+                    let cx = body.left() + body.width() * (c as f32 + 0.5) / 3.0;
+                    let cy = body.top() + body.height() * (r as f32 + 0.5) / 2.0;
+                    painter.circle_filled(Pos2::new(cx, cy), (1.6 * viewport.zoom).clamp(1.0, 3.0), color);
+                }
+            }
+        }
     }
 }
 

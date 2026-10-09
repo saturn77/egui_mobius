@@ -2588,6 +2588,7 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
         overlay,
         ports: default_ports_for(tool),
         style_ref: None,
+        icon: None,
     }
 }
 

@@ -221,6 +221,18 @@ impl GridUnits {
 // =============================================================================
 
 /// A placed shape on the canvas with ports and styling.
+/// A small VECTOR glyph drawn inside the node's top-left corner — role iconography
+/// (an MCU's QFP outline, a power bolt, a sine, a buffer triangle, a pin header),
+/// painter-drawn and zoom-scaled, in the node's border colour.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NodeIcon {
+    Chip,
+    Power,
+    Analog,
+    Buffer,
+    Connector,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
@@ -228,6 +240,9 @@ pub struct Node {
     pub transform: Transform,
     pub overlay: Overlay,
     pub ports: Vec<Port>,
+    /// Role glyph, if any ( in the DSL).
+    #[serde(default)]
+    pub icon: Option<NodeIcon>,
     /// Name of the style class this node references in the DSL,
     /// if any. Purely a serialisation hint — the node's `overlay`
     /// and `ports` already carry the fully-resolved values.
