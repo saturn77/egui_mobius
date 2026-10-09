@@ -221,23 +221,13 @@ impl GridUnits {
 // =============================================================================
 
 /// A placed shape on the canvas with ports and styling.
-/// A small VECTOR glyph drawn inside the node's top-left corner — role iconography
-/// (an MCU's QFP outline, a power bolt, a sine, a buffer triangle, a pin header),
-/// painter-drawn and zoom-scaled, in the node's border colour.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum NodeIcon {
-    Chip,
-    Power,
-    Analog,
-    Buffer,
-    Connector,
-}
-
-/// An icon plus its placement: `Corner` is a small badge top-left; `Center` paints a
-/// LARGE faded watermark behind the label — the Simulink mask read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// A NAMED icon plus its placement — the name indexes the HOST's icon library
+/// (grafica itself ships no icon vocabulary; domains register their own painters).
+/// `center: false` is a small badge top-left; `center: true` paints a LARGE faded
+/// watermark behind the label.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NodeIconSpec {
-    pub kind: NodeIcon,
+    pub name: String,
     pub center: bool,
 }
 

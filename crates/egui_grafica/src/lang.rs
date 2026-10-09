@@ -720,21 +720,14 @@ impl Parser {
     }
 
     fn parse_node_icon(&mut self) -> Result<crate::model::NodeIconSpec, ParseError> {
-        use crate::model::{NodeIcon, NodeIconSpec};
-        let k = self.ident()?;
-        let kind = match k.as_str() {
-            "chip" => NodeIcon::Chip,
-            "power" => NodeIcon::Power,
-            "analog" => NodeIcon::Analog,
-            "buffer" => NodeIcon::Buffer,
-            "connector" => NodeIcon::Connector,
-            other => return self.err(format!("unknown icon '{other}'")),
-        };
+        // The icon NAME is an open identifier — grafica carries no icon vocabulary;
+        // the host's library decides what (if anything) paints for it.
+        let name = self.ident()?;
         let center = matches!(self.peek(), Some(Tok::Ident(w)) if w == "center");
         if center {
             self.pos += 1;
         }
-        Ok(NodeIconSpec { kind, center })
+        Ok(crate::model::NodeIconSpec { name, center })
     }
 
     fn parse_port_kind(&mut self) -> Result<PortKind, ParseError> {
@@ -1066,9 +1059,9 @@ impl<'a> Printer<'a> {
         if style_fill.as_ref() != Some(f) {
             self.line(2, &format!("fill {} {}", quote(&f.color), num(f.alpha)));
         }
-        if let Some(icon) = node.icon {
+        if let Some(icon) = &node.icon {
             let place = if icon.center { " center" } else { "" };
-            self.line(2, &format!("icon {}{place}", icon_kw(icon.kind)));
+            self.line(2, &format!("icon {}{place}", icon.name));
         }
 
         if let Some(text) = &node.overlay.text {
@@ -1240,17 +1233,6 @@ fn num(v: f32) -> String {
         format!("{}", v as i64)
     } else {
         format!("{v}")
-    }
-}
-
-fn icon_kw(i: crate::model::NodeIcon) -> &'static str {
-    use crate::model::NodeIcon::*;
-    match i {
-        Chip => "chip",
-        Power => "power",
-        Analog => "analog",
-        Buffer => "buffer",
-        Connector => "connector",
     }
 }
 

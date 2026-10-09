@@ -71,9 +71,9 @@ impl Viewport {
 /// Layer order: nodes → edges → ports → waypoints. Edges paint after
 /// nodes so connectors appear on top. The grid is painted separately by
 /// the caller — CPU [`paint_grid`] or the GPU canvas shader.
-pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport) {
+pub fn paint_scene(painter: &Painter, scene: &Scene, viewport: &Viewport, icons: &IconLibrary) {
     for node in &scene.nodes {
-        paint_node(painter, node, viewport);
+        paint_node(painter, node, viewport, icons);
     }
     for edge in &scene.edges {
         paint_edge(painter, edge, scene, viewport);
@@ -407,7 +407,7 @@ fn stroke_for_edge(overlay: &EdgeOverlay, viewport: &Viewport) -> Stroke {
 // Node painting
 // =============================================================================
 
-fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
+fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport, icons: &IconLibrary) {
     let (x, y) = node.transform.position;
     let (w, h) = node.transform.size;
     let top_left = viewport.world_to_screen((x, y));
@@ -449,8 +449,8 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
         }
     }
 
-    if let Some(icon) = node.icon {
-        paint_node_icon(painter, icon, screen_rect, stroke.color, viewport);
+    if let Some(icon) = &node.icon {
+        paint_node_icon(painter, icon, screen_rect, stroke.color, viewport, icons);
     }
     // (center icons paint before text, so the label reads over the watermark)
     if let Some(text) = &node.overlay.text {
@@ -458,19 +458,26 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport) {
     }
 }
 
-/// Role iconography, painter-drawn in the node's top-left corner — an MCU's QFP
-/// outline, a power bolt, a sine, a buffer triangle, a pin header. Zoom-scaled,
-/// in the node's border colour.
+/// A host-registered icon painter: draws a glyph filling `rect`, using the given
+/// colour and stroke. grafica ships NO icon vocabulary — domains (EDA, dataflow,
+/// whatever) register painters under names their documents reference.
+pub type IconPainter = fn(&Painter, Rect, Color32, Stroke);
+
+/// The host's named icon painters. Empty by default: unknown names paint nothing.
+#[derive(Default, Clone)]
+pub struct IconLibrary(pub std::collections::BTreeMap<String, IconPainter>);
+
+/// Paint a node's icon by LIBRARY LOOKUP. Placement is grafica's: `center` is a
+/// large faded watermark behind the label; otherwise a small crisp top-left badge.
 fn paint_node_icon(
     painter: &Painter,
-    spec: crate::model::NodeIconSpec,
+    spec: &crate::model::NodeIconSpec,
     rect: Rect,
     color: Color32,
     viewport: &Viewport,
+    icons: &IconLibrary,
 ) {
-    use crate::model::NodeIcon;
-    // CENTER: a large, faded watermark behind the label — the Simulink mask read.
-    // CORNER: a small crisp badge, top-left.
+    let Some(draw) = icons.0.get(&spec.name) else { return };
     let (s, origin, color) = if spec.center {
         let s = (rect.width().min(rect.height()) * 0.55).max(12.0);
         let origin = Pos2::new(rect.center().x - s * 0.5, rect.center().y - s * 0.5);
@@ -481,7 +488,6 @@ fn paint_node_icon(
         let pad = 6.0 * viewport.zoom;
         (s, Pos2::new(rect.left() + pad, rect.top() + pad), color)
     };
-    let icon = spec.kind;
     let stroke = Stroke::new(
         if spec.center {
             (s * 0.06).clamp(1.2, 6.0)
@@ -490,54 +496,7 @@ fn paint_node_icon(
         },
         color,
     );
-    let p = |fx: f32, fy: f32| Pos2::new(origin.x + fx * s, origin.y + fy * s);
-    match icon {
-        NodeIcon::Chip => {
-            // QFP: square body, pin stubs on all four sides.
-            let body = Rect::from_min_size(p(0.22, 0.22), Vec2::splat(s * 0.56));
-            painter.rect(body, CornerRadius::same(1), Color32::TRANSPARENT, stroke, StrokeKind::Inside);
-            for k in 0..3 {
-                let f = (k as f32 + 0.5) / 3.0;
-                let tx = body.left() + body.width() * f;
-                let ty = body.top() + body.height() * f;
-                painter.line_segment([Pos2::new(tx, origin.y), Pos2::new(tx, body.top())], stroke);
-                painter.line_segment([Pos2::new(tx, body.bottom()), Pos2::new(tx, origin.y + s)], stroke);
-                painter.line_segment([Pos2::new(origin.x, ty), Pos2::new(body.left(), ty)], stroke);
-                painter.line_segment([Pos2::new(body.right(), ty), Pos2::new(origin.x + s, ty)], stroke);
-            }
-        }
-        NodeIcon::Power => {
-            painter.add(egui::Shape::closed_line(
-                vec![p(0.55, 0.0), p(0.2, 0.55), p(0.45, 0.55), p(0.35, 1.0), p(0.8, 0.4), p(0.52, 0.4)],
-                stroke,
-            ));
-        }
-        NodeIcon::Analog => {
-            let mut pts = Vec::new();
-            for k in 0..=16 {
-                let t = k as f32 / 16.0;
-                pts.push(Pos2::new(
-                    origin.x + t * s,
-                    origin.y + s * 0.5 - (t * std::f32::consts::TAU).sin() * s * 0.35,
-                ));
-            }
-            painter.add(egui::Shape::line(pts, stroke));
-        }
-        NodeIcon::Buffer => {
-            painter.add(egui::Shape::closed_line(vec![p(0.1, 0.1), p(0.1, 0.9), p(0.9, 0.5)], stroke));
-        }
-        NodeIcon::Connector => {
-            let body = Rect::from_min_size(origin, Vec2::new(s, s * 0.66));
-            painter.rect(body, CornerRadius::same(1), Color32::TRANSPARENT, stroke, StrokeKind::Inside);
-            for r in 0..2 {
-                for c in 0..3 {
-                    let cx = body.left() + body.width() * (c as f32 + 0.5) / 3.0;
-                    let cy = body.top() + body.height() * (r as f32 + 0.5) / 2.0;
-                    painter.circle_filled(Pos2::new(cx, cy), (1.6 * viewport.zoom).clamp(1.0, 3.0), color);
-                }
-            }
-        }
-    }
+    draw(painter, Rect::from_min_size(origin, Vec2::splat(s)), color, stroke);
 }
 
 /// Paint only the text labels of every node. The GPU path draws node

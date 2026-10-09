@@ -146,6 +146,9 @@ pub struct CanvasCitizen {
     style_node: Option<NodeId>,
     /// Edge whose floating Style window is open.
     style_edge: Option<EdgeId>,
+    /// HOST-registered icon painters — grafica carries no icon vocabulary of its
+    /// own; documents reference names, this library decides what paints.
+    pub icon_library: std::sync::Arc<crate::render::IconLibrary>,
     /// `Some(id)` when the named node is in inline text-edit mode —
     /// a TextEdit is overlaid on the node's centre and other canvas
     /// gestures are suppressed until edit ends.
@@ -260,6 +263,7 @@ impl CanvasCitizen {
             node_action: None,
             style_node: None,
             style_edge: None,
+            icon_library: std::sync::Arc::new(crate::render::IconLibrary::default()),
             editing_node: None,
             edit_buffer: String::new(),
             show_page_modal: false,
@@ -1646,7 +1650,9 @@ impl CanvasCitizen {
             // Page board on top of the grid so the sheet covers it
             // wherever the paper sits — same visual model simcore uses.
             crate::page::paint_page(&painter, &self.viewport, &settings);
-            self.registry.with_scene(|scene| paint_scene(&painter, scene, &self.viewport));
+            let icons = self.icon_library.clone();
+            self.registry
+                .with_scene(|scene| paint_scene(&painter, scene, &self.viewport, &icons));
         }
 
         // Selection highlights — painter-side on both paths.
@@ -1722,7 +1728,7 @@ impl CanvasCitizen {
     fn render_style_window(&mut self, ctx: &egui::Context) {
         let Some(nid) = self.style_node.clone() else { return };
         let Some((overlay, node_icon)) = self.registry.with_scene(|s| {
-            s.nodes.iter().find(|n| n.id == nid).map(|n| (n.overlay.clone(), n.icon))
+            s.nodes.iter().find(|n| n.id == nid).map(|n| (n.overlay.clone(), n.icon.clone()))
         }) else {
             self.style_node = None;
             return;
@@ -1785,50 +1791,46 @@ impl CanvasCitizen {
                     ui.checkbox(&mut text.bold, "Bold");
                     ui.checkbox(&mut text.italic, "Italic");
                 });
-                ui.separator();
-                // The MASK: role glyph + placement (corner badge vs centred
-                // watermark) — assign or change it right here.
-                ui.horizontal(|ui| {
-                    ui.label("Mask");
-                    use crate::model::{NodeIcon, NodeIconSpec};
-                    let mut kind = node_icon.map(|i| i.kind);
-                    let shown = match kind {
-                        None => "— none —",
-                        Some(NodeIcon::Chip) => "Chip (QFP)",
-                        Some(NodeIcon::Power) => "Power (bolt)",
-                        Some(NodeIcon::Analog) => "Analog (sine)",
-                        Some(NodeIcon::Buffer) => "Buffer (triangle)",
-                        Some(NodeIcon::Connector) => "Connector (header)",
-                    };
-                    let mut changed = false;
-                    egui::ComboBox::from_id_salt(("grafica-style-mask", &nid.0))
-                        .selected_text(shown)
-                        .show_ui(ui, |ui| {
-                            for (val, label) in [
-                                (None, "— none —"),
-                                (Some(NodeIcon::Chip), "Chip (QFP)"),
-                                (Some(NodeIcon::Power), "Power (bolt)"),
-                                (Some(NodeIcon::Analog), "Analog (sine)"),
-                                (Some(NodeIcon::Buffer), "Buffer (triangle)"),
-                                (Some(NodeIcon::Connector), "Connector (header)"),
-                            ] {
-                                if ui.selectable_label(kind == val, label).clicked() {
-                                    kind = val;
+                // The MASK — only when the HOST registered an icon library; the
+                // names come from the library, not from grafica.
+                if !self.icon_library.0.is_empty() {
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label("Mask");
+                        use crate::model::NodeIconSpec;
+                        let mut name = node_icon.as_ref().map(|i| i.name.clone());
+                        let shown = name.clone().unwrap_or_else(|| "— none —".to_string());
+                        let mut changed = false;
+                        egui::ComboBox::from_id_salt(("grafica-style-mask", &nid.0))
+                            .selected_text(shown)
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_label(name.is_none(), "— none —").clicked() {
+                                    name = None;
                                     changed = true;
                                 }
-                            }
-                        });
-                    let mut center = node_icon.map(|i| i.center).unwrap_or(true);
-                    if ui.checkbox(&mut center, "Centered watermark").changed() {
-                        changed = true;
-                    }
-                    if changed {
-                        self.registry.set_node_icon(
-                            &nid,
-                            kind.map(|kind| NodeIconSpec { kind, center }),
-                        );
-                    }
-                });
+                                for key in self.icon_library.0.keys() {
+                                    if ui
+                                        .selectable_label(name.as_deref() == Some(key), key)
+                                        .clicked()
+                                    {
+                                        name = Some(key.clone());
+                                        changed = true;
+                                    }
+                                }
+                            });
+                        let mut center =
+                            node_icon.as_ref().map(|i| i.center).unwrap_or(true);
+                        if ui.checkbox(&mut center, "Centered watermark").changed() {
+                            changed = true;
+                        }
+                        if changed {
+                            self.registry.set_node_icon(
+                                &nid,
+                                name.map(|name| NodeIconSpec { name, center }),
+                            );
+                        }
+                    });
+                }
                 if next != overlay {
                     self.registry.update_node_overlay(&nid, next);
                 }
