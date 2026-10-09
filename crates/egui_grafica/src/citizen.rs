@@ -1186,6 +1186,43 @@ impl CanvasCitizen {
             {
                 self.finish_connection(from, self.fsm.cursor_world);
             }
+            // A port REPOSITION that lands on a dangling free end CAPTURES it:
+            // the end becomes the port — the port OWNS the connection point, it
+            // never just sits on top of an unattached end.
+            if self.fsm.state == CanvasState::Connecting
+                && !self.fsm.connect_latched
+                && let Some((nid, pid)) = self.fsm.connect_from.clone()
+            {
+                let port_radius = PORT_GRAB_PX / self.viewport.zoom;
+                if let Some(pw) =
+                    self.registry.with_scene(|s| port_world_position(s, &nid, &pid))
+                {
+                    let captures: Vec<(EdgeId, EdgeEndSide)> =
+                        self.registry.with_scene(|s| {
+                            let mut hits = Vec::new();
+                            for e in &s.edges {
+                                for (side, end) in
+                                    [(EdgeEndSide::From, &e.from), (EdgeEndSide::To, &e.to)]
+                                {
+                                    if let EdgeEnd::Free(x, y) = end {
+                                        let d = (x - pw.0).hypot(y - pw.1);
+                                        if d <= port_radius {
+                                            hits.push((e.id.clone(), side));
+                                        }
+                                    }
+                                }
+                            }
+                            hits
+                        });
+                    for (eid, side) in captures {
+                        self.registry.attach_end(
+                            &eid,
+                            side,
+                            EdgeEnd::Port(nid.clone(), pid.clone()),
+                        );
+                    }
+                }
+            }
             // A marquee selects every node/edge it caught.
             if self.fsm.state == CanvasState::Marquee {
                 let (nodes, edges) = self.registry.with_scene(|s| {

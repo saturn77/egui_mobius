@@ -432,6 +432,21 @@ impl Registry {
     /// Only meaningful when the side is currently `EdgeEnd::Free`. The
     /// new end may be either a port (reconnecting the wire through the
     /// preserved waypoint) or a fresh free point further out.
+    /// Reattach one end of an edge IN PLACE — no waypoint is preserved (that's
+    /// [`Self::extend_free_end`]'s job). Used when a repositioned port CAPTURES a
+    /// dangling free end that sits on it: the end simply becomes the port.
+    pub fn attach_end(&self, id: &EdgeId, side: EdgeEndSide, new_end: EdgeEnd) {
+        self.mutate(|scene| {
+            let Some(edge) = scene.edges.iter_mut().find(|e| &e.id == id) else {
+                return;
+            };
+            match side {
+                EdgeEndSide::From => edge.from = new_end.clone(),
+                EdgeEndSide::To => edge.to = new_end.clone(),
+            }
+        });
+    }
+
     pub fn extend_free_end(&self, id: &EdgeId, side: EdgeEndSide, new_end: EdgeEnd) {
         self.mutate(|scene| {
             let Some(edge) = scene.edges.iter_mut().find(|e| &e.id == id) else {
@@ -777,6 +792,43 @@ mod tests {
         // entry stays horizontal — y followed by -50, x unchanged.
         assert!((waypoints[1].1 - 100.0).abs() < 1e-3, "w2.y = {}", waypoints[1].1);
         assert_eq!(waypoints[1].0, 150.0);
+    }
+
+    #[test]
+    fn attach_end_rebinds_in_place_without_a_waypoint() {
+        // A repositioned port capturing a dangling end: the Free end simply
+        // BECOMES the port — routing untouched, no waypoint inserted.
+        let reg = Registry::new(Scene::default());
+        let mut a = node_rect("a", (0.0, 0.0), (100.0, 100.0));
+        a.ports.push(Port {
+            id: PortId("pa".into()),
+            name: "pa".into(),
+            kind: PortKind::Out,
+            anchor: PortAnchor::East(0.5),
+            data_type: None,
+        });
+        reg.add_node(a);
+        reg.add_edge(Edge {
+            id: EdgeId("e".into()),
+            from: EdgeEnd::Free(200.0, 50.0),
+            to: EdgeEnd::Free(300.0, 50.0),
+            routing: Routing::Straight,
+            overlay: EdgeOverlay::default(),
+        });
+
+        reg.attach_end(
+            &EdgeId("e".into()),
+            EdgeEndSide::From,
+            EdgeEnd::Port(NodeId("a".into()), PortId("pa".into())),
+        );
+
+        let edge = &reg.scene().edges[0];
+        assert_eq!(
+            edge.from,
+            EdgeEnd::Port(NodeId("a".into()), PortId("pa".into()))
+        );
+        assert_eq!(edge.to, EdgeEnd::Free(300.0, 50.0));
+        assert!(matches!(edge.routing, Routing::Straight), "routing untouched");
     }
 
     #[test]
