@@ -144,6 +144,8 @@ pub struct CanvasCitizen {
     pub node_action: Option<NodeId>,
     /// Node whose floating Style window (full colour pickers + typography) is open.
     style_node: Option<NodeId>,
+    /// Edge whose floating Style window is open.
+    style_edge: Option<EdgeId>,
     /// `Some(id)` when the named node is in inline text-edit mode —
     /// a TextEdit is overlaid on the node's centre and other canvas
     /// gestures are suppressed until edit ends.
@@ -227,24 +229,6 @@ fn rgb_to_hex(rgb: [u8; 3]) -> String {
     format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2])
 }
 
-/// Compact inline RGB editor — three drag-value spinners plus a colour
-/// swatch preview. Self-contained: no popups, so it composes inside
-/// nested menus without fighting auto-close behaviour.
-fn inline_color_editor(ui: &mut egui::Ui, rgb: &mut [u8; 3]) {
-    ui.horizontal(|ui| {
-        ui.label("Color");
-        ui.add(egui::DragValue::new(&mut rgb[0]).range(0..=255).speed(1.0).prefix("R "));
-        ui.add(egui::DragValue::new(&mut rgb[1]).range(0..=255).speed(1.0).prefix("G "));
-        ui.add(egui::DragValue::new(&mut rgb[2]).range(0..=255).speed(1.0).prefix("B "));
-        let (swatch, _) =
-            ui.allocate_exact_size(egui::vec2(22.0, 18.0), egui::Sense::hover());
-        ui.painter().rect_filled(
-            swatch,
-            2.0,
-            egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2]),
-        );
-    });
-}
 
 fn line_style_label(s: crate::model::LineStyle) -> &'static str {
     use crate::model::LineStyle;
@@ -279,6 +263,7 @@ impl CanvasCitizen {
             node_action_label: None,
             node_action: None,
             style_node: None,
+            style_edge: None,
             editing_node: None,
             edit_buffer: String::new(),
             show_page_modal: false,
@@ -1620,32 +1605,12 @@ impl CanvasCitizen {
                         action = Some(ContextAction::DeleteEdge(eid.clone()));
                         ui.close();
                     }
-                    if let Some(overlay) = &edge_overlay {
-                        ui.menu_button("Wire style", |ui| {
-                            let mut next = overlay.clone();
-                            let mut rgb = hex_to_rgb(&next.color);
-                            inline_color_editor(ui, &mut rgb);
-                            next.color = rgb_to_hex(rgb);
-                            ui.add(
-                                egui::Slider::new(&mut next.width, 0.5..=6.0).text("Width"),
-                            );
-                            ui.separator();
-                            for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
-                                if ui
-                                    .selectable_label(
-                                        next.line_style == style,
-                                        line_style_label(style),
-                                    )
-                                    .clicked()
-                                {
-                                    next.line_style = style;
-                                }
-                            }
-                            if next != *overlay {
-                                action = Some(ContextAction::SetEdgeOverlay(eid.clone(), next));
-                            }
-                        });
+                    ui.separator();
+                    if ui.button("🎨 Style…").clicked() {
+                        self.style_edge = Some(eid.clone());
+                        ui.close();
                     }
+                    let _ = &edge_overlay;
                 } else {
                     ui.label(egui::RichText::new("Nothing here").weak());
                 }
@@ -1728,8 +1693,9 @@ impl CanvasCitizen {
             );
         }
 
-        // ── Floating per-node Style window ──
+        // ── Floating Style windows (node, wire) ──
         self.render_style_window(ui.ctx());
+        self.render_edge_style_window(ui.ctx());
 
         // ── Inline text-edit overlay ──
         //
@@ -1827,6 +1793,51 @@ impl CanvasCitizen {
             });
         if !open {
             self.style_node = None;
+        }
+    }
+
+    /// The floating Style window for one WIRE: colour picker, width, line style.
+    fn render_edge_style_window(&mut self, ctx: &egui::Context) {
+        let Some(eid) = self.style_edge.clone() else { return };
+        let Some(overlay) = self
+            .registry
+            .with_scene(|s| s.edges.iter().find(|e| e.id == eid).map(|e| e.overlay.clone()))
+        else {
+            self.style_edge = None;
+            return;
+        };
+        let mut open = true;
+        egui::Window::new(format!("🎨 Wire — {}", eid.0))
+            .id(egui::Id::new(("grafica-edge-style", eid.0.clone())))
+            .collapsible(false)
+            .resizable(false)
+            .open(&mut open)
+            .show(ctx, |ui| {
+                let mut next = overlay.clone();
+                ui.horizontal(|ui| {
+                    ui.label("Colour");
+                    let mut c = hex_alpha_to_color32(&next.color, 1.0);
+                    if ui.color_edit_button_srgba(&mut c).changed() {
+                        next.color = color32_to_hex(c);
+                    }
+                    ui.add(egui::Slider::new(&mut next.width, 0.5..=6.0).text("px"));
+                });
+                ui.horizontal(|ui| {
+                    for style in [LineStyle::Solid, LineStyle::Dashed, LineStyle::Dotted] {
+                        if ui
+                            .selectable_label(next.line_style == style, line_style_label(style))
+                            .clicked()
+                        {
+                            next.line_style = style;
+                        }
+                    }
+                });
+                if next != overlay {
+                    self.registry.update_edge_overlay(&eid, next);
+                }
+            });
+        if !open {
+            self.style_edge = None;
         }
     }
 
