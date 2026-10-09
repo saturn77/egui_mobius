@@ -87,6 +87,7 @@ fn power_board() -> Node {
             port("fpga_intf", PortKind::Bidir, PortAnchor::South(0.3)),
         ],
         style_ref: None,
+        icon: None,
     }
 }
 
@@ -104,6 +105,7 @@ fn sense_board() -> Node {
             port("adc_bus", PortKind::Out, PortAnchor::East(0.5)),
         ],
         style_ref: None,
+        icon: None,
     }
 }
 
@@ -118,6 +120,7 @@ fn adc_board() -> Node {
             port("fpga_link", PortKind::Bidir, PortAnchor::East(0.5)),
         ],
         style_ref: None,
+        icon: None,
     }
 }
 
@@ -132,6 +135,7 @@ fn fpga_board() -> Node {
             port("fpga_intf", PortKind::In, PortAnchor::South(0.5)),
         ],
         style_ref: None,
+        icon: None,
     }
 }
 
