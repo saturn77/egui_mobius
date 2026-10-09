@@ -486,13 +486,27 @@ fn paint_node_image(painter: &Painter, img: &crate::model::NodeImage, node_rect:
         egui::TextureOptions::LINEAR,
         egui::load::SizeHint::default(),
     );
-    if let Ok(egui::load::TexturePoll::Ready { texture }) = result {
-        painter.with_clip_rect(node_rect).image(
-            texture.id,
-            rect,
-            Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
-            Color32::WHITE,
-        );
+    match result {
+        Ok(egui::load::TexturePoll::Ready { texture }) => {
+            painter.with_clip_rect(node_rect).image(
+                texture.id,
+                rect,
+                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        }
+        Ok(egui::load::TexturePoll::Pending { .. }) => {}
+        // NEVER silent: a failed load says so on the node (missing loader,
+        // unreadable file, unsupported format).
+        Err(err) => {
+            painter.with_clip_rect(node_rect).text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                format!("⚠ image: {err}"),
+                egui::FontId::proportional(11.0),
+                Color32::from_rgb(0xB0, 0x30, 0x30),
+            );
+        }
     }
 }
 
