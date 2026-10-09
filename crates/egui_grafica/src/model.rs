@@ -231,6 +231,17 @@ pub struct NodeIconSpec {
     pub center: bool,
 }
 
+/// A raster image placed INSIDE a node — any file the host's egui image loaders can
+/// read (a chip photo, a logo). `center` is the image centre as a fraction of the
+/// node rect; `scale` is the image side relative to the node's smaller dimension.
+/// Mouse-editable: drag the image to move it, drag its corner handle to resize.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeImage {
+    pub source: String,
+    pub center: (f32, f32),
+    pub scale: f32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub id: NodeId,
@@ -241,6 +252,9 @@ pub struct Node {
     /// Role glyph, if any (`icon chip` / `icon chip center` in the DSL).
     #[serde(default)]
     pub icon: Option<NodeIconSpec>,
+    /// Image inside the node (`image "path" at 0.5 0.5 scale 0.6` in the DSL).
+    #[serde(default)]
+    pub image: Option<NodeImage>,
     /// Name of the style class this node references in the DSL,
     /// if any. Purely a serialisation hint — the node's `overlay`
     /// and `ports` already carry the fully-resolved values.

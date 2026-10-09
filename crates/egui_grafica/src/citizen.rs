@@ -146,6 +146,10 @@ pub struct CanvasCitizen {
     style_node: Option<NodeId>,
     /// Edge whose floating Style window is open.
     style_edge: Option<EdgeId>,
+    /// A live image drag inside a selected node: (node, resizing?, start centre,
+    /// start scale, grab point in world). Move = drag the photo; resize = drag its
+    /// bottom-right handle. One undo batch spans the gesture.
+    image_drag: Option<(NodeId, bool, (f32, f32), f32, (f32, f32))>,
     /// HOST-registered icon painters — grafica carries no icon vocabulary of its
     /// own; documents reference names, this library decides what paints.
     pub icon_library: std::sync::Arc<crate::render::IconLibrary>,
@@ -263,6 +267,7 @@ impl CanvasCitizen {
             node_action: None,
             style_node: None,
             style_edge: None,
+            image_drag: None,
             icon_library: std::sync::Arc::new(crate::render::IconLibrary::default()),
             editing_node: None,
             edit_buffer: String::new(),
@@ -830,7 +835,44 @@ impl CanvasCitizen {
         // Hit-test at the true press origin, not `interact_pointer_pos` —
         // egui only reports a drag once the pointer has moved a few pixels,
         // and testing that drifted point misses thin wires and small ports.
+        // A SELECTED node's inner image owns gestures that start on it: drag the
+        // photo to move it inside the block, drag its corner handle to resize —
+        // intercepted before the FSM so the node itself doesn't move.
         if !editing
+            && self.active_tool == ShapeTool::Select
+            && response.drag_started_by(egui::PointerButton::Primary)
+            && let Some(screen) = ui.input(|i| i.pointer.press_origin())
+        {
+            let world = self.viewport.screen_to_world(screen);
+            let grab = PORT_GRAB_PX / self.viewport.zoom;
+            let hit = self.registry.with_scene(|sc| {
+                for nid in &self.selection.nodes {
+                    let Some(n) = sc.nodes.iter().find(|n| &n.id == nid) else { continue };
+                    let Some(img) = &n.image else { continue };
+                    let (x, y) = n.transform.position;
+                    let (w, h) = n.transform.size;
+                    let node_rect = egui::Rect::from_min_size(
+                        egui::pos2(x, y),
+                        egui::vec2(w, h),
+                    );
+                    let r = crate::render::node_image_rect(img, node_rect);
+                    let corner = r.right_bottom();
+                    let on_corner = (world.0 - corner.x).abs() <= grab
+                        && (world.1 - corner.y).abs() <= grab;
+                    let inside = r.contains(egui::pos2(world.0, world.1));
+                    if on_corner || inside {
+                        return Some((nid.clone(), on_corner, img.center, img.scale));
+                    }
+                }
+                None
+            });
+            if let Some((nid, resize, c0, s0)) = hit {
+                self.registry.begin_undo_batch();
+                self.image_drag = Some((nid, resize, c0, s0, world));
+            }
+        }
+        if !editing
+            && self.image_drag.is_none()
             && self.active_tool == ShapeTool::Select
             && response.drag_started_by(egui::PointerButton::Primary)
             && let Some(screen) = ui.input(|i| i.pointer.press_origin())
@@ -1170,6 +1212,38 @@ impl CanvasCitizen {
             let delta = response.drag_delta();
             self.viewport.origin.x += delta.x;
             self.viewport.origin.y += delta.y;
+        }
+
+        // ── Live image move/resize (undo-batched; per-frame writes collapse). ──
+        if let Some((nid, resize, c0, s0, grab_w)) = self.image_drag.clone()
+            && response.dragged_by(egui::PointerButton::Primary)
+            && let Some(screen) = response.interact_pointer_pos()
+        {
+            let world = self.viewport.screen_to_world(screen);
+            let geom = self.registry.with_scene(|sc| {
+                sc.nodes
+                    .iter()
+                    .find(|n| n.id == nid)
+                    .map(|n| (n.transform.size, n.image.clone()))
+            });
+            if let Some(((w, h), Some(mut img))) = geom {
+                let (dx, dy) = (world.0 - grab_w.0, world.1 - grab_w.1);
+                if resize {
+                    let base = w.min(h).max(1.0);
+                    img.scale = (s0 + (dx.max(dy) * 2.0) / base).clamp(0.08, 2.0);
+                } else {
+                    img.center = (
+                        (c0.0 + dx / w.max(1.0)).clamp(0.0, 1.0),
+                        (c0.1 + dy / h.max(1.0)).clamp(0.0, 1.0),
+                    );
+                }
+                self.registry.set_node_image(&nid, Some(img));
+            }
+        }
+        if response.drag_stopped_by(egui::PointerButton::Primary)
+            && self.image_drag.take().is_some()
+        {
+            self.registry.end_undo_batch();
         }
 
         // ── Release: finalise the gesture, return the FSM to Idle ──
@@ -1831,6 +1905,52 @@ impl CanvasCitizen {
                         }
                     });
                 }
+                ui.separator();
+                // The IMAGE: any picture inside the block (a chip photo). Position
+                // and size are MOUSE-edited on the canvas: drag the photo to move,
+                // drag its bottom-right corner to resize.
+                ui.horizontal(|ui| {
+                    ui.label("Image");
+                    let current = self
+                        .registry
+                        .with_scene(|sc| {
+                            sc.nodes
+                                .iter()
+                                .find(|n| n.id == nid)
+                                .and_then(|n| n.image.clone())
+                        });
+                    match &current {
+                        Some(img) => {
+                            let short = std::path::Path::new(&img.source)
+                                .file_name()
+                                .map(|f| f.to_string_lossy().into_owned())
+                                .unwrap_or_else(|| img.source.clone());
+                            ui.monospace(short);
+                            if ui.small_button("✖").on_hover_text("Remove image").clicked() {
+                                self.registry.set_node_image(&nid, None);
+                            }
+                        }
+                        None => {
+                            ui.weak("none");
+                        }
+                    }
+                    if ui.button("📁 Browse…").clicked() {
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp", "bmp"])
+                            .pick_file()
+                        {
+                            self.registry.set_node_image(
+                                &nid,
+                                Some(crate::model::NodeImage {
+                                    source: path.display().to_string(),
+                                    center: (0.5, 0.5),
+                                    scale: 0.5,
+                                }),
+                            );
+                        }
+                    }
+                });
+                ui.weak("drag the image to move it · drag its corner to resize");
                 if next != overlay {
                     self.registry.update_node_overlay(&nid, next);
                 }
@@ -2634,6 +2754,7 @@ fn make_shape_node(tool: ShapeTool, id: NodeId, center: (f32, f32)) -> Node {
         ports: default_ports_for(tool),
         style_ref: None,
         icon: None,
+        image: None,
     }
 }
 

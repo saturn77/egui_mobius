@@ -441,6 +441,16 @@ impl Registry {
         });
     }
 
+    /// Set (or clear) a node's inner image; also the live mouse-drag update path
+    /// (an open undo batch collapses the per-frame writes into one step).
+    pub fn set_node_image(&self, id: &NodeId, image: Option<crate::model::NodeImage>) {
+        self.mutate(|scene| {
+            if let Some(n) = scene.nodes.iter_mut().find(|n| &n.id == id) {
+                n.image = image;
+            }
+        });
+    }
+
     /// Reattach one end of an edge IN PLACE — no waypoint is preserved (that's
     /// [`Self::extend_free_end`]'s job). Used when a repositioned port CAPTURES a
     /// dangling free end that sits on it: the end simply becomes the port.
@@ -715,6 +725,7 @@ mod tests {
             ports: vec![],
             style_ref: None,
             icon: None,
+            image: None,
         }
     }
 

@@ -588,6 +588,7 @@ impl Parser {
             ports,
             style_ref,
             icon: None,
+            image: None,
         };
 
         while !matches!(self.peek(), Some(Tok::RBrace)) {
@@ -600,6 +601,7 @@ impl Parser {
                 "fill" => node.overlay.fill = self.parse_fill()?,
                 "text" => node.overlay.text = Some(self.parse_text()?),
                 "icon" => node.icon = Some(self.parse_node_icon()?),
+                "image" => node.image = Some(self.parse_node_image()?),
                 "port" => {
                     // Inline ports override style ports with the same id.
                     let p = self.parse_port()?;
@@ -728,6 +730,26 @@ impl Parser {
             self.pos += 1;
         }
         Ok(crate::model::NodeIconSpec { name, center })
+    }
+
+    fn parse_node_image(&mut self) -> Result<crate::model::NodeImage, ParseError> {
+        let source = self.string()?;
+        let mut img =
+            crate::model::NodeImage { source, center: (0.5, 0.5), scale: 0.5 };
+        loop {
+            match self.peek() {
+                Some(Tok::Ident(k)) if k == "at" => {
+                    self.pos += 1;
+                    img.center = (self.number()?, self.number()?);
+                }
+                Some(Tok::Ident(k)) if k == "scale" => {
+                    self.pos += 1;
+                    img.scale = self.number()?;
+                }
+                _ => break,
+            }
+        }
+        Ok(img)
     }
 
     fn parse_port_kind(&mut self) -> Result<PortKind, ParseError> {
@@ -1062,6 +1084,18 @@ impl<'a> Printer<'a> {
         if let Some(icon) = &node.icon {
             let place = if icon.center { " center" } else { "" };
             self.line(2, &format!("icon {}{place}", icon.name));
+        }
+        if let Some(img) = &node.image {
+            self.line(
+                2,
+                &format!(
+                    "image {} at {} {} scale {}",
+                    quote(&img.source),
+                    num(img.center.0),
+                    num(img.center.1),
+                    num(img.scale)
+                ),
+            );
         }
 
         if let Some(text) = &node.overlay.text {
@@ -1418,6 +1452,7 @@ mod tests {
                     ],
                     style_ref: None,
                     icon: None,
+                    image: None,
                 },
                 Node {
                     id: NodeId("b".into()),
@@ -1437,6 +1472,7 @@ mod tests {
                     }],
                     style_ref: None,
                     icon: None,
+                    image: None,
                 },
             ],
             edges: vec![Edge {
@@ -1497,6 +1533,7 @@ mod tests {
             }],
             style_ref: None,
             icon: None,
+            image: None,
         };
         let scene = Scene {
             nodes: vec![make("a", 0.0, 0.0), make("b", 100.0, 0.0), make("c", 200.0, 0.0)],

@@ -88,6 +88,7 @@ fn power_board() -> Node {
         ],
         style_ref: None,
         icon: None,
+        image: None,
     }
 }
 
@@ -106,6 +107,7 @@ fn sense_board() -> Node {
         ],
         style_ref: None,
         icon: None,
+        image: None,
     }
 }
 
@@ -121,6 +123,7 @@ fn adc_board() -> Node {
         ],
         style_ref: None,
         icon: None,
+        image: None,
     }
 }
 
@@ -136,6 +139,7 @@ fn fpga_board() -> Node {
         ],
         style_ref: None,
         icon: None,
+        image: None,
     }
 }
 

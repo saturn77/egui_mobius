@@ -826,6 +826,7 @@ mod tests {
             ports: vec![],
             style_ref: None,
             icon: None,
+            image: None,
         }
     }
 

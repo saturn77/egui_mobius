@@ -449,12 +449,50 @@ fn paint_node(painter: &Painter, node: &Node, viewport: &Viewport, icons: &IconL
         }
     }
 
+    if let Some(img) = &node.image {
+        paint_node_image(painter, img, screen_rect);
+    }
     if let Some(icon) = &node.icon {
         paint_node_icon(painter, icon, screen_rect, stroke.color, viewport, icons);
     }
     // (center icons paint before text, so the label reads over the watermark)
     if let Some(text) = &node.overlay.text {
         paint_node_text(painter, text, screen_rect, viewport);
+    }
+}
+
+/// The image's screen rect inside its node — shared by painting and hit-testing.
+pub fn node_image_rect(img: &crate::model::NodeImage, node_rect: Rect) -> Rect {
+    let side = node_rect.width().min(node_rect.height()) * img.scale.clamp(0.05, 2.0);
+    let c = Pos2::new(
+        node_rect.left() + img.center.0 * node_rect.width(),
+        node_rect.top() + img.center.1 * node_rect.height(),
+    );
+    Rect::from_center_size(c, Vec2::splat(side))
+}
+
+/// Paint a node's inner image via egui's image loaders (the HOST installs them —
+/// `egui_extras::install_image_loaders`); a not-yet-loaded or unknown file paints
+/// nothing. Clipped to the node, so a dragged image never spills outside its block.
+fn paint_node_image(painter: &Painter, img: &crate::model::NodeImage, node_rect: Rect) {
+    let uri = if img.source.contains("://") {
+        img.source.clone()
+    } else {
+        format!("file://{}", img.source)
+    };
+    let rect = node_image_rect(img, node_rect);
+    let result = painter.ctx().try_load_texture(
+        &uri,
+        egui::TextureOptions::LINEAR,
+        egui::load::SizeHint::default(),
+    );
+    if let Ok(egui::load::TexturePoll::Ready { texture }) = result {
+        painter.with_clip_rect(node_rect).image(
+            texture.id,
+            rect,
+            Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+            Color32::WHITE,
+        );
     }
 }
 

@@ -190,6 +190,7 @@ mod tests {
             ports: vec![],
             style_ref: None,
             icon: None,
+            image: None,
         };
         // Interior of the parallelogram.
         assert!(contour_contains(&node, (50.0, 50.0)));
