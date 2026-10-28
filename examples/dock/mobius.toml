@@ -1,0 +1,8 @@
+# Compiler directives for dock.mobius — paths resolve relative to this
+# file. `mobius-gen examples/dock/dock.mobius` lands the generated
+# project in the workspace's target/tmp, built against this checkout.
+
+[project]
+out = "../../target/tmp/dock_demo"
+mobius_root = "../.."
+asset_root = "."

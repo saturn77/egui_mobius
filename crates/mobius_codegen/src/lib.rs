@@ -188,10 +188,12 @@ pub fn generate(source: &str, opts: &Options) -> Result<Generated, Error> {
         files.insert("src/theme.rs".into(), theme_rs);
     }
     files.insert("src/citizens/mod.rs".into(), model.emit_citizens_mod());
-    files.insert(
-        format!("src/citizens/{}.rs", model.citizen_snake),
-        model.emit_citizen()?,
-    );
+    for decl in &model.decls {
+        files.insert(
+            format!("src/citizens/{}.rs", decl.snake),
+            model.emit_citizen(decl)?,
+        );
+    }
     files.insert("src/main.rs".into(), model.emit_main(opts));
 
     Ok(Generated {
@@ -217,29 +219,56 @@ struct FieldModel {
     enum_name: Option<String>,
 }
 
+struct IfaceModel {
+    name: String,
+    fields: Vec<FieldModel>,
+    /// `(field_name, payload_enum)` of the single signal field, if any.
+    signal: Option<(String, String)>,
+}
+
+struct PortModel {
+    name: String,
+    iface: String,
+}
+
+struct CitizenDeclModel {
+    ty: String,
+    snake: String,
+    ports: Vec<PortModel>,
+    body: Vec<WidgetNode>,
+}
+
+struct CitizenInstModel {
+    name: String,
+    /// Declaration type name.
+    decl: String,
+    /// `(port_name, iface_instance)` in the declaration's port order.
+    bindings: Vec<(String, String)>,
+}
+
 struct Model {
     app_name: String,
     crate_name: String,
     enums: Vec<EnumModel>,
-    iface_name: String,
-    iface_instance: String,
-    state_fields: Vec<FieldModel>,
-    /// `(field_name, payload_enum)` of the single signal field, if any.
-    signal: Option<(String, String)>,
-    citizen_ty: String,
-    citizen_snake: String,
-    citizen_port: String,
-    body: Vec<WidgetNode>,
+    ifaces: Vec<IfaceModel>,
+    /// `(instance_name, iface_type)` in wiring order.
+    iface_insts: Vec<(String, String)>,
+    decls: Vec<CitizenDeclModel>,
+    insts: Vec<CitizenInstModel>,
+    /// Citizen instances in the top bar, in order.
+    top: Vec<String>,
+    /// `(citizen_instance, region)` — region ∈ left/right/bottom/center.
+    docked: Vec<(String, String)>,
     about: Option<AboutModel>,
-    /// Interface field a `clock` primitive reads — the host writes it
-    /// per frame.
-    clock_field: Option<String>,
-    /// Combo-bound enum field named `theme` → the host applies visuals.
-    theme_field: Option<String>,
+    /// `(iface_instance, field)` written with the wall clock per frame.
+    clock_writes: Vec<(String, String)>,
+    /// `(iface_instance, field, enum)` of the combo-bound `theme` field.
+    theme: Option<(String, String, String)>,
 }
 
 struct AboutModel {
-    trigger_field: String,
+    /// `(iface_instance, field)` of the bool cell that opens the window.
+    trigger: (String, String),
     title: String,
     tagline: String,
     /// Source-relative path of the banner image, copied into the generated
@@ -254,7 +283,7 @@ struct AboutModel {
 impl Model {
     fn build(app: &App) -> Result<Model, Error> {
         let mut enums: Vec<EnumModel> = Vec::new();
-        let mut iface = None;
+        let mut iface_decls: Vec<&mobius_lang::ast::Interface> = Vec::new();
         let mut citizens: Vec<&CitizenDecl> = Vec::new();
         let mut wiring: Vec<&Stmt> = Vec::new();
         let mut layout: Vec<&Stmt> = Vec::new();
@@ -266,11 +295,7 @@ impl Model {
                     variants: e.variants.clone(),
                     combo: false,
                 }),
-                AppItem::Interface(i) => {
-                    if iface.replace(i).is_some() {
-                        return Err(Error::Unsupported("multiple interfaces (v0 handles one)".into()));
-                    }
-                }
+                AppItem::Interface(i) => iface_decls.push(i),
                 AppItem::Citizen(c) => citizens.push(c),
                 AppItem::Section(s) => match s.name.as_str() {
                     "wiring" => wiring.extend(&s.stmts),
@@ -287,114 +312,248 @@ impl Model {
             }
         }
 
-        let iface = iface.ok_or_else(|| Error::Unsupported("no `interface`".into()))?;
-        let [citizen]: [&CitizenDecl; 1] = citizens
-            .try_into()
-            .map_err(|_| Error::Unsupported("exactly one citizen (v0)".into()))?;
-
-        // Interface fields → Path A cells + the Path B signal.
-        let mut state_fields = Vec::new();
-        let mut signal = None;
-        for field in &iface.fields {
-            match &field.kind {
-                FieldKind::State { ty, default } => {
-                    let ty_name = ty.path.joined();
-                    let enum_name = enums.iter().find(|e| e.name == ty_name).map(|e| e.name.clone());
-                    state_fields.push(FieldModel {
-                        name: field.name.clone(),
-                        rust_ty: rust_type(&ty_name),
-                        default: render_default(&field.name, default.as_ref())?,
-                        enum_name,
-                    });
-                }
-                FieldKind::Signal { ty } => {
-                    if signal
-                        .replace((field.name.clone(), ty.path.joined()))
-                        .is_some()
-                    {
-                        return Err(Error::Unsupported("multiple signal fields (v0)".into()));
+        // Interface declarations → Path A cell structs + Path B signals.
+        let mut ifaces = Vec::new();
+        for iface in &iface_decls {
+            let mut fields = Vec::new();
+            let mut signal = None;
+            for field in &iface.fields {
+                match &field.kind {
+                    FieldKind::State { ty, default } => {
+                        let ty_name = ty.path.joined();
+                        let enum_name =
+                            enums.iter().find(|e| e.name == ty_name).map(|e| e.name.clone());
+                        fields.push(FieldModel {
+                            name: field.name.clone(),
+                            rust_ty: rust_type(&ty_name),
+                            default: render_default(&field.name, default.as_ref())?,
+                            enum_name,
+                        });
+                    }
+                    FieldKind::Signal { ty } => {
+                        if signal
+                            .replace((field.name.clone(), ty.path.joined()))
+                            .is_some()
+                        {
+                            return Err(Error::Unsupported(format!(
+                                "multiple signal fields in `{}` (v0)",
+                                iface.name
+                            )));
+                        }
+                    }
+                    FieldKind::Array { .. } => {
+                        return Err(Error::Unsupported(format!(
+                            "array field `{}` (v0)",
+                            field.name
+                        )));
                     }
                 }
-                FieldKind::Array { .. } => {
-                    return Err(Error::Unsupported(format!("array field `{}` (v0)", field.name)));
-                }
             }
+            ifaces.push(IfaceModel {
+                name: iface.name.clone(),
+                fields,
+                signal,
+            });
         }
 
-        // Wiring: instance names for the interface and the citizen.
-        let mut iface_instance = None;
-        for stmt in &wiring {
-            if let Stmt::Instance { name, ty, .. } = stmt {
-                if ty.joined() == iface.name {
-                    iface_instance = Some(name.clone());
+        // Citizen declarations: ports name their interface type.
+        let mut decls = Vec::new();
+        for citizen in &citizens {
+            if citizen.ports.is_empty() {
+                return Err(Error::Unsupported(format!(
+                    "citizen `{}` has no port",
+                    citizen.name
+                )));
+            }
+            let mut ports = Vec::new();
+            for port in &citizen.ports {
+                // `Chrome.ribbon` — the modport view is not checked here
+                // (that's lower()'s job); codegen needs the interface type.
+                let iface = port.ty.path.segments[0].clone();
+                if !ifaces.iter().any(|i| i.name == iface) {
+                    return Err(Error::Unsupported(format!(
+                        "port `{}` of `{}` names unknown interface `{iface}`",
+                        port.name, citizen.name
+                    )));
                 }
+                ports.push(PortModel {
+                    name: port.name.clone(),
+                    iface,
+                });
+            }
+            decls.push(CitizenDeclModel {
+                ty: citizen.name.clone(),
+                snake: snake_case(&citizen.name),
+                ports,
+                body: citizen.body.clone(),
+            });
+        }
+
+        // Wiring: interface instances, then citizen instances with their
+        // port bindings (`Ribbon(c = chrome.ribbon)` → c ↔ chrome).
+        let mut iface_insts: Vec<(String, String)> = Vec::new();
+        let mut insts: Vec<CitizenInstModel> = Vec::new();
+        for stmt in &wiring {
+            let Stmt::Instance { name, ty, args, .. } = stmt else {
+                continue;
+            };
+            let ty = ty.joined();
+            if ifaces.iter().any(|i| i.name == ty) {
+                iface_insts.push((name.clone(), ty));
+            } else if let Some(decl) = decls.iter().find(|d| d.ty == ty) {
+                let mut bindings = Vec::new();
+                for port in &decl.ports {
+                    let arg = args
+                        .iter()
+                        .find(|a| a.name == port.name)
+                        .ok_or_else(|| {
+                            Error::Unsupported(format!(
+                                "instance `{name}` does not bind port `{}`",
+                                port.name
+                            ))
+                        })?;
+                    let Expr::Path(p) = &arg.value else {
+                        return Err(Error::Unsupported(format!(
+                            "binding for `{name}.{}` must be `instance.modport`",
+                            port.name
+                        )));
+                    };
+                    let iface_inst = p.segments[0].clone();
+                    match iface_insts.iter().find(|(n, _)| n == &iface_inst) {
+                        Some((_, iface_ty)) if iface_ty == &port.iface => {}
+                        Some((_, iface_ty)) => {
+                            return Err(Error::Unsupported(format!(
+                                "`{name}.{}` wants `{}` but `{iface_inst}` is `{iface_ty}`",
+                                port.name, port.iface
+                            )));
+                        }
+                        None => {
+                            return Err(Error::Unsupported(format!(
+                                "binding for `{name}.{}` names unknown instance `{iface_inst}`",
+                                port.name
+                            )));
+                        }
+                    }
+                    bindings.push((port.name.clone(), iface_inst));
+                }
+                insts.push(CitizenInstModel {
+                    name: name.clone(),
+                    decl: decl.ty.clone(),
+                    bindings,
+                });
+            } else {
+                return Err(Error::Unsupported(format!(
+                    "instance `{name}` of unknown type `{ty}`"
+                )));
             }
         }
-        let iface_instance = iface_instance
-            .ok_or_else(|| Error::Unsupported(format!("`{}` never instantiated in @wiring", iface.name)))?;
 
         // Layout directives.
         let mut about = None;
+        let mut top = Vec::new();
+        let mut docked = Vec::new();
         for stmt in &layout {
             if let Stmt::Directive { name, args, .. } = stmt {
                 match name.as_str() {
-                    // v0: the single citizen is the top bar; the directive
-                    // is accepted and checked for presence only.
-                    "top" => {}
-                    "about" => about = Some(parse_about(args, &iface_instance)?),
+                    "top" => {
+                        for arg in args {
+                            if let DirectiveArg::Positional(Expr::Path(p)) = arg {
+                                top.push(p.joined());
+                            }
+                        }
+                    }
+                    "dock" => docked.push(parse_dock(args)?),
+                    "about" => about = Some(parse_about(args, &iface_insts)?),
                     other => {
                         return Err(Error::Unsupported(format!("@layout directive `{other}`")));
                     }
                 }
             }
         }
+        for placed in top.iter().chain(docked.iter().map(|(i, _)| i)) {
+            if !insts.iter().any(|i| &i.name == placed) {
+                return Err(Error::Unsupported(format!(
+                    "@layout places unknown citizen instance `{placed}`"
+                )));
+            }
+        }
+        if !docked.is_empty() && !docked.iter().any(|(_, r)| r == "center") {
+            return Err(Error::Unsupported(
+                "dock layout needs at least one `region = center`".into(),
+            ));
+        }
 
-        let port = citizen
-            .ports
-            .first()
-            .ok_or_else(|| Error::Unsupported(format!("citizen `{}` has no port", citizen.name)))?;
-
-        // Scan the widget tree for primitives that put obligations on the
-        // host (clock writer, theme visuals) or on the enums (combo).
-        let mut clock_field = None;
-        let mut theme_field = None;
-        scan_widgets(&citizen.body, &mut |p: &mobius_lang::ast::Primitive| {
-            match (p.kind.as_str(), &p.binding) {
-                ("clock", Binding::Read { path, .. }) => {
-                    clock_field = path.segments.last().cloned();
-                }
-                ("combo", Binding::TwoWay { path, .. }) => {
-                    let field_name = path.segments.last().cloned().unwrap_or_default();
-                    if let Some(f) = state_fields.iter().find(|f| f.name == field_name) {
-                        if let Some(enum_name) = &f.enum_name {
-                            if let Some(e) = enums.iter_mut().find(|e| &e.name == enum_name) {
-                                e.combo = true;
-                                if field_name == "theme" {
-                                    theme_field = Some(field_name.clone());
+        // Scan widget trees for host obligations (clock writers, the theme
+        // enum) and enum needs (combo). Per-instance: a clock in a
+        // declaration obliges every instance's bound interface.
+        let mut clock_writes: Vec<(String, String)> = Vec::new();
+        let mut theme: Option<(String, String, String)> = None;
+        for decl in &decls {
+            let mut decl_clock_fields: Vec<(String, String)> = Vec::new(); // (port, field)
+            let mut decl_theme: Option<(String, String, String)> = None; // (port, field, enum)
+            scan_widgets(&decl.body, &mut |p: &mobius_lang::ast::Primitive| {
+                match (p.kind.as_str(), &p.binding) {
+                    ("clock", Binding::Read { path, .. }) => {
+                        if let [port, field] = path.segments.as_slice() {
+                            decl_clock_fields.push((port.clone(), field.clone()));
+                        }
+                    }
+                    ("combo", Binding::TwoWay { path, .. }) => {
+                        if let [port, field] = path.segments.as_slice() {
+                            let iface = decl.ports.iter().find(|pm| &pm.name == port);
+                            let enum_name = iface.and_then(|pm| {
+                                ifaces
+                                    .iter()
+                                    .find(|i| i.name == pm.iface)
+                                    .and_then(|i| i.fields.iter().find(|f| &f.name == field))
+                                    .and_then(|f| f.enum_name.clone())
+                            });
+                            if let Some(enum_name) = enum_name {
+                                if let Some(e) = enums.iter_mut().find(|e| e.name == enum_name) {
+                                    e.combo = true;
+                                }
+                                if field == "theme" {
+                                    decl_theme =
+                                        Some((port.clone(), field.clone(), enum_name));
                                 }
                             }
                         }
                     }
+                    _ => {}
                 }
-                _ => {}
+            });
+            for inst in insts.iter().filter(|i| i.decl == decl.ty) {
+                for (port, field) in &decl_clock_fields {
+                    if let Some((_, iface_inst)) =
+                        inst.bindings.iter().find(|(p, _)| p == port)
+                    {
+                        clock_writes.push((iface_inst.clone(), field.clone()));
+                    }
+                }
+                if let (Some((port, field, enum_name)), None) = (&decl_theme, &theme) {
+                    if let Some((_, iface_inst)) =
+                        inst.bindings.iter().find(|(p, _)| p == port)
+                    {
+                        theme = Some((iface_inst.clone(), field.clone(), enum_name.clone()));
+                    }
+                }
             }
-        });
+        }
+        clock_writes.dedup();
 
         Ok(Model {
             app_name: app.name.clone(),
             crate_name: snake_case(&app.name),
             enums,
-            iface_name: iface.name.clone(),
-            iface_instance,
-            state_fields,
-            signal,
-            citizen_ty: citizen.name.clone(),
-            citizen_snake: snake_case(&citizen.name),
-            citizen_port: port.name.clone(),
-            body: citizen.body.clone(),
+            ifaces,
+            iface_insts,
+            decls,
+            insts,
+            top,
+            docked,
             about,
-            clock_field,
-            theme_field,
+            clock_writes,
+            theme,
         })
     }
 
@@ -419,7 +578,7 @@ eframe = {{ version = "{egui}", default-features = false, features = [
     "wayland",
     "x11",
 ] }}
-egui = "{egui}"{image_deps}
+egui = "{egui}"{image_deps}{dock_dep}
 egui_citizen = {{ path = "{citizen}" }}
 egui_mobius_reactive = {{ path = "{reactive}" }}
 
@@ -442,6 +601,11 @@ opt-level = 2
             } else {
                 ""
             },
+            dock_dep = if self.docked.is_empty() {
+                ""
+            } else {
+                "\negui_dock = \"0.21\""
+            },
             citizen = citizen_dep.display(),
             reactive = reactive_dep.display(),
         )
@@ -455,12 +619,11 @@ opt-level = 2
             out,
             "//! Shared state for {app} — generated by mobius_codegen.\n\
              //!\n\
-             //! `{iface}` is the app's Path A boundary: one `Dynamic<T>` cell per\n\
-             //! interface state field. Citizens hold `&{iface}` and read / write\n\
-             //! the cells; nothing here is passed `&mut`.\n\n\
+             //! Each interface is a Path A boundary: one `Dynamic<T>` cell per\n\
+             //! state field. Citizens hold `&Iface` and read / write the cells;\n\
+             //! nothing here is passed `&mut`.\n\n\
              use egui_mobius_reactive::Dynamic;\n",
             app = self.app_name,
-            iface = self.iface_name,
         );
 
         for e in &self.enums {
@@ -498,25 +661,27 @@ opt-level = 2
             }
         }
 
-        let _ = write!(
-            out,
-            "\n/// Path A cells of the `{iface}` interface.\n\
-             #[derive(Clone)]\n\
-             pub struct {iface} {{\n",
-            iface = self.iface_name,
-        );
-        for f in &self.state_fields {
-            let _ = writeln!(out, "    pub {}: Dynamic<{}>,", f.name, f.rust_ty);
+        for iface in &self.ifaces {
+            let _ = write!(
+                out,
+                "\n/// Path A cells of the `{name}` interface.\n\
+                 #[derive(Clone)]\n\
+                 pub struct {name} {{\n",
+                name = iface.name,
+            );
+            for f in &iface.fields {
+                let _ = writeln!(out, "    pub {}: Dynamic<{}>,", f.name, f.rust_ty);
+            }
+            let _ = write!(
+                out,
+                "}}\n\nimpl {name} {{\n    pub fn new() -> Self {{\n        Self {{\n",
+                name = iface.name,
+            );
+            for f in &iface.fields {
+                let _ = writeln!(out, "            {}: Dynamic::new({}),", f.name, f.default);
+            }
+            out.push_str("        }\n    }\n}\n");
         }
-        let _ = write!(
-            out,
-            "}}\n\nimpl {iface} {{\n    pub fn new() -> Self {{\n        Self {{\n",
-            iface = self.iface_name,
-        );
-        for f in &self.state_fields {
-            let _ = writeln!(out, "            {}: Dynamic::new({}),", f.name, f.default);
-        }
-        out.push_str("        }\n    }\n}\n");
         out
     }
 
@@ -602,45 +767,99 @@ opt-level = 2
 
     /// The enum behind the combo-bound `theme` field, if there is one.
     fn theme_enum(&self) -> Option<String> {
-        let field = self.theme_field.as_ref()?;
-        self.state_fields
-            .iter()
-            .find(|f| &f.name == field)
-            .and_then(|f| f.enum_name.clone())
+        self.theme.as_ref().map(|(_, _, e)| e.clone())
     }
 
     // ── src/citizens/ ───────────────────────────────────────────────────
 
     fn emit_citizens_mod(&self) -> String {
-        format!(
-            "//! Citizen modules — generated by mobius_codegen.\n\n\
-             pub mod {snake};\n\npub use {snake}::{ty};\n",
-            snake = self.citizen_snake,
-            ty = self.citizen_ty,
-        )
+        let mut out = "//! Citizen modules — generated by mobius_codegen.\n\n".to_owned();
+        for decl in &self.decls {
+            let _ = writeln!(out, "pub mod {};", decl.snake);
+        }
+        out.push('\n');
+        for decl in &self.decls {
+            let _ = writeln!(out, "pub use {}::{};", decl.snake, decl.ty);
+        }
+        out
     }
 
-    fn emit_citizen(&self) -> Result<String, Error> {
-        let mut uses = vec![self.iface_name.clone()];
-        if let Some((_, payload)) = &self.signal {
-            uses.push(payload.clone());
+    /// The Path B signal reachable from a declaration's ports, if any:
+    /// `(port, signal_field, payload_enum)`.
+    fn decl_signal(&self, decl: &CitizenDeclModel) -> Option<(String, String, String)> {
+        decl.ports.iter().find_map(|port| {
+            self.ifaces
+                .iter()
+                .find(|i| i.name == port.iface)
+                .and_then(|i| i.signal.clone())
+                .map(|(field, payload)| (port.name.clone(), field, payload))
+        })
+    }
+
+    /// The field a binding path names: `(port, field_model)`.
+    fn port_field(
+        &self,
+        decl: &CitizenDeclModel,
+        path: &mobius_lang::ast::Path,
+    ) -> Result<(String, FieldModel), Error> {
+        if let [port, field] = path.segments.as_slice() {
+            if let Some(pm) = decl.ports.iter().find(|pm| &pm.name == port) {
+                if let Some(f) = self
+                    .ifaces
+                    .iter()
+                    .find(|i| i.name == pm.iface)
+                    .and_then(|i| i.fields.iter().find(|f| &f.name == field))
+                {
+                    return Ok((
+                        port.clone(),
+                        FieldModel {
+                            name: f.name.clone(),
+                            rust_ty: f.rust_ty.clone(),
+                            default: f.default.clone(),
+                            enum_name: f.enum_name.clone(),
+                        },
+                    ));
+                }
+            }
+        }
+        Err(Error::Unsupported(format!(
+            "binding path `{}` in `{}` (expected `<port>.<field>`)",
+            path.joined(),
+            decl.ty
+        )))
+    }
+
+    fn emit_citizen(&self, decl: &CitizenDeclModel) -> Result<String, Error> {
+        let mut uses: Vec<String> = decl.ports.iter().map(|p| p.iface.clone()).collect();
+        if let Some((_, _, payload)) = self.decl_signal(decl) {
+            uses.push(payload);
         }
         for e in &self.enums {
-            if e.combo && !uses.contains(&e.name) {
+            if e.combo
+                && decl.ports.iter().any(|p| {
+                    self.ifaces
+                        .iter()
+                        .find(|i| i.name == p.iface)
+                        .is_some_and(|i| {
+                            i.fields.iter().any(|f| f.enum_name.as_deref() == Some(&e.name))
+                        })
+                })
+            {
                 uses.push(e.name.clone());
             }
         }
         uses.sort();
+        uses.dedup();
 
         let mut out = format!(
             "//! The {ty} citizen — generated by mobius_codegen.\n\n\
              use egui_citizen::citizen_panel;\n\n\
              use crate::state::{{{uses}}};\n\n",
-            ty = self.citizen_ty,
+            ty = decl.ty,
             uses = uses.join(", "),
         );
 
-        if let Some((signal_name, payload)) = &self.signal {
+        if let Some((_, signal_name, payload)) = self.decl_signal(decl) {
             let _ = write!(
                 out,
                 "citizen_panel!({ty}, \"{id}\",\n\
@@ -648,45 +867,42 @@ opt-level = 2
                  \x20   // app once per frame.\n\
                  \x20   outbox: Vec<{payload}> = Vec::new(),\n\
                  );\n\n",
-                ty = self.citizen_ty,
-                id = self.citizen_snake,
+                ty = decl.ty,
+                id = decl.snake,
             );
         } else {
-            let _ = write!(out, "citizen_panel!({}, \"{}\");\n\n", self.citizen_ty, self.citizen_snake);
+            let _ = write!(out, "citizen_panel!({}, \"{}\");\n\n", decl.ty, decl.snake);
         }
 
+        let params: String = decl
+            .ports
+            .iter()
+            .map(|p| format!(", {}: &{}", p.name, p.iface))
+            .collect();
         let _ = write!(
             out,
-            "impl {ty} {{\n    pub fn show(&mut self, ui: &mut egui::Ui, {port}: &{iface}) {{\n",
-            ty = self.citizen_ty,
-            port = self.citizen_port,
-            iface = self.iface_name,
+            "impl {ty} {{\n    pub fn show(&mut self, ui: &mut egui::Ui{params}) {{\n",
+            ty = decl.ty,
         );
         let _ = writeln!(out, "        ui.add_space(3.0);");
-        if self.chrome_needs_theme() {
-            let _ = writeln!(
-                out,
-                "        let theme = {}.{}.get();",
-                self.citizen_port,
-                self.theme_field.as_deref().unwrap_or("theme"),
-            );
+        if let Some((port, field)) = self.chrome_theme_binding(decl) {
+            let _ = writeln!(out, "        let theme = {port}.{field}.get();");
         }
         let mut body = String::new();
-        self.emit_widgets(&self.body, 2, &mut body)?;
+        self.emit_widgets(decl, &decl.body, 2, &mut body)?;
         out.push_str(&body);
         out.push_str("    }\n}\n");
         Ok(out)
     }
 
-    /// Does the citizen body contain chrome that reads `theme.brand()` /
-    /// `theme.accent()`? (wordmark, clock, or the about-trigger button)
-    fn chrome_needs_theme(&self) -> bool {
-        if self.theme_field.is_none() {
-            return false;
-        }
-        let trigger = self.about.as_ref().map(|a| a.trigger_field.as_str());
+    /// If this declaration's chrome (wordmark, clock, about-trigger
+    /// button) wants theme colours, the `(port, field)` to read the theme
+    /// from — a port whose interface carries the combo-bound theme field.
+    fn chrome_theme_binding(&self, decl: &CitizenDeclModel) -> Option<(String, String)> {
+        let (_, theme_field, _) = self.theme.as_ref()?;
+        let trigger = self.about.as_ref().map(|a| a.trigger.1.as_str());
         let mut needs = false;
-        scan_widgets(&self.body, &mut |p| match (p.kind.as_str(), &p.binding) {
+        scan_widgets(&decl.body, &mut |p| match (p.kind.as_str(), &p.binding) {
             ("wordmark", _) | ("clock", _) => needs = true,
             ("button", Binding::TwoWay { path, .. }) => {
                 if path.segments.last().map(String::as_str) == trigger {
@@ -695,22 +911,39 @@ opt-level = 2
             }
             _ => {}
         });
-        needs
+        if !needs {
+            return None;
+        }
+        decl.ports
+            .iter()
+            .find(|pm| {
+                self.ifaces
+                    .iter()
+                    .find(|i| i.name == pm.iface)
+                    .is_some_and(|i| i.fields.iter().any(|f| &f.name == theme_field))
+            })
+            .map(|pm| (pm.name.clone(), theme_field.clone()))
     }
 
-    fn emit_widgets(&self, nodes: &[WidgetNode], depth: usize, out: &mut String) -> Result<(), Error> {
+    fn emit_widgets(
+        &self,
+        decl: &CitizenDeclModel,
+        nodes: &[WidgetNode],
+        depth: usize,
+        out: &mut String,
+    ) -> Result<(), Error> {
         let pad = "    ".repeat(depth);
         for node in nodes {
             match node {
                 WidgetNode::Container { kind, children, span } => match kind.as_str() {
                     "row" => {
                         let _ = writeln!(out, "{pad}ui.horizontal(|ui| {{");
-                        self.emit_widgets(children, depth + 1, out)?;
+                        self.emit_widgets(decl, children, depth + 1, out)?;
                         let _ = writeln!(out, "{pad}}});");
                     }
                     "column" => {
                         let _ = writeln!(out, "{pad}ui.vertical(|ui| {{");
-                        self.emit_widgets(children, depth + 1, out)?;
+                        self.emit_widgets(decl, children, depth + 1, out)?;
                         let _ = writeln!(out, "{pad}}});");
                     }
                     "right" => {
@@ -722,7 +955,7 @@ opt-level = 2
                             "{pad}ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {{"
                         );
                         let reversed: Vec<WidgetNode> = children.iter().rev().cloned().collect();
-                        self.emit_widgets(&reversed, depth + 1, out)?;
+                        self.emit_widgets(decl, &reversed, depth + 1, out)?;
                         let _ = writeln!(out, "{pad}}});");
                     }
                     other => {
@@ -732,7 +965,7 @@ opt-level = 2
                 WidgetNode::For { span, .. } => {
                     return Err(Error::Unsupported(format!("`for` loops (v0) at {span:?}")));
                 }
-                WidgetNode::Primitive(p) => self.emit_primitive(p, &pad, out)?,
+                WidgetNode::Primitive(p) => self.emit_primitive(decl, p, &pad, out)?,
             }
         }
         Ok(())
@@ -740,17 +973,19 @@ opt-level = 2
 
     fn emit_primitive(
         &self,
+        decl: &CitizenDeclModel,
         p: &mobius_lang::ast::Primitive,
         pad: &str,
         out: &mut String,
     ) -> Result<(), Error> {
         let label = p.label.as_deref().unwrap_or("");
+        let themed = self.chrome_theme_binding(decl).is_some();
         match (p.kind.as_str(), &p.binding) {
             ("separator", Binding::None) => {
                 let _ = writeln!(out, "{pad}ui.separator();");
             }
             ("wordmark", Binding::None) => {
-                if self.theme_field.is_some() {
+                if themed {
                     // Two-tone wordmark in the theme's brand colours, split
                     // at the camel hump (CopperTrace house style).
                     let (head, tail) = split_wordmark(label);
@@ -776,24 +1011,37 @@ opt-level = 2
                 }
             }
             ("label", Binding::Read { path, .. }) | ("clock", Binding::Read { path, .. }) => {
-                let field = self.port_field(path)?;
+                let (port, field) = self.port_field(decl, path)?;
                 if p.kind == "clock" {
-                    let style = if self.theme_field.is_some() {
+                    let style = if themed {
                         ".monospace().color(theme.accent())"
                     } else {
                         ".monospace().weak()"
                     };
                     let _ = writeln!(
                         out,
-                        "{pad}ui.label(egui::RichText::new({port}.{field}.get()){style});",
-                        port = self.citizen_port,
+                        "{pad}ui.label(egui::RichText::new({port}.{name}.get()){style});",
+                        name = field.name,
                     );
                 } else {
-                    let _ = writeln!(out, "{pad}ui.label({}.{field}.get());", self.citizen_port);
+                    // Typed display: strings label directly, floats get a
+                    // stable precision, everything else goes through Display.
+                    let line = match field.rust_ty.as_str() {
+                        "String" => format!("ui.label({port}.{}.get());", field.name),
+                        "f32" | "f64" => format!(
+                            "ui.label(format!(\"{{:.2}}\", {port}.{}.get()));",
+                            field.name
+                        ),
+                        _ => format!(
+                            "ui.label(format!(\"{{}}\", {port}.{}.get()));",
+                            field.name
+                        ),
+                    };
+                    let _ = writeln!(out, "{pad}{line}");
                 }
             }
             ("button", Binding::Event(expr)) => {
-                let push = self.render_event(expr)?;
+                let push = self.render_event(decl, expr)?;
                 let _ = writeln!(out, "{pad}if ui.button(\"{label}\").clicked() {{");
                 let _ = writeln!(out, "{pad}    {push}");
                 let _ = writeln!(out, "{pad}}}");
@@ -802,39 +1050,49 @@ opt-level = 2
                 // A button two-way bound to a bool cell: click sets it true;
                 // whoever owns the consequence (a modal, the host) sets it
                 // back to false.
-                let field = self.port_field(path)?;
-                let is_about = self.theme_field.is_some()
-                    && self.about.as_ref().map(|a| a.trigger_field.as_str()) == Some(field.as_str());
+                let (port, field) = self.port_field(decl, path)?;
+                let is_about = themed
+                    && self.about.as_ref().map(|a| a.trigger.1.as_str())
+                        == Some(field.name.as_str());
                 let button = if is_about {
                     format!("ui.button(egui::RichText::new(\"{label}\").color(theme.accent()))")
                 } else {
                     format!("ui.button(\"{label}\")")
                 };
                 let _ = writeln!(out, "{pad}if {button}.clicked() {{");
-                let _ = writeln!(out, "{pad}    {}.{field}.set(true);", self.citizen_port);
+                let _ = writeln!(out, "{pad}    {port}.{}.set(true);", field.name);
+                let _ = writeln!(out, "{pad}}}");
+            }
+            ("slider", Binding::TwoWay { path, .. }) => {
+                let (port, field) = self.port_field(decl, path)?;
+                let (lo, hi) = p.range.as_ref().ok_or_else(|| {
+                    Error::Unsupported(format!("slider `{}` needs a `lo..hi` range", field.name))
+                })?;
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let _ = writeln!(
+                    out,
+                    "{pad}if ui.add(egui::Slider::new(&mut value, {lo}..={hi}).text(\"{label}\")).changed() {{",
+                    lo = render_number(lo),
+                    hi = render_number(hi),
+                );
+                let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
             ("combo", Binding::TwoWay { path, .. }) => {
-                let field = self.port_field(path)?;
-                let enum_name = self
-                    .state_fields
-                    .iter()
-                    .find(|f| f.name == field)
-                    .and_then(|f| f.enum_name.clone())
-                    .ok_or_else(|| {
-                        Error::Unsupported(format!("combo on non-enum field `{field}`"))
-                    })?;
-                let port = &self.citizen_port;
+                let (port, field) = self.port_field(decl, path)?;
+                let enum_name = field.enum_name.clone().ok_or_else(|| {
+                    Error::Unsupported(format!("combo on non-enum field `{}`", field.name))
+                })?;
                 let selected = if label.is_empty() {
                     "picked.label().to_owned()".to_owned()
                 } else {
                     format!("format!(\"{label} {{}}\", picked.label())")
                 };
-                let _ = writeln!(out, "{pad}let mut picked = {port}.{field}.get();");
+                let _ = writeln!(out, "{pad}let mut picked = {port}.{}.get();", field.name);
                 let _ = writeln!(
                     out,
                     "{pad}egui::ComboBox::from_id_salt(\"{salt}\")",
-                    salt = format!("{}_{field}", self.citizen_snake),
+                    salt = format!("{}_{}", decl.snake, field.name),
                 );
                 let _ = writeln!(out, "{pad}    .selected_text({selected})");
                 let _ = writeln!(out, "{pad}    .show_ui(ui, |ui| {{");
@@ -845,9 +1103,9 @@ opt-level = 2
                 );
                 let _ = writeln!(out, "{pad}        }}");
                 let _ = writeln!(out, "{pad}    }});");
-                let _ = writeln!(out, "{pad}if picked != {port}.{field}.get() {{");
-                let _ = writeln!(out, "{pad}    {port}.{field}.set(picked);");
-                if self.theme_field.as_deref() == Some(field.as_str()) {
+                let _ = writeln!(out, "{pad}if picked != {port}.{}.get() {{", field.name);
+                let _ = writeln!(out, "{pad}    {port}.{}.set(picked);", field.name);
+                if self.theme.as_ref().map(|(_, f, _)| f.as_str()) == Some(field.name.as_str()) {
                     let _ = writeln!(out, "{pad}    picked.apply(ui.ctx());");
                 }
                 let _ = writeln!(out, "{pad}}}");
@@ -862,29 +1120,16 @@ opt-level = 2
         Ok(())
     }
 
-    /// `c.field` → `field`, checking the port prefix.
-    fn port_field(&self, path: &mobius_lang::ast::Path) -> Result<String, Error> {
-        match path.segments.as_slice() {
-            [port, field] if *port == self.citizen_port => Ok(field.clone()),
-            _ => Err(Error::Unsupported(format!(
-                "binding path `{}` (expected `{}.<field>`)",
-                path.joined(),
-                self.citizen_port
-            ))),
-        }
-    }
-
     /// `-> c.actions(RibbonCmd::New)` → `self.outbox.push(RibbonCmd::New);`
-    fn render_event(&self, expr: &Expr) -> Result<String, Error> {
+    fn render_event(&self, decl: &CitizenDeclModel, expr: &Expr) -> Result<String, Error> {
         let Expr::Call { path, args, .. } = expr else {
             return Err(Error::Unsupported("event binding must be a call".into()));
         };
-        let (signal_name, _) = self
-            .signal
-            .as_ref()
-            .ok_or_else(|| Error::Unsupported("event fired but no signal field".into()))?;
+        let (signal_port, signal_name, _) = self.decl_signal(decl).ok_or_else(|| {
+            Error::Unsupported(format!("event fired but `{}` reaches no signal field", decl.ty))
+        })?;
         match path.segments.as_slice() {
-            [port, field] if *port == self.citizen_port && field == signal_name => {}
+            [port, field] if *port == signal_port && *field == signal_name => {}
             _ => {
                 return Err(Error::Unsupported(format!(
                     "event target `{}` is not the signal field",
@@ -904,84 +1149,260 @@ opt-level = 2
     // ── src/main.rs ─────────────────────────────────────────────────────
 
     fn emit_main(&self, opts: &Options) -> String {
-        let iface = &self.iface_name;
-        let inst = &self.iface_instance;
-        let citizen_ty = &self.citizen_ty;
-        let snake = &self.citizen_snake;
+        let has_dock = !self.docked.is_empty();
+        let need_ctx = self.about.is_some() || !self.clock_writes.is_empty();
+        let has_splits = self.docked.iter().any(|(_, r)| r != "center");
+        let dock_use = if !has_dock {
+            ""
+        } else if has_splits {
+            "use egui_dock::{DockArea, DockState, NodeIndex};\n"
+        } else {
+            "use egui_dock::{DockArea, DockState};\n"
+        };
         let mut out = format!(
             "//! {app} — generated by mobius_codegen.\n\
              //!\n\
              //! Wiring follows the egui_mobius book: Path A state lives in the\n\
-             //! `state::{iface}` cells, the citizen's Path B events drain through\n\
-             //! `actions::handle` once per frame, and the registry handles\n\
-             //! lifecycle only.\n\n\
+             //! `state::*` cells, citizens' Path B events drain through actions\n\
+             //! once per frame, and the registry handles lifecycle only.\n\n\
              mod citizens;\n\
              mod state;\n\
              {mod_theme}\n\
              use eframe::egui;\n\
-             use egui_citizen::Registry;\n\n\
-             struct App {{\n\
-             \x20   registry: Registry,\n\
-             \x20   {inst}: state::{iface},\n\
-             \x20   {snake}: citizens::{citizen_ty},\n\
-             }}\n\n\
-             impl App {{\n\
-             \x20   fn new() -> Self {{\n\
-             \x20       let mut registry = Registry::new();\n\
-             \x20       let {snake}_state = registry.add().with_name(\"{snake}\");\n\
-             \x20       let _ = registry.drain_messages(); // discard setup messages\n\
-             \x20       Self {{\n\
-             \x20           registry,\n\
-             \x20           {inst}: state::{iface}::new(),\n\
-             \x20           {snake}: citizens::{citizen_ty}::new({snake}_state),\n\
-             \x20       }}\n\
-             \x20   }}\n\
-             }}\n\n\
-             impl eframe::App for App {{\n\
-             \x20   fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {{\n\
-             \x20       let ctx = ui.ctx().clone();\n",
+             use egui_citizen::Registry;\n{dock_use}\n",
             app = self.app_name,
-            mod_theme = if self.theme_field.is_some() { "mod theme;\n" } else { "" },
+            mod_theme = if self.theme.is_some() { "mod theme;\n" } else { "" },
         );
 
-        if let Some(clock) = &self.clock_field {
-            let _ = writeln!(out, "        self.{inst}.{clock}.set(wall_clock());");
+        // ── Tab enum (docked instances only) ────────────────────────────
+        if has_dock {
+            out.push_str(
+                "/// One dock tab per docked citizen instance.\n\
+                 #[derive(Clone, Copy, PartialEq)]\n\
+                 enum Tab {\n",
+            );
+            for (inst, _) in &self.docked {
+                let _ = writeln!(out, "    {},", camel_case(inst));
+            }
+            out.push_str(
+                "}\n\nimpl Tab {\n    /// The instance id — registry name and citizen id.\n\
+                 \x20   fn id(self) -> &'static str {\n        match self {\n",
+            );
+            for (inst, _) in &self.docked {
+                let _ = writeln!(out, "            Tab::{} => \"{inst}\",", camel_case(inst));
+            }
+            out.push_str("        }\n    }\n}\n\n");
+        }
+
+        // ── App struct ──────────────────────────────────────────────────
+        out.push_str("struct App {\n    registry: Registry,\n");
+        if has_dock {
+            out.push_str("    dock_state: DockState<Tab>,\n");
+        }
+        for (inst, iface) in &self.iface_insts {
+            let _ = writeln!(out, "    {inst}: state::{iface},");
+        }
+        for inst in &self.insts {
+            let _ = writeln!(out, "    {}: citizens::{},", inst.name, inst.decl);
+        }
+        out.push_str("}\n\nimpl App {\n    fn new() -> Self {\n        let mut registry = Registry::new();\n");
+        for inst in &self.insts {
             let _ = writeln!(
                 out,
-                "        ctx.request_repaint_after(std::time::Duration::from_millis(250));"
+                "        let {}_state = registry.add().with_name(\"{}\");",
+                inst.name, inst.name
             );
         }
-
-        let _ = write!(
-            out,
-            "\n        egui::Panel::top(\"{snake}\").show(ui, |ui| {{\n\
-             \x20           self.{snake}.show(ui, &self.{inst});\n\
-             \x20       }});\n\
-             \x20       egui::CentralPanel::default().show(ui, |ui| {{\n\
-             \x20           ui.weak(\"Generated by mobius_codegen — the bar above is the {citizen_ty} citizen.\");\n\
-             \x20       }});\n\n",
-        );
-
-        if self.about.is_some() {
-            let _ = writeln!(out, "        about_window(&ctx, &self.{inst});");
-            out.push('\n');
+        if let Some((first, _)) = self.docked.first() {
+            let _ = writeln!(out, "        registry.activate(\"{first}\");");
         }
-
-        if self.signal.is_some() {
+        out.push_str("        let _ = registry.drain_messages(); // discard setup messages\n");
+        if has_dock {
+            let center: Vec<String> = self
+                .docked
+                .iter()
+                .filter(|(_, r)| r == "center")
+                .map(|(i, _)| format!("Tab::{}", camel_case(i)))
+                .collect();
             let _ = write!(
                 out,
-                "        // Path B: drain the citizen's outbox and route through actions.\n\
-                 \x20       for cmd in std::mem::take(&mut self.{snake}.outbox) {{\n\
-                 \x20           actions::handle(cmd, &self.{inst});\n\
-                 \x20       }}\n",
+                "\n        // Dock layout from the @layout dock() directives.\n\
+                 \x20       let mut dock_state = DockState::new(vec![{}]);\n",
+                center.join(", ")
+            );
+            for (region, method, fraction) in [
+                ("left", "split_left", "0.30"),
+                ("right", "split_right", "0.70"),
+                ("bottom", "split_below", "0.70"),
+            ] {
+                let tabs: Vec<String> = self
+                    .docked
+                    .iter()
+                    .filter(|(_, r)| r == region)
+                    .map(|(i, _)| format!("Tab::{}", camel_case(i)))
+                    .collect();
+                if !tabs.is_empty() {
+                    let _ = writeln!(
+                        out,
+                        "        let _ = dock_state.main_surface_mut().{method}(NodeIndex::root(), {fraction}, vec![{}]);",
+                        tabs.join(", ")
+                    );
+                }
+            }
+        }
+        out.push_str("        Self {\n            registry,\n");
+        if has_dock {
+            out.push_str("            dock_state,\n");
+        }
+        for (inst, iface) in &self.iface_insts {
+            let _ = writeln!(out, "            {inst}: state::{iface}::new(),");
+        }
+        for inst in &self.insts {
+            let _ = writeln!(
+                out,
+                "            {}: citizens::{}::with_id({}_state, \"{}\"),",
+                inst.name, inst.decl, inst.name, inst.name
             );
         }
-        let _ = write!(
-            out,
+        out.push_str("        }\n    }\n}\n\n");
+
+        // ── TabViewer (docked instances route by tab id) ─────────────────
+        if has_dock {
+            let mut used_ifaces: Vec<&str> = Vec::new();
+            for (inst_name, _) in &self.docked {
+                let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
+                for (_, iface_inst) in &inst.bindings {
+                    if !used_ifaces.contains(&iface_inst.as_str()) {
+                        used_ifaces.push(iface_inst);
+                    }
+                }
+            }
+            out.push_str("struct TabViewer<'a> {\n    registry: &'a mut Registry,\n");
+            for iface_inst in &used_ifaces {
+                let (_, iface) = self
+                    .iface_insts
+                    .iter()
+                    .find(|(n, _)| n == iface_inst)
+                    .unwrap();
+                let _ = writeln!(out, "    {iface_inst}: &'a state::{iface},");
+            }
+            for (inst_name, _) in &self.docked {
+                let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
+                let _ = writeln!(out, "    {}: &'a mut citizens::{},", inst.name, inst.decl);
+            }
+            out.push_str(
+                "}\n\nimpl egui_dock::TabViewer for TabViewer<'_> {\n    type Tab = Tab;\n\n\
+                 \x20   fn id(&mut self, tab: &mut Tab) -> egui::Id {\n\
+                 \x20       egui::Id::new(tab.id())\n    }\n\n\
+                 \x20   fn title(&mut self, tab: &mut Tab) -> egui::WidgetText {\n\
+                 \x20       tab.id().into()\n    }\n\n\
+                 \x20   fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Tab) {\n        match tab {\n",
+            );
+            for (inst_name, _) in &self.docked {
+                let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
+                let args: String = inst
+                    .bindings
+                    .iter()
+                    .map(|(_, iface_inst)| format!(", self.{iface_inst}"))
+                    .collect();
+                let _ = writeln!(
+                    out,
+                    "            Tab::{} => self.{}.show(ui{args}),",
+                    camel_case(inst_name),
+                    inst.name
+                );
+            }
+            out.push_str(
+                "        }\n    }\n\n\
+                 \x20   fn on_tab_button(&mut self, tab: &mut Tab, response: &egui::Response) {\n\
+                 \x20       if response.clicked() {\n\
+                 \x20           self.registry.activate(tab.id());\n\
+                 \x20       }\n    }\n}\n\n",
+            );
+        }
+
+        // ── eframe::App ─────────────────────────────────────────────────
+        out.push_str(
+            "impl eframe::App for App {\n    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {\n",
+        );
+        if need_ctx {
+            out.push_str("        let ctx = ui.ctx().clone();\n");
+        }
+        for (inst, field) in &self.clock_writes {
+            let _ = writeln!(out, "        self.{inst}.{field}.set(wall_clock());");
+        }
+        if !self.clock_writes.is_empty() {
+            out.push_str(
+                "        ctx.request_repaint_after(std::time::Duration::from_millis(250));\n",
+            );
+        }
+        for top_inst in &self.top {
+            let inst = self.insts.iter().find(|i| &i.name == top_inst).unwrap();
+            let args: String = inst
+                .bindings
+                .iter()
+                .map(|(_, iface_inst)| format!(", &self.{iface_inst}"))
+                .collect();
+            let _ = write!(
+                out,
+                "\n        egui::Panel::top(\"{name}\").show(ui, |ui| {{\n\
+                 \x20           self.{name}.show(ui{args});\n\
+                 \x20       }});\n",
+                name = inst.name,
+            );
+        }
+        if has_dock {
+            out.push_str("\n        let mut viewer = TabViewer {\n            registry: &mut self.registry,\n");
+            let mut used_ifaces: Vec<&str> = Vec::new();
+            for (inst_name, _) in &self.docked {
+                let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
+                for (_, iface_inst) in &inst.bindings {
+                    if !used_ifaces.contains(&iface_inst.as_str()) {
+                        used_ifaces.push(iface_inst);
+                    }
+                }
+            }
+            for iface_inst in &used_ifaces {
+                let _ = writeln!(out, "            {iface_inst}: &self.{iface_inst},");
+            }
+            for (inst_name, _) in &self.docked {
+                let _ = writeln!(out, "            {inst_name}: &mut self.{inst_name},");
+            }
+            out.push_str(
+                "        };\n        DockArea::new(&mut self.dock_state).show_inside(ui, &mut viewer);\n",
+            );
+        } else {
+            let _ = write!(
+                out,
+                "        egui::CentralPanel::default().show(ui, |ui| {{\n\
+                 \x20           ui.weak(\"Generated by mobius_codegen.\");\n\
+                 \x20       }});\n",
+            );
+        }
+        if let Some(about) = &self.about {
+            let _ = writeln!(out, "\n        about_window(&ctx, &self.{});", about.trigger.0);
+        }
+        for inst in &self.insts {
+            let decl = self.decls.iter().find(|d| d.ty == inst.decl).unwrap();
+            if let Some((signal_port, _, _)) = self.decl_signal(decl) {
+                let (_, iface_inst) = inst
+                    .bindings
+                    .iter()
+                    .find(|(p, _)| p == &signal_port)
+                    .unwrap();
+                let _ = write!(
+                    out,
+                    "\n        // Path B: drain the outbox and route through actions.\n\
+                     \x20       for cmd in std::mem::take(&mut self.{name}.outbox) {{\n\
+                     \x20           actions::handle(cmd, &self.{iface_inst});\n\
+                     \x20       }}\n",
+                    name = inst.name,
+                );
+            }
+        }
+        out.push_str(
             "        // Registry lifecycle messages — drained after the panels show.\n\
-             \x20       for _msg in self.registry.drain_messages() {{}}\n\
-             \x20   }}\n\
-             }}\n",
+             \x20       for _msg in self.registry.drain_messages() {}\n    }\n}\n",
         );
 
         if let Some(about) = &self.about {
@@ -1049,7 +1470,14 @@ opt-level = 2
                  \x20       {inst}.{trigger}.set(false);\n\
                  \x20   }}\n\
                  }}\n",
-                trigger = about.trigger_field,
+                inst = about.trigger.0,
+                iface = self
+                    .iface_insts
+                    .iter()
+                    .find(|(n, _)| n == &about.trigger.0)
+                    .map(|(_, i)| i.as_str())
+                    .unwrap_or_default(),
+                trigger = about.trigger.1,
                 title = about.title,
                 tagline = about.tagline,
                 resizable = about.resizable,
@@ -1080,7 +1508,10 @@ opt-level = 2
             }
         }
 
-        if let Some((_, payload)) = &self.signal {
+        if let Some(signal_iface) = self.ifaces.iter().find(|i| i.signal.is_some()) {
+            let payload = &signal_iface.signal.as_ref().unwrap().1;
+            let iface = &signal_iface.name;
+            let param = snake_case(iface);
             let _ = write!(
                 out,
                 "\nmod actions {{\n\
@@ -1088,7 +1519,7 @@ opt-level = 2
                  \x20   //! spawn it, send it over a channel, write results back into\n\
                  \x20   //! `{iface}` cells.\n\n\
                  \x20   use crate::state::{{{iface}, {payload}}};\n\n\
-                 \x20   pub fn handle(cmd: {payload}, _{inst}: &{iface}) {{\n\
+                 \x20   pub fn handle(cmd: {payload}, _{param}: &{iface}) {{\n\
                  \x20       match cmd {{\n",
             );
             let variants = self
@@ -1106,7 +1537,7 @@ opt-level = 2
             out.push_str("        }\n    }\n}\n");
         }
 
-        if self.clock_field.is_some() {
+        if !self.clock_writes.is_empty() {
             out.push_str(
                 "\n/// Wall clock (UTC, std-only) for the ribbon's clock slot.\n\
                  fn wall_clock() -> String {\n\
@@ -1120,14 +1551,14 @@ opt-level = 2
         }
 
         let has_image = self.about.as_ref().is_some_and(|a| a.image.is_some());
-        let creator = if self.theme_field.is_some() || has_image {
+        let creator = if self.theme.is_some() || has_image {
             let mut lines = String::new();
             if has_image {
                 lines.push_str("            egui_extras::install_image_loaders(&cc.egui_ctx);\n");
             }
             let _ = writeln!(lines, "            let app = App::new();");
-            if let Some(theme) = &self.theme_field {
-                let _ = writeln!(lines, "            app.{inst}.{theme}.get().apply(&cc.egui_ctx);");
+            if let Some((inst, field, _)) = &self.theme {
+                let _ = writeln!(lines, "            app.{inst}.{field}.get().apply(&cc.egui_ctx);");
             }
             format!("Box::new(|cc| {{\n{lines}            Ok(Box::new(app))\n        }}),")
         } else {
@@ -1306,7 +1737,37 @@ fn scan_widgets(nodes: &[WidgetNode], f: &mut impl FnMut(&mobius_lang::ast::Prim
     }
 }
 
-fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel, Error> {
+/// `dock(instance, region = left);` → `(instance, region)`.
+fn parse_dock(args: &[DirectiveArg]) -> Result<(String, String), Error> {
+    let mut instance = None;
+    let mut region = "center".to_owned();
+    for arg in args {
+        match arg {
+            DirectiveArg::Positional(Expr::Path(p)) => instance = Some(p.joined()),
+            DirectiveArg::Named(named) if named.name == "region" => {
+                let Expr::Path(p) = &named.value else {
+                    return Err(Error::Unsupported("dock region must be a name".into()));
+                };
+                region = p.joined();
+            }
+            _ => return Err(Error::Unsupported("dock() takes `(instance, region = ...)`".into())),
+        }
+    }
+    if !matches!(region.as_str(), "left" | "right" | "bottom" | "center") {
+        return Err(Error::Unsupported(format!(
+            "dock region `{region}` (expected left/right/bottom/center)"
+        )));
+    }
+    Ok((
+        instance.ok_or_else(|| Error::Unsupported("dock() needs an instance".into()))?,
+        region,
+    ))
+}
+
+fn parse_about(
+    args: &[DirectiveArg],
+    iface_insts: &[(String, String)],
+) -> Result<AboutModel, Error> {
     let mut trigger = None;
     let mut title = None;
     let mut tagline = None;
@@ -1319,10 +1780,12 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
         };
         match (named.name.as_str(), &named.value) {
             ("trigger", Expr::Path(p)) => match p.segments.as_slice() {
-                [inst, field] if inst == iface_instance => trigger = Some(field.clone()),
+                [inst, field] if iface_insts.iter().any(|(n, _)| n == inst) => {
+                    trigger = Some((inst.clone(), field.clone()));
+                }
                 _ => {
                     return Err(Error::Unsupported(format!(
-                        "about trigger `{}` (expected `{iface_instance}.<field>`)",
+                        "about trigger `{}` (expected `<iface-instance>.<field>`)",
                         p.joined()
                     )));
                 }
@@ -1338,7 +1801,7 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
         }
     }
     Ok(AboutModel {
-        trigger_field: trigger.ok_or_else(|| Error::Unsupported("about() needs trigger".into()))?,
+        trigger: trigger.ok_or_else(|| Error::Unsupported("about() needs trigger".into()))?,
         title: title.ok_or_else(|| Error::Unsupported("about() needs title".into()))?,
         tagline: tagline.unwrap_or_default(),
         image,
@@ -1393,6 +1856,29 @@ fn mobius_version(root: &Path) -> String {
         }
     }
     "path".to_owned()
+}
+
+/// `controls0` → `Controls0`, `my_scope` → `MyScope` — Tab variant names.
+fn camel_case(name: &str) -> String {
+    name.split('_')
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            let mut chars = s.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect()
+}
+
+/// Render a slider-range literal as an f32-friendly number.
+fn render_number(expr: &Expr) -> String {
+    match expr {
+        Expr::Int(i, _) => format!("{i}.0"),
+        Expr::Float(f, _) => format!("{f:?}"),
+        other => format!("/* unsupported range expr {other:?} */"),
+    }
 }
 
 /// Split a CamelCase wordmark at its first hump: `"RibbonDemo"` →

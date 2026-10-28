@@ -39,8 +39,19 @@ macro_rules! citizen_panel {
 
         impl $name {
             pub fn new(citizen_state: $crate::CitizenState) -> Self {
+                Self::with_id(citizen_state, $id)
+            }
+
+            /// Construct with an instance-specific id instead of the
+            /// declaration default — the same panel type instantiated
+            /// several times gives each instance its own identity
+            /// (register each with the matching name).
+            pub fn with_id(
+                citizen_state: $crate::CitizenState,
+                id: impl Into<$crate::CitizenId>,
+            ) -> Self {
                 Self {
-                    citizen_id: $crate::CitizenId::new($id),
+                    citizen_id: id.into(),
                     citizen_state,
                     $( $field: $default, )*
                 }
