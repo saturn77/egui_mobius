@@ -16,6 +16,13 @@
 app DockDemo {
     enum Theme { CopperDark, TokyoNight, Light }
 
+    // Modport verbs are DRIVER semantics, from the citizen's seat (the
+    // SystemVerilog frame): `out` = this side's hand is on the pen (the
+    // theme combo and About button live in the ribbon, so the ribbon
+    // drives those cells — and like SV, `out` implies read access too);
+    // `in` = read-only (the host stamps the clock; the ribbon displays
+    // it). The two modports mirror exactly — every cell has one driver,
+    // which is what makes the one-writer check possible.
     interface Chrome {
         theme : Theme = Theme::CopperDark
         show_about : bool = false
