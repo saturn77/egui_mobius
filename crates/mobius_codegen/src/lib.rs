@@ -95,7 +95,15 @@ pub fn load_project_config(source: &Path) -> Result<Option<ProjectConfig>, Error
     };
     let file: ProjectConfigFile = toml::from_str(&text)
         .map_err(|e| Error::Config(format!("{}: {e}", path.display())))?;
-    let resolve = |p: Option<String>| p.map(|p| dir.join(p));
+    // Absolutize: these paths end up inside the generated Cargo.toml,
+    // where a path relative to *this* file would silently resolve against
+    // the output directory instead.
+    let resolve = |p: Option<String>| {
+        p.map(|p| {
+            let joined = dir.join(p);
+            std::path::absolute(&joined).unwrap_or(joined)
+        })
+    };
     Ok(Some(ProjectConfig {
         out: resolve(file.project.out),
         crate_name: file.project.crate_name,
@@ -326,7 +334,7 @@ impl Model {
                         fields.push(FieldModel {
                             name: field.name.clone(),
                             rust_ty: rust_type(&ty_name),
-                            default: render_default(&field.name, default.as_ref())?,
+                            default: render_default(&field.name, &ty_name, default.as_ref())?,
                             enum_name,
                         });
                     }
@@ -578,7 +586,7 @@ eframe = {{ version = "{egui}", default-features = false, features = [
     "wayland",
     "x11",
 ] }}
-egui = "{egui}"{image_deps}{dock_dep}
+egui = "{egui}"{image_deps}{dock_dep}{lens_dep}
 egui_citizen = {{ path = "{citizen}" }}
 egui_mobius_reactive = {{ path = "{reactive}" }}
 
@@ -606,6 +614,14 @@ opt-level = 2
             } else {
                 "\negui_dock = \"0.21\""
             },
+            lens_dep = if self.logger_iface().is_some() {
+                format!(
+                    "\negui_lens = {{ path = \"{}\" }}",
+                    opts.mobius_root.join("crates/egui_lens").display()
+                )
+            } else {
+                String::new()
+            },
             citizen = citizen_dep.display(),
             reactive = reactive_dep.display(),
         )
@@ -625,6 +641,9 @@ opt-level = 2
              use egui_mobius_reactive::Dynamic;\n",
             app = self.app_name,
         );
+        if self.logger_iface().is_some() {
+            out.push_str("use egui_lens::{LogColors, ReactiveEventLoggerState};\n");
+        }
 
         for e in &self.enums {
             let _ = write!(
@@ -794,6 +813,25 @@ opt-level = 2
                 .and_then(|i| i.signal.clone())
                 .map(|(field, payload)| (port.name.clone(), field, payload))
         })
+    }
+
+    /// The egui_lens logger interface, if declared:
+    /// `(iface, state_field, colors_field)`.
+    fn logger_iface(&self) -> Option<(&IfaceModel, String, String)> {
+        self.ifaces.iter().find_map(|i| {
+            let state = i.fields.iter().find(|f| f.rust_ty == "ReactiveEventLoggerState")?;
+            let colors = i.fields.iter().find(|f| f.rust_ty == "LogColors")?;
+            Some((i, state.name.clone(), colors.name.clone()))
+        })
+    }
+
+    /// The first wired instance of the logger interface.
+    fn logger_inst(&self) -> Option<String> {
+        let (iface, _, _) = self.logger_iface()?;
+        self.iface_insts
+            .iter()
+            .find(|(_, ty)| ty == &iface.name)
+            .map(|(n, _)| n.clone())
     }
 
     /// The field a binding path names: `(port, field_model)`.
@@ -1110,6 +1148,30 @@ opt-level = 2
                 }
                 let _ = writeln!(out, "{pad}}}");
             }
+            ("logger", Binding::Read { path, .. }) => {
+                // The egui_lens prefab: renders the reactive event log from
+                // the bound interface's state + colors cells.
+                let (port, _) = self.port_field(decl, path)?;
+                let iface_name = decl
+                    .ports
+                    .iter()
+                    .find(|pm| pm.name == port)
+                    .map(|pm| pm.iface.clone())
+                    .unwrap_or_default();
+                let (_, state_field, colors_field) = self
+                    .logger_iface()
+                    .filter(|(i, _, _)| i.name == iface_name)
+                    .ok_or_else(|| {
+                        Error::Unsupported(
+                            "logger needs an interface with LoggerState + LogColors fields"
+                                .into(),
+                        )
+                    })?;
+                let _ = writeln!(
+                    out,
+                    "{pad}egui_lens::ReactiveEventLogger::with_colors(&{port}.{state_field}, &{port}.{colors_field}).show(ui);"
+                );
+            }
             (kind, _) => {
                 return Err(Error::Unsupported(format!(
                     "primitive `{kind}` with this binding at {:?}",
@@ -1250,7 +1312,12 @@ opt-level = 2
                 }
             }
         }
-        out.push_str("        Self {\n            registry,\n");
+        let logger_inst = self.logger_inst();
+        out.push_str(if logger_inst.is_some() {
+            "        let app = Self {\n            registry,\n"
+        } else {
+            "        Self {\n            registry,\n"
+        });
         if has_dock {
             out.push_str("            dock_state,\n");
         }
@@ -1264,7 +1331,13 @@ opt-level = 2
                 inst.name, inst.decl, inst.name, inst.name
             );
         }
-        out.push_str("        }\n    }\n}\n\n");
+        if let Some(log_inst) = &logger_inst {
+            out.push_str("        };\n");
+            let _ = writeln!(out, "        startup::banner(&app.{log_inst});");
+            out.push_str("        app\n    }\n}\n\n");
+        } else {
+            out.push_str("        }\n    }\n}\n\n");
+        }
 
         // ── TabViewer (docked instances route by tab id) ─────────────────
         if has_dock {
@@ -1535,6 +1608,62 @@ opt-level = 2
                 );
             }
             out.push_str("        }\n    }\n}\n");
+        }
+
+        if let Some((iface, state_field, colors_field)) = self.logger_iface() {
+            let iface_name = iface.name.clone();
+            let mobius_v = mobius_version(&opts.mobius_root);
+            let mut rows = vec![
+                ("egui_citizen", mobius_v.clone()),
+                ("egui_mobius_reactive", mobius_v.clone()),
+                ("egui_lens", mobius_v),
+                ("egui / eframe", EGUI_VERSION.to_owned()),
+            ];
+            if has_dock {
+                rows.push(("egui_dock", "0.21".to_owned()));
+            }
+            let mut dep_lines = String::new();
+            for (n, v) in &rows {
+                let _ = writeln!(
+                    dep_lines,
+                    "            \"    {:<21}: {v}\\n\",",
+                    format!("{n} ")
+                );
+            }
+            let _ = write!(
+                out,
+                "\nmod startup {{\n\
+                 \x20   //! Startup banner — the CopperForge logger convention:\n\
+                 \x20   //! welcome, dependency versions, system details.\n\n\
+                 \x20   use egui_lens::ReactiveEventLogger;\n\n\
+                 \x20   pub fn banner(log: &crate::state::{iface_name}) {{\n\
+                 \x20       let logger = ReactiveEventLogger::with_colors(&log.{state_field}, &log.{colors_field});\n\
+                 \x20       logger.log_info(\"Startup: init\");\n\
+                 \x20       logger.log_info(concat!(\n\
+                 \x20           \"**** Welcome to {app}, version \", env!(\"CARGO_PKG_VERSION\"), \"\\n\\n\",\n\
+                 \x20           \"    DEPENDENCIES\\n\",\n\
+                 {dep_lines}\
+                 \x20       ));\n\
+                 \x20       logger.log_info(&system_details());\n\
+                 \x20   }}\n\n\
+                 \x20   /// Linux: /etc/os-release + kernel version; elsewhere the OS constant.\n\
+                 \x20   fn system_details() -> String {{\n\
+                 \x20       let name = std::fs::read_to_string(\"/etc/os-release\")\n\
+                 \x20           .ok()\n\
+                 \x20           .and_then(|s| {{\n\
+                 \x20               s.lines().find_map(|l| {{\n\
+                 \x20                   l.strip_prefix(\"PRETTY_NAME=\").map(|v| v.trim_matches('\"').to_owned())\n\
+                 \x20               }})\n\
+                 \x20           }})\n\
+                 \x20           .unwrap_or_else(|| std::env::consts::OS.to_owned());\n\
+                 \x20       let kernel = std::fs::read_to_string(\"/proc/sys/kernel/osrelease\")\n\
+                 \x20           .map(|s| s.trim().to_owned())\n\
+                 \x20           .unwrap_or_else(|_| \"unknown\".to_owned());\n\
+                 \x20       format!(\"SYSTEM DETAILS\\n\\n    SYSTEM\\n    System Name   : {{name}}\\n    System Kernel : {{kernel}}\")\n\
+                 \x20   }}\n\
+                 }}\n",
+                app = self.app_name,
+            );
         }
 
         if !self.clock_writes.is_empty() {
@@ -1813,13 +1942,20 @@ fn parse_about(
 fn rust_type(mobius_ty: &str) -> String {
     match mobius_ty {
         "string" => "String".into(),
+        // Builtin prefab types — the egui_lens logger pair.
+        "LoggerState" => "ReactiveEventLoggerState".into(),
         other => other.into(),
     }
 }
 
-fn render_default(field: &str, default: Option<&Expr>) -> Result<String, Error> {
+fn render_default(field: &str, ty: &str, default: Option<&Expr>) -> Result<String, Error> {
     let Some(expr) = default else {
-        return Err(Error::Unsupported(format!("field `{field}` needs a default (v0)")));
+        // Builtin types default themselves; everything else must say.
+        return match ty {
+            "LoggerState" => Ok("ReactiveEventLoggerState::new()".into()),
+            "LogColors" => Ok("LogColors::default()".into()),
+            _ => Err(Error::Unsupported(format!("field `{field}` needs a default (v0)"))),
+        };
     };
     Ok(match expr {
         Expr::Bool(b, _) => b.to_string(),

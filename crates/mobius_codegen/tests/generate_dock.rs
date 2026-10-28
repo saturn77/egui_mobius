@@ -29,9 +29,14 @@ fn dock_project_cargo_checks() {
     assert!(main.contains("Controls::with_id(controls0_state, \"controls0\")"));
     assert!(main.contains("Controls::with_id(controls1_state, \"controls1\")"));
     assert!(main.contains("Tab::Scope1 => self.scope1.show(ui, self.ch1),"));
+    assert!(main.contains("startup::banner(&app.log);"));
     let citizens_mod = &generated.files["src/citizens/mod.rs"];
     assert!(citizens_mod.contains("pub mod controls;"));
     assert!(citizens_mod.contains("pub mod scope;"));
+    assert!(citizens_mod.contains("pub mod system;"));
+    assert!(generated.files["Cargo.toml"].contains("egui_lens"));
+    assert!(generated.files["src/citizens/system.rs"]
+        .contains("egui_lens::ReactiveEventLogger::with_colors(&l.state, &l.colors).show(ui);"));
 
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(&generated.crate_name);
     if out.exists() {

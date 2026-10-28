@@ -44,11 +44,21 @@ both. The items below close the gaps that duality exposes.
   The VS Code extension (`editors/mobius-vscode`) grows a ~30-line
   client activation.
 
-- **Second citizen milestone.** Generates the dock: `dock()` directive,
-  `TabViewer` routing, tab enum, multi-citizen state through the
-  interface. The honest test is the *same* citizen declaration
-  instantiated twice — which requires instance-derived `CitizenId`s
-  (`citizen_panel!` currently bakes one id per declaration).
+- ~~**Second citizen milestone.**~~ Done: `dock()` → DockState/Tab/
+  TabViewer generation, instance-derived `CitizenId`s via
+  `citizen_panel!::with_id`, multi-instancing proven in
+  `examples/dock` (Controls ×2 / Scope ×2 over Channel ×2), plus the
+  System citizen (egui_lens prefab: builtin `LoggerState`/`LogColors`
+  types, `logger` primitive, generated startup banner with deps +
+  system details).
+
+- **Example 3 — the terminal citizen (tutorial ladder).** James's
+  sequence: ribbon (chrome) → dock (composition + logger) → terminal
+  (shell citizen, CopperForge-style: bash passthrough + app
+  subcommands). Each example builds on the previous — a tutorial of
+  sorts. The terminal is likely the first *stateful* prefab (input
+  buffer, history) and the first natural Path B consumer (commands as
+  events into an actions module).
 
 - **Self-truing deps table.** The About window's `DEPENDENCIES` const
   is a generation-time snapshot. A generated `build.rs` extracting

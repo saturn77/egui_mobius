@@ -1,16 +1,51 @@
-// The second-citizen milestone — a docked two-channel panel layout.
+// The second-citizen milestone — a complete Level-1 app shape: themed
+// ribbon on top, a docked two-channel panel layout, and the System
+// logger (egui_lens) along the bottom.
 //
 // The honest test of citizen-as-module: the SAME citizen declarations
 // (`Controls`, `Scope`) instantiated twice, each pair wired to its own
 // instance of the SAME interface (`Channel`) — declaration vs instance,
 // exactly like instantiating a Verilog module twice with different port
 // bindings. Each instance gets its own CitizenId and dock tab.
+//
+// `LoggerState` / `LogColors` are builtin prefab types (egui_lens); the
+// `logger` primitive renders the reactive event log, and the generated
+// app logs the startup banner — version, dependencies, system details —
+// the way CopperForge does.
 
 app DockDemo {
+    enum Theme { CopperDark, TokyoNight, Light }
+
+    interface Chrome {
+        theme : Theme = Theme::CopperDark
+        clock : string = ""
+        modport ribbon (out theme, in clock)
+        modport host (in theme, out clock)
+    }
+
     interface Channel {
         level : f32 = 0.5
         modport ctrl (out level)
         modport view (in level)
+    }
+
+    interface Log {
+        state : LoggerState
+        colors : LogColors
+        modport view (in state, in colors)
+        modport host (out state, out colors)
+    }
+
+    citizen Ribbon (c : Chrome.ribbon) {
+        row {
+            wordmark "DockDemo";
+            separator;
+            right {
+                combo "🎨" <-> c.theme;
+                separator;
+                clock <- c.clock;
+            }
+        }
     }
 
     citizen Controls (c : Channel.ctrl) {
@@ -25,19 +60,29 @@ app DockDemo {
         }
     }
 
+    citizen System (l : Log.view) {
+        logger <- l.state;
+    }
+
     @wiring {
+        let chrome = Chrome();
         let ch0 = Channel();
         let ch1 = Channel();
+        let log = Log();
+        let ribbon = Ribbon(c = chrome.ribbon);
         let controls0 = Controls(c = ch0.ctrl);
         let controls1 = Controls(c = ch1.ctrl);
         let scope0 = Scope(s = ch0.view);
         let scope1 = Scope(s = ch1.view);
+        let system = System(l = log.view);
     }
 
     @layout {
+        top(ribbon);
         dock(controls0, region = left);
         dock(controls1, region = left);
         dock(scope0, region = center);
         dock(scope1, region = center);
+        dock(system, region = bottom);
     }
 }
