@@ -18,6 +18,9 @@ fn ribbon_project_cargo_checks() {
         source,
         &mobius_codegen::Options {
             mobius_root: mobius_root.clone(),
+            asset_root: Some(
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"),
+            ),
         },
     )
     .expect("fixture generates");

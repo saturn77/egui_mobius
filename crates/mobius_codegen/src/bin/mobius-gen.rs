@@ -27,7 +27,13 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let generated = match mobius_codegen::generate(&source, &mobius_codegen::Options { mobius_root }) {
+    let asset_root = std::path::Path::new(&input)
+        .parent()
+        .map(std::path::Path::to_path_buf);
+    let generated = match mobius_codegen::generate(
+        &source,
+        &mobius_codegen::Options { mobius_root, asset_root },
+    ) {
         Ok(generated) => generated,
         Err(e) => {
             eprintln!("mobius-gen: {e}");

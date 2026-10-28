@@ -43,12 +43,17 @@ pub struct Options {
     /// An `egui_mobius` checkout; the generated `Cargo.toml` path-depends
     /// on `crates/egui_citizen` and `crates/egui_mobius_reactive` under it.
     pub mobius_root: PathBuf,
+    /// Base directory for resolving asset paths in the source (e.g. the
+    /// `about(image = "...")` banner) — usually the `.mobius` file's dir.
+    pub asset_root: Option<PathBuf>,
 }
 
-/// A generated project: relative path → file contents.
+/// A generated project: relative path → file contents, plus binary assets
+/// copied from the source's asset references.
 pub struct Generated {
     pub crate_name: String,
     pub files: BTreeMap<String, String>,
+    pub assets: BTreeMap<String, Vec<u8>>,
 }
 
 impl Generated {
@@ -61,6 +66,13 @@ impl Generated {
             }
             std::fs::write(path, contents)?;
         }
+        for (rel, bytes) in &self.assets {
+            let path = dir.join(rel);
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, bytes)?;
+        }
         Ok(())
     }
 }
@@ -71,6 +83,8 @@ pub enum Error {
     /// A construct the generator does not handle (yet) — carries a
     /// human-readable description of what and where.
     Unsupported(String),
+    /// A referenced asset could not be read.
+    Asset(String),
 }
 
 impl std::fmt::Display for Error {
@@ -78,6 +92,7 @@ impl std::fmt::Display for Error {
         match self {
             Error::Parse(e) => write!(f, "parse error: {e:?}"),
             Error::Unsupported(what) => write!(f, "unsupported: {what}"),
+            Error::Asset(what) => write!(f, "asset: {what}"),
         }
     }
 }
@@ -93,6 +108,17 @@ pub fn generate(source: &str, opts: &Options) -> Result<Generated, Error> {
         .ok_or_else(|| Error::Unsupported("no `app` in source".into()))?;
     let model = Model::build(app)?;
 
+    let mut assets = BTreeMap::new();
+    if let Some(image) = model.about.as_ref().and_then(|a| a.image.clone()) {
+        let root = opts.asset_root.as_ref().ok_or_else(|| {
+            Error::Asset(format!("about image `{image}` given but no asset_root to resolve it"))
+        })?;
+        let path = root.join(&image);
+        let bytes = std::fs::read(&path)
+            .map_err(|e| Error::Asset(format!("cannot read {}: {e}", path.display())))?;
+        assets.insert("assets/about.png".to_owned(), bytes);
+    }
+
     let mut files = BTreeMap::new();
     files.insert("Cargo.toml".into(), model.emit_manifest(opts));
     files.insert("src/state.rs".into(), model.emit_state());
@@ -104,11 +130,12 @@ pub fn generate(source: &str, opts: &Options) -> Result<Generated, Error> {
         format!("src/citizens/{}.rs", model.citizen_snake),
         model.emit_citizen()?,
     );
-    files.insert("src/main.rs".into(), model.emit_main());
+    files.insert("src/main.rs".into(), model.emit_main(opts));
 
     Ok(Generated {
         crate_name: model.crate_name.clone(),
         files,
+        assets,
     })
 }
 
@@ -153,6 +180,11 @@ struct AboutModel {
     trigger_field: String,
     title: String,
     tagline: String,
+    /// Source-relative path of the banner image, copied into the generated
+    /// project as `assets/about.png`.
+    image: Option<String>,
+    /// Show the ShutterFrame-style "Built with" dependency table.
+    deps: bool,
 }
 
 impl Model {
@@ -316,7 +348,7 @@ publish = false
 
 [dependencies]
 eframe = "{egui}"
-egui = "{egui}"
+egui = "{egui}"{image_deps}
 egui_citizen = {{ path = "{citizen}" }}
 egui_mobius_reactive = {{ path = "{reactive}" }}
 
@@ -325,6 +357,12 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
 "#,
             name = self.crate_name,
             egui = EGUI_VERSION,
+            image_deps = if self.about.as_ref().is_some_and(|a| a.image.is_some()) {
+                "\negui_extras = { version = \"0.36\", features = [\"image\"] }\n\
+                 image = { version = \"0.25\", default-features = false, features = [\"png\"] }"
+            } else {
+                ""
+            },
             citizen = citizen_dep.display(),
             reactive = reactive_dep.display(),
         )
@@ -786,7 +824,7 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
 
     // ── src/main.rs ─────────────────────────────────────────────────────
 
-    fn emit_main(&self) -> String {
+    fn emit_main(&self, opts: &Options) -> String {
         let iface = &self.iface_name;
         let inst = &self.iface_instance;
         let citizen_ty = &self.citizen_ty;
@@ -868,6 +906,38 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
         );
 
         if let Some(about) = &self.about {
+            let banner = if about.image.is_some() {
+                "            ui.vertical_centered(|ui| {\n\
+                 \x20               ui.add_space(10.0);\n\
+                 \x20               ui.add(\n\
+                 \x20                   egui::Image::new(egui::include_image!(\"../assets/about.png\"))\n\
+                 \x20                       .fit_to_original_size(0.75)\n\
+                 \x20                       .max_size(egui::vec2(420.0, 320.0)),\n\
+                 \x20               );\n\
+                 \x20               ui.add_space(12.0);\n\
+                 \x20           });\n"
+            } else {
+                ""
+            };
+            let deps_table = if about.deps {
+                "            ui.add_space(8.0);\n\
+                 \x20           ui.separator();\n\
+                 \x20           ui.label(egui::RichText::new(\"Built with\").strong());\n\
+                 \x20           ui.add_space(2.0);\n\
+                 \x20           egui::Grid::new(\"about_deps\")\n\
+                 \x20               .num_columns(3)\n\
+                 \x20               .spacing([12.0, 2.0])\n\
+                 \x20               .show(ui, |ui| {\n\
+                 \x20                   for (name, version, what) in DEPENDENCIES {\n\
+                 \x20                       ui.monospace(*name);\n\
+                 \x20                       ui.weak(*version);\n\
+                 \x20                       ui.weak(*what);\n\
+                 \x20                       ui.end_row();\n\
+                 \x20                   }\n\
+                 \x20               });\n"
+            } else {
+                ""
+            };
             let _ = write!(
                 out,
                 "\n/// The About window, from the `about(...)` layout directive.\n\
@@ -884,11 +954,13 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                  \x20       .default_pos(ctx.content_rect().center())\n\
                  \x20       .open(&mut open)\n\
                  \x20       .show(ctx, |ui| {{\n\
+                 {banner}\
                  \x20           ui.heading(\"{title}\");\n\
                  \x20           ui.label(egui::RichText::new(\"{tagline}\").italics());\n\
                  \x20           ui.add_space(8.0);\n\
                  \x20           ui.separator();\n\
                  \x20           ui.weak(format!(\"version {{}}\", env!(\"CARGO_PKG_VERSION\")));\n\
+                 {deps_table}\
                  \x20       }});\n\
                  \x20   if !open {{\n\
                  \x20       {inst}.{trigger}.set(false);\n\
@@ -898,6 +970,30 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                 title = about.title,
                 tagline = about.tagline,
             );
+
+            if about.deps {
+                let mobius_v = mobius_version(&opts.mobius_root);
+                let mut rows = vec![
+                    ("egui_citizen".to_owned(), mobius_v.clone(), "citizen component model"),
+                    ("egui_mobius_reactive".to_owned(), mobius_v, "Dynamic<T> reactive cells"),
+                    ("egui / eframe".to_owned(), EGUI_VERSION.to_owned(), "immediate-mode UI"),
+                ];
+                if about.image.is_some() {
+                    rows.push((
+                        "egui_extras / image".to_owned(),
+                        "0.36 / 0.25".to_owned(),
+                        "PNG loading",
+                    ));
+                }
+                out.push_str(
+                    "\n/// `Built with` rows for the About window — regenerate or edit freely.\n\
+                     const DEPENDENCIES: &[(&str, &str, &str)] = &[\n",
+                );
+                for (name, version, what) in rows {
+                    let _ = writeln!(out, "    (\"{name}\", \"{version}\", \"{what}\"),");
+                }
+                out.push_str("];\n");
+            }
         }
 
         if let Some((_, payload)) = &self.signal {
@@ -939,14 +1035,17 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
             );
         }
 
-        let creator = if let Some(theme) = &self.theme_field {
-            format!(
-                "Box::new(|cc| {{\n\
-                 \x20           let app = App::new();\n\
-                 \x20           app.{inst}.{theme}.get().apply(&cc.egui_ctx);\n\
-                 \x20           Ok(Box::new(app))\n\
-                 \x20       }}),"
-            )
+        let has_image = self.about.as_ref().is_some_and(|a| a.image.is_some());
+        let creator = if self.theme_field.is_some() || has_image {
+            let mut lines = String::new();
+            if has_image {
+                lines.push_str("            egui_extras::install_image_loaders(&cc.egui_ctx);\n");
+            }
+            let _ = writeln!(lines, "            let app = App::new();");
+            if let Some(theme) = &self.theme_field {
+                let _ = writeln!(lines, "            app.{inst}.{theme}.get().apply(&cc.egui_ctx);");
+            }
+            format!("Box::new(|cc| {{\n{lines}            Ok(Box::new(app))\n        }}),")
         } else {
             "Box::new(|_cc| Ok(Box::new(App::new()))),".to_owned()
         };
@@ -1126,6 +1225,8 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
     let mut trigger = None;
     let mut title = None;
     let mut tagline = None;
+    let mut image = None;
+    let mut deps = false;
     for arg in args {
         let DirectiveArg::Named(named) = arg else {
             return Err(Error::Unsupported("about() takes named arguments".into()));
@@ -1142,6 +1243,8 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
             },
             ("title", Expr::Str(s, _)) => title = Some(s.clone()),
             ("tagline", Expr::Str(s, _)) => tagline = Some(s.clone()),
+            ("image", Expr::Str(s, _)) => image = Some(s.clone()),
+            ("deps", Expr::Bool(b, _)) => deps = *b,
             (other, _) => {
                 return Err(Error::Unsupported(format!("about() argument `{other}`")));
             }
@@ -1151,6 +1254,8 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
         trigger_field: trigger.ok_or_else(|| Error::Unsupported("about() needs trigger".into()))?,
         title: title.ok_or_else(|| Error::Unsupported("about() needs title".into()))?,
         tagline: tagline.unwrap_or_default(),
+        image,
+        deps,
     })
 }
 
@@ -1178,6 +1283,28 @@ fn render_default(field: &str, default: Option<&Expr>) -> Result<String, Error> 
             )));
         }
     })
+}
+
+/// The `[workspace.package] version` of the egui_mobius checkout, for the
+/// About window's dependency rows. Falls back to `"path"` when unreadable.
+fn mobius_version(root: &Path) -> String {
+    let Ok(manifest) = std::fs::read_to_string(root.join("Cargo.toml")) else {
+        return "path".to_owned();
+    };
+    let mut in_workspace_package = false;
+    for line in manifest.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            in_workspace_package = line == "[workspace.package]";
+        } else if in_workspace_package {
+            if let Some(rest) = line.strip_prefix("version") {
+                if let Some(v) = rest.split('"').nth(1) {
+                    return v.to_owned();
+                }
+            }
+        }
+    }
+    "path".to_owned()
 }
 
 /// Split a CamelCase wordmark at its first hump: `"RibbonDemo"` →
@@ -1217,9 +1344,14 @@ mod tests {
             source,
             &Options {
                 mobius_root: PathBuf::from("/tmp/mobius"),
+                asset_root: Some(PathBuf::from(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/fixtures"
+                ))),
             },
         )
         .expect("fixture generates");
+        assert!(generated.assets.contains_key("assets/about.png"));
         assert_eq!(generated.crate_name, "ribbon_demo");
         let ribbon = &generated.files["src/citizens/ribbon.rs"];
         // The right group is emitted reversed for right_to_left.
