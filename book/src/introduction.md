@@ -57,6 +57,28 @@ adding capability without throwing away what came before:
 Levels 1–2 use `egui_citizen` and `egui_mobius_reactive`; level 3
 brings in `egui_mobius` itself.
 
+## Where egui_mobius is heading
+
+Everything in this book is plain Rust, and stays that way. But the
+architecture it teaches — citizens, shared `Dynamic<T>` cells, outbox
+messages, a lifecycle registry — is a *semantic model*, regular enough
+to write down. `mobius_lang` is an optional notation for exactly that:
+a `.mobius` source declares which citizens exist, what state they
+share and in which direction, which events they emit and who drains
+them, and where they sit. One grammar, three consumers: the host
+interprets a design live while you iterate, `mobius_codegen` emits it
+as a complete idiomatic cargo project when it's real, and the editor
+flags errors with the same parser both tools use. Hardware designers
+will recognize the shape — simulation and synthesis from one source.
+
+The long-term direction is **a language-directed toolchain with a
+reference runtime**: the crates this book teaches are the runtime, the
+language is the notation for designs over them, and an app expressible
+in `.mobius` follows this book's architecture *by construction*. None
+of it is required — every crate stands alone, and the generated code
+has no dependency on the generator. The toolchain is how the ecosystem
+grows, not a gate in front of it.
+
 > **Who this book is for**
 >
 > Familiarity with `egui`, with dockable widgets — Qt's Advanced

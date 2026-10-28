@@ -117,6 +117,21 @@ without citizens, etc.) are catalogued in
 | `egui_lens` | Reactive event logger component — terminal-style log panel with custom log types, per-type colors, filtering, and file export. The canonical logger across the framework; see `examples/logger_component`. |
 | `egui_mobius_components` | Predecessor logger built on the older signal/slot architecture. **Superseded by `egui_lens`.** Kept for backward compatibility; new code should use `egui_lens`. |
 
+## Looking ahead
+
+Everything above is plain Rust, and stays that way — but the
+architecture it describes is regular enough to *write down*.
+[`mobius_lang`](crates/mobius_lang) is an optional `.mobius` notation
+for exactly that (which citizens exist, what state they share, where
+they dock), and [`mobius_codegen`](crates/mobius_codegen) turns such a
+file into a complete, idiomatic cargo project you then own and edit —
+[`examples/ribbon`](examples/ribbon) is ~57 lines of source that
+becomes a themed, working app. A starting point generator, not a new
+way of life: you never have to touch it, and nothing it emits depends
+on it. Longer-term, `egui_mobius` is growing toward a
+**language-directed toolchain with a reference runtime** — the crates
+you see above are the runtime, and they stand on their own.
+
 ## See also
 
 - **[egui_mobius_template](https://github.com/saturn77/egui_mobius_template)** — project skeleton for new applications.
