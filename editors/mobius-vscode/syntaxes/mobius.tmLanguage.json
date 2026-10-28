@@ -43,9 +43,9 @@
       "match": "\\b(app|interface|citizen|enum|modport|let|for|in|bind)\\b"
     },
     "verbs": {
-      "comment": "modport direction verbs and the signal field marker",
+      "comment": "modport access verbs (write/read preferred; out/in SV synonyms) and the signal field marker",
       "name": "storage.modifier.mobius",
-      "match": "\\b(out|emit|drain|signal)\\b"
+      "match": "\\b(write|read|out|emit|drain|signal)\\b"
     },
     "builtin-types": {
       "name": "storage.type.primitive.mobius",

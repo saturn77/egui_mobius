@@ -10,7 +10,7 @@
 //! interface := 'interface' IDENT '{' field* modport* '}'
 //! field     := IDENT ':' ('signal' type | type ['=' expr])
 //! modport   := 'modport' IDENT '(' verb IDENT (',' verb IDENT)* ')'
-//! verb      := 'out' | 'in' | 'emit' | 'drain'
+//! verb      := 'write' | 'read' | 'emit' | 'drain'   (synonyms: 'out' = write, 'in' = read)
 //! citizen   := 'citizen' IDENT '(' [port (',' port)*] ')' '{' widget* '}'
 //! port      := IDENT ':' type
 //! widget    := IDENT '{' widget* '}'
@@ -535,16 +535,20 @@ impl Parser {
         let mut entries = Vec::new();
         loop {
             let verb_span = self.peek().span;
-            let verb = if self.eat_word("out") {
+            // `write`/`read` are the preferred UI-frame spellings;
+            // `out`/`in` remain as SystemVerilog-compatible synonyms.
+            let verb = if self.eat_word("write") || self.eat_word("out") {
                 Verb::Out
-            } else if self.eat_word("in") {
+            } else if self.eat_word("read") || self.eat_word("in") {
                 Verb::In
             } else if self.eat_word("emit") {
                 Verb::Emit
             } else if self.eat_word("drain") {
                 Verb::Drain
             } else {
-                return Err(self.error("expected modport verb `out`, `in`, `emit`, or `drain`"));
+                return Err(self.error(
+                    "expected modport verb `write`, `read`, `emit`, or `drain` (or SV-style `out`/`in`)",
+                ));
             };
             let (field, field_span) = self.ident("field name")?;
             entries.push(ModportEntry {

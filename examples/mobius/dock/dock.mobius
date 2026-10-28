@@ -16,32 +16,33 @@
 app DockDemo {
     enum Theme { CopperDark, TokyoNight, Light }
 
-    // Modport verbs are DRIVER semantics, from the citizen's seat (the
-    // SystemVerilog frame): `out` = this side's hand is on the pen (the
-    // theme combo and About button live in the ribbon, so the ribbon
-    // drives those cells — and like SV, `out` implies read access too);
-    // `in` = read-only (the host stamps the clock; the ribbon displays
-    // it). The two modports mirror exactly — every cell has one driver,
-    // which is what makes the one-writer check possible.
+    // Modport verbs are access rights from the citizen's seat: `write`
+    // = this side's hand is on the pen (the theme combo and About
+    // button live in the ribbon, so the ribbon writes those cells —
+    // writing implies reading); `read` = observe only (the host stamps
+    // the clock; the ribbon displays it). The two modports mirror
+    // exactly — every cell has one writer, which is what makes the
+    // one-writer check possible. (SystemVerilog spellings `out`/`in`
+    // are accepted synonyms.)
     interface Chrome {
         theme : Theme = Theme::CopperDark
         show_about : bool = false
         clock : string = ""
-        modport ribbon (out theme, out show_about, in clock)
-        modport host (in theme, in show_about, out clock)
+        modport ribbon (write theme, write show_about, read clock)
+        modport host (read theme, read show_about, write clock)
     }
 
     interface Channel {
         level : f32 = 0.5
-        modport ctrl (out level)
-        modport view (in level)
+        modport ctrl (write level)
+        modport view (read level)
     }
 
     interface Log {
         state : LoggerState
         colors : LogColors
-        modport view (in state, in colors)
-        modport host (out state, out colors)
+        modport view (read state, read colors)
+        modport host (write state, write colors)
     }
 
     // Example 1's chrome essentials — wordmark, theme, About/version,
