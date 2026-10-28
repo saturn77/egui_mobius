@@ -25,7 +25,7 @@ module, and the startup banner.
 
 ```sh
 cargo run -p mobius_codegen --bin mobius-gen -- examples/dock/dock.mobius
-cd target/tmp/dock_demo && cargo run
+cd examples/dock/generated && cargo run
 ```
 
 This example is the second codegen gate:

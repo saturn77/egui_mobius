@@ -9,7 +9,7 @@ banner image and dependency table.
 
 ```sh
 cargo run -p mobius_codegen --bin mobius-gen -- examples/ribbon/ribbon.mobius
-cd target/tmp/ribbon_demo && cargo run
+cd examples/ribbon/generated && cargo run
 ```
 
 The output location and dependency roots come from `mobius.toml` here;

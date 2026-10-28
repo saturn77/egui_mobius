@@ -18,9 +18,10 @@ app DockDemo {
 
     interface Chrome {
         theme : Theme = Theme::CopperDark
+        show_about : bool = false
         clock : string = ""
-        modport ribbon (out theme, in clock)
-        modport host (in theme, out clock)
+        modport ribbon (out theme, out show_about, in clock)
+        modport host (in theme, in show_about, out clock)
     }
 
     interface Channel {
@@ -36,12 +37,15 @@ app DockDemo {
         modport host (out state, out colors)
     }
 
+    // Example 1's chrome essentials — wordmark, theme, About/version,
+    // clock — without the file group.
     citizen Ribbon (c : Chrome.ribbon) {
         row {
             wordmark "DockDemo";
             separator;
             right {
                 combo "🎨" <-> c.theme;
+                button "ℹ About" <-> c.show_about;
                 separator;
                 clock <- c.clock;
             }
@@ -79,6 +83,11 @@ app DockDemo {
 
     @layout {
         top(ribbon);
+        about(trigger = chrome.show_about,
+              title   = "DockDemo",
+              tagline = "Example 2 of the .mobius tutorial — the egui_lens System citizen (logger prefab), docked panels, and the same citizen instantiated twice.",
+              deps    = true,
+              resizable = true);
         dock(controls0, region = left);
         dock(controls1, region = left);
         dock(scope0, region = center);

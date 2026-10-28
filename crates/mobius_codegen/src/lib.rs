@@ -191,6 +191,8 @@ pub fn generate(source: &str, opts: &Options) -> Result<Generated, Error> {
 
     let mut files = BTreeMap::new();
     files.insert("Cargo.toml".into(), model.emit_manifest(opts));
+    // Generated projects are committable — keep their build junk out.
+    files.insert(".gitignore".into(), "/target\n/Cargo.lock\n".into());
     files.insert("src/state.rs".into(), model.emit_state());
     if let Some(theme_rs) = model.emit_theme() {
         files.insert("src/theme.rs".into(), theme_rs);
@@ -1452,6 +1454,18 @@ opt-level = 2
                  \x20       }});\n",
             );
         }
+        if let Some(log_inst) = self.logger_inst() {
+            let _ = write!(
+                out,
+                "\n        // egui_lens's System Info button sets a temp-memory flag;\n\
+                 \x20       // answering it is the host's job (per egui_lens's own comment).\n\
+                 \x20       let info_id = egui::Id::new(\"show_system_info\");\n\
+                 \x20       if ui.ctx().memory(|mem| mem.data.get_temp::<bool>(info_id).unwrap_or(false)) {{\n\
+                 \x20           startup::system_info(&self.{log_inst});\n\
+                 \x20           ui.ctx().memory_mut(|mem| mem.data.remove::<bool>(info_id));\n\
+                 \x20       }}\n",
+            );
+        }
         if let Some(about) = &self.about {
             let _ = writeln!(out, "\n        about_window(&ctx, &self.{});", about.trigger.0);
         }
@@ -1626,7 +1640,7 @@ opt-level = 2
             for (n, v) in &rows {
                 let _ = writeln!(
                     dep_lines,
-                    "            \"    {:<21}: {v}\\n\",",
+                    "        \"    {:<21}: {v}\\n\",",
                     format!("{n} ")
                 );
             }
@@ -1636,15 +1650,23 @@ opt-level = 2
                  \x20   //! Startup banner — the CopperForge logger convention:\n\
                  \x20   //! welcome, dependency versions, system details.\n\n\
                  \x20   use egui_lens::ReactiveEventLogger;\n\n\
+                 \x20   const WELCOME: &str = concat!(\n\
+                 \x20       \"**** Welcome to {app}, version \", env!(\"CARGO_PKG_VERSION\"), \"\\n\\n\",\n\
+                 \x20       \"    DEPENDENCIES\\n\",\n\
+                 {dep_lines}\
+                 \x20   );\n\n\
                  \x20   pub fn banner(log: &crate::state::{iface_name}) {{\n\
                  \x20       let logger = ReactiveEventLogger::with_colors(&log.{state_field}, &log.{colors_field});\n\
                  \x20       logger.log_info(\"Startup: init\");\n\
-                 \x20       logger.log_info(concat!(\n\
-                 \x20           \"**** Welcome to {app}, version \", env!(\"CARGO_PKG_VERSION\"), \"\\n\\n\",\n\
-                 \x20           \"    DEPENDENCIES\\n\",\n\
-                 {dep_lines}\
-                 \x20       ));\n\
+                 \x20       logger.log_info(WELCOME);\n\
                  \x20       logger.log_info(&system_details());\n\
+                 \x20   }}\n\n\
+                 \x20   /// The System Info button: details first, banner last, so the\n\
+                 \x20   /// banner reads on top in the circular buffer (CopperForge order).\n\
+                 \x20   pub fn system_info(log: &crate::state::{iface_name}) {{\n\
+                 \x20       let logger = ReactiveEventLogger::with_colors(&log.{state_field}, &log.{colors_field});\n\
+                 \x20       logger.log_info(&system_details());\n\
+                 \x20       logger.log_info(WELCOME);\n\
                  \x20   }}\n\n\
                  \x20   /// Linux: /etc/os-release + kernel version; elsewhere the OS constant.\n\
                  \x20   fn system_details() -> String {{\n\

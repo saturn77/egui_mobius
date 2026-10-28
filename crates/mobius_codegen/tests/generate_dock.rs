@@ -30,6 +30,8 @@ fn dock_project_cargo_checks() {
     assert!(main.contains("Controls::with_id(controls1_state, \"controls1\")"));
     assert!(main.contains("Tab::Scope1 => self.scope1.show(ui, self.ch1),"));
     assert!(main.contains("startup::banner(&app.log);"));
+    assert!(main.contains("startup::system_info(&self.log);"));
+    assert!(main.contains("about_window(&ctx, &self.chrome);"));
     let citizens_mod = &generated.files["src/citizens/mod.rs"];
     assert!(citizens_mod.contains("pub mod controls;"));
     assert!(citizens_mod.contains("pub mod scope;"));
