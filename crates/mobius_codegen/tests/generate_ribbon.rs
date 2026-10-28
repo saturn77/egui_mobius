@@ -21,6 +21,7 @@ fn ribbon_project_cargo_checks() {
             asset_root: Some(
                 Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"),
             ),
+            crate_name: None,
         },
     )
     .expect("fixture generates");

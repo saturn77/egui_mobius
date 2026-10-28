@@ -46,6 +46,62 @@ pub struct Options {
     /// Base directory for resolving asset paths in the source (e.g. the
     /// `about(image = "...")` banner) — usually the `.mobius` file's dir.
     pub asset_root: Option<PathBuf>,
+    /// Override the generated crate name (default: snake_case of the app).
+    pub crate_name: Option<String>,
+}
+
+/// Compiler directives from a `mobius.toml` next to the `.mobius` source —
+/// the project-file half of the output-pathing story (the source stays
+/// portable, the way RTL stays pure while `.qsf` / filelists carry paths).
+/// All paths are resolved relative to the toml's directory. Precedence at
+/// the CLI: explicit arguments > `mobius.toml` > defaults.
+///
+/// ```toml
+/// [project]
+/// out = "../../../../target/tmp/ribbon_demo"
+/// # crate_name = "ribbon_demo"
+/// # mobius_root = "../../../.."
+/// # asset_root = "."
+/// ```
+#[derive(Debug, Default, PartialEq)]
+pub struct ProjectConfig {
+    pub out: Option<PathBuf>,
+    pub crate_name: Option<String>,
+    pub mobius_root: Option<PathBuf>,
+    pub asset_root: Option<PathBuf>,
+}
+
+#[derive(serde::Deserialize)]
+struct ProjectConfigFile {
+    project: ProjectConfigTable,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectConfigTable {
+    out: Option<String>,
+    crate_name: Option<String>,
+    mobius_root: Option<String>,
+    asset_root: Option<String>,
+}
+
+/// Load the `mobius.toml` sitting next to `source`, if any. Relative paths
+/// in the file resolve against its own directory.
+pub fn load_project_config(source: &Path) -> Result<Option<ProjectConfig>, Error> {
+    let dir = source.parent().unwrap_or_else(|| Path::new("."));
+    let path = dir.join("mobius.toml");
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return Ok(None);
+    };
+    let file: ProjectConfigFile = toml::from_str(&text)
+        .map_err(|e| Error::Config(format!("{}: {e}", path.display())))?;
+    let resolve = |p: Option<String>| p.map(|p| dir.join(p));
+    Ok(Some(ProjectConfig {
+        out: resolve(file.project.out),
+        crate_name: file.project.crate_name,
+        mobius_root: resolve(file.project.mobius_root),
+        asset_root: resolve(file.project.asset_root),
+    }))
 }
 
 /// A generated project: relative path → file contents, plus binary assets
@@ -85,6 +141,8 @@ pub enum Error {
     Unsupported(String),
     /// A referenced asset could not be read.
     Asset(String),
+    /// A malformed `mobius.toml`.
+    Config(String),
 }
 
 impl std::fmt::Display for Error {
@@ -93,6 +151,7 @@ impl std::fmt::Display for Error {
             Error::Parse(e) => write!(f, "parse error: {e:?}"),
             Error::Unsupported(what) => write!(f, "unsupported: {what}"),
             Error::Asset(what) => write!(f, "asset: {what}"),
+            Error::Config(what) => write!(f, "mobius.toml: {what}"),
         }
     }
 }
@@ -106,7 +165,10 @@ pub fn generate(source: &str, opts: &Options) -> Result<Generated, Error> {
         .apps
         .first()
         .ok_or_else(|| Error::Unsupported("no `app` in source".into()))?;
-    let model = Model::build(app)?;
+    let mut model = Model::build(app)?;
+    if let Some(name) = &opts.crate_name {
+        model.crate_name = name.clone();
+    }
 
     let mut assets = BTreeMap::new();
     if let Some(image) = model.about.as_ref().and_then(|a| a.image.clone()) {
@@ -1374,6 +1436,7 @@ mod tests {
                     env!("CARGO_MANIFEST_DIR"),
                     "/tests/fixtures"
                 ))),
+                crate_name: None,
             },
         )
         .expect("fixture generates");
@@ -1394,5 +1457,19 @@ mod tests {
     fn snake_cases() {
         assert_eq!(snake_case("RibbonDemo"), "ribbon_demo");
         assert_eq!(snake_case("Ribbon"), "ribbon");
+    }
+
+    #[test]
+    fn project_config_loads_and_resolves() {
+        let fixtures = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"));
+        let config = load_project_config(&fixtures.join("ribbon.mobius"))
+            .expect("parses")
+            .expect("fixture mobius.toml exists");
+        // Relative paths resolve against the toml's directory.
+        assert_eq!(config.out, Some(fixtures.join("../../../../target/tmp/ribbon_demo")));
+        assert_eq!(config.asset_root, Some(fixtures.join(".")));
+        assert_eq!(config.crate_name, None);
+        // No sibling mobius.toml → None, not an error.
+        assert!(load_project_config(Path::new("/nonexistent/x.mobius")).unwrap().is_none());
     }
 }
