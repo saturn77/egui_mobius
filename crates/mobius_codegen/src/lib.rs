@@ -185,6 +185,8 @@ struct AboutModel {
     image: Option<String>,
     /// Show the ShutterFrame-style "Built with" dependency table.
     deps: bool,
+    /// User-resizable window (width fills, vertical shrink scrolls).
+    resizable: bool,
 }
 
 impl Model {
@@ -909,10 +911,10 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
             let banner = if about.image.is_some() {
                 "            ui.vertical_centered(|ui| {\n\
                  \x20               ui.add_space(10.0);\n\
+                 \x20               // Width tracks the window so horizontal resize sticks.\n\
                  \x20               ui.add(\n\
                  \x20                   egui::Image::new(egui::include_image!(\"../assets/about.png\"))\n\
-                 \x20                       .fit_to_original_size(0.75)\n\
-                 \x20                       .max_size(egui::vec2(420.0, 320.0)),\n\
+                 \x20                       .max_size(egui::vec2(ui.available_width(), f32::INFINITY)),\n\
                  \x20               );\n\
                  \x20               ui.add_space(12.0);\n\
                  \x20           });\n"
@@ -948,12 +950,15 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                  \x20   let mut open = true;\n\
                  \x20   egui::Window::new(\"About {title}\")\n\
                  \x20       .collapsible(false)\n\
-                 \x20       .resizable(true)\n\
+                 \x20       .resizable({resizable})\n\
                  \x20       .default_width(460.0)\n\
                  \x20       .pivot(egui::Align2::CENTER_CENTER)\n\
                  \x20       .default_pos(ctx.content_rect().center())\n\
                  \x20       .open(&mut open)\n\
                  \x20       .show(ctx, |ui| {{\n\
+                 \x20           // Opens at full content height; shrinking it scrolls, and\n\
+                 \x20           // the width-filling scroll area makes horizontal resize stick.\n\
+                 \x20           egui::ScrollArea::vertical().auto_shrink([false, true]).show(ui, |ui| {{\n\
                  {banner}\
                  \x20           ui.heading(\"{title}\");\n\
                  \x20           ui.label(egui::RichText::new(\"{tagline}\").italics());\n\
@@ -961,6 +966,7 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                  \x20           ui.separator();\n\
                  \x20           ui.weak(format!(\"version {{}}\", env!(\"CARGO_PKG_VERSION\")));\n\
                  {deps_table}\
+                 \x20           }});\n\
                  \x20       }});\n\
                  \x20   if !open {{\n\
                  \x20       {inst}.{trigger}.set(false);\n\
@@ -969,6 +975,7 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                 trigger = about.trigger_field,
                 title = about.title,
                 tagline = about.tagline,
+                resizable = about.resizable,
             );
 
             if about.deps {
@@ -1227,6 +1234,7 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
     let mut tagline = None;
     let mut image = None;
     let mut deps = false;
+    let mut resizable = true;
     for arg in args {
         let DirectiveArg::Named(named) = arg else {
             return Err(Error::Unsupported("about() takes named arguments".into()));
@@ -1245,6 +1253,7 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
             ("tagline", Expr::Str(s, _)) => tagline = Some(s.clone()),
             ("image", Expr::Str(s, _)) => image = Some(s.clone()),
             ("deps", Expr::Bool(b, _)) => deps = *b,
+            ("resizable", Expr::Bool(b, _)) => resizable = *b,
             (other, _) => {
                 return Err(Error::Unsupported(format!("about() argument `{other}`")));
             }
@@ -1256,6 +1265,7 @@ fn parse_about(args: &[DirectiveArg], iface_instance: &str) -> Result<AboutModel
         tagline: tagline.unwrap_or_default(),
         image,
         deps,
+        resizable,
     })
 }
 
