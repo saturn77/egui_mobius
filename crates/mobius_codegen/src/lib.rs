@@ -96,6 +96,9 @@ pub fn generate(source: &str, opts: &Options) -> Result<Generated, Error> {
     let mut files = BTreeMap::new();
     files.insert("Cargo.toml".into(), model.emit_manifest(opts));
     files.insert("src/state.rs".into(), model.emit_state());
+    if let Some(theme_rs) = model.emit_theme() {
+        files.insert("src/theme.rs".into(), theme_rs);
+    }
     files.insert("src/citizens/mod.rs".into(), model.emit_citizens_mod());
     files.insert(
         format!("src/citizens/{}.rs", model.citizen_snake),
@@ -116,8 +119,6 @@ struct EnumModel {
     variants: Vec<String>,
     /// Bound by a `combo` — gets `ALL` and `label()`.
     combo: bool,
-    /// The app's theme enum — gets the `visuals()` stub.
-    visuals: bool,
 }
 
 struct FieldModel {
@@ -168,7 +169,6 @@ impl Model {
                     name: e.name.clone(),
                     variants: e.variants.clone(),
                     combo: false,
-                    visuals: false,
                 }),
                 AppItem::Interface(i) => {
                     if iface.replace(i).is_some() {
@@ -274,7 +274,6 @@ impl Model {
                             if let Some(e) = enums.iter_mut().find(|e| &e.name == enum_name) {
                                 e.combo = true;
                                 if field_name == "theme" {
-                                    e.visuals = true;
                                     theme_field = Some(field_name.clone());
                                 }
                             }
@@ -360,46 +359,25 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
             }
             out.push_str("}\n");
 
-            if e.combo || e.visuals {
-                let _ = write!(out, "\nimpl {} {{\n", e.name);
-                if e.combo {
-                    let all = e
-                        .variants
-                        .iter()
-                        .map(|v| format!("{}::{v}", e.name))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let _ = write!(
-                        out,
-                        "    pub const ALL: [{name}; {n}] = [{all}];\n\n\
-                         \x20   pub fn label(self) -> &'static str {{\n        match self {{\n",
-                        name = e.name,
-                        n = e.variants.len(),
-                    );
-                    for v in &e.variants {
-                        let _ = writeln!(out, "            {}::{v} => \"{v}\",", e.name);
-                    }
-                    out.push_str("        }\n    }\n");
+            if e.combo {
+                let all = e
+                    .variants
+                    .iter()
+                    .map(|v| format!("{}::{v}", e.name))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let _ = write!(
+                    out,
+                    "\nimpl {name} {{\n\
+                     \x20   pub const ALL: [{name}; {n}] = [{all}];\n\n\
+                     \x20   pub fn label(self) -> &'static str {{\n        match self {{\n",
+                    name = e.name,
+                    n = e.variants.len(),
+                );
+                for v in &e.variants {
+                    let _ = writeln!(out, "            {}::{v} => \"{v}\",", e.name);
                 }
-                if e.visuals {
-                    let light_arms: String = e
-                        .variants
-                        .iter()
-                        .filter(|v| v.contains("Light"))
-                        .map(|v| format!("            {}::{v} => egui::Visuals::light(),\n", e.name))
-                        .collect();
-                    let _ = write!(
-                        out,
-                        "\n    /// Theme stub: `Light`-named variants map to light visuals,\n\
-                         \x20   /// everything else to dark. Replace with real per-variant styles.\n\
-                         \x20   pub fn visuals(self) -> egui::Visuals {{\n\
-                         \x20       match self {{\n{light_arms}\
-                         \x20           _ => egui::Visuals::dark(),\n\
-                         \x20       }}\n\
-                         \x20   }}\n",
-                    );
-                }
-                out.push_str("}\n");
+                out.push_str("        }\n    }\n}\n");
             }
         }
 
@@ -423,6 +401,95 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
         }
         out.push_str("        }\n    }\n}\n");
         out
+    }
+
+    // ── src/theme.rs ────────────────────────────────────────────────────
+
+    /// The theme enum's palette + chrome colours, in the house style:
+    /// `apply()` sets the full visuals, `brand()` colours the wordmark,
+    /// `accent()` colours ribbon chrome (clock, about). Palettes are
+    /// ported from CopperTrace's `theme.rs`; variants are matched to a
+    /// palette by name (`Light`/`Tokyo`/`Copper`), unknown dark variants
+    /// cycle through the dark palettes.
+    fn emit_theme(&self) -> Option<String> {
+        let enum_name = self.theme_enum()?;
+        let e = self.enums.iter().find(|e| e.name == enum_name)?;
+
+        let mut dark_index = 0usize;
+        let palettes: Vec<&'static str> = e
+            .variants
+            .iter()
+            .map(|v| {
+                let p = palette_for(v, dark_index);
+                if p != "light" && !v.contains("Tokyo") && !v.contains("Copper") {
+                    dark_index += 1;
+                }
+                p
+            })
+            .collect();
+
+        let mut out = format!(
+            "//! Themes for {app} — generated by mobius_codegen. Palettes ported\n\
+             //! from CopperTrace's `theme.rs` (Discord-dark / Tokyo Night Storm /\n\
+             //! Forge-PM grey). Replace freely — this file is scaffolding.\n\n\
+             use egui::Color32;\n\nuse crate::state::{enum_name};\n\n\
+             impl {enum_name} {{\n\
+             \x20   /// Apply this theme to the egui context.\n\
+             \x20   pub fn apply(self, ctx: &egui::Context) {{\n\
+             \x20       match self {{\n",
+            app = self.app_name,
+        );
+        for (v, p) in e.variants.iter().zip(&palettes) {
+            let _ = writeln!(out, "            {enum_name}::{v} => apply_{p}(ctx),");
+        }
+        out.push_str(
+            "        }\n    }\n\n\
+             \x20   /// Brand wordmark colours, chosen per theme.\n\
+             \x20   pub fn brand(self) -> (Color32, Color32) {\n        match self {\n",
+        );
+        for (v, p) in e.variants.iter().zip(&palettes) {
+            let brand = match *p {
+                "tokyo" => "(Color32::from_rgb(0xff, 0x9e, 0x64), Color32::from_rgb(0x7a, 0xa2, 0xf7))",
+                "light" => "(Color32::from_rgb(214, 127, 60), Color32::from_rgb(0xe6, 0xe6, 0xe6))",
+                _ => "(Color32::from_rgb(214, 127, 60), Color32::from_rgb(225, 228, 230))",
+            };
+            let _ = writeln!(out, "            {enum_name}::{v} => {brand},");
+        }
+        out.push_str(
+            "        }\n    }\n\n\
+             \x20   /// Accent colour for ribbon chrome (clock, version / about tags).\n\
+             \x20   pub fn accent(self) -> Color32 {\n        match self {\n",
+        );
+        for (v, p) in e.variants.iter().zip(&palettes) {
+            let accent = match *p {
+                "tokyo" => "Color32::from_rgb(0x7d, 0xcf, 0xff)",
+                "light" => "Color32::from_rgb(0x8a, 0xb4, 0xf8)",
+                _ => "Color32::from_rgb(0x58, 0x65, 0xf2)",
+            };
+            let _ = writeln!(out, "            {enum_name}::{v} => {accent},");
+        }
+        out.push_str("        }\n    }\n}\n");
+
+        for p in ["discord", "tokyo", "light"] {
+            if palettes.contains(&p) {
+                out.push('\n');
+                out.push_str(match p {
+                    "discord" => PALETTE_DISCORD,
+                    "tokyo" => PALETTE_TOKYO,
+                    _ => PALETTE_LIGHT,
+                });
+            }
+        }
+        Some(out)
+    }
+
+    /// The enum behind the combo-bound `theme` field, if there is one.
+    fn theme_enum(&self) -> Option<String> {
+        let field = self.theme_field.as_ref()?;
+        self.state_fields
+            .iter()
+            .find(|f| &f.name == field)
+            .and_then(|f| f.enum_name.clone())
     }
 
     // ── src/citizens/ ───────────────────────────────────────────────────
@@ -478,11 +545,40 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
             port = self.citizen_port,
             iface = self.iface_name,
         );
+        let _ = writeln!(out, "        ui.add_space(3.0);");
+        if self.chrome_needs_theme() {
+            let _ = writeln!(
+                out,
+                "        let theme = {}.{}.get();",
+                self.citizen_port,
+                self.theme_field.as_deref().unwrap_or("theme"),
+            );
+        }
         let mut body = String::new();
         self.emit_widgets(&self.body, 2, &mut body)?;
         out.push_str(&body);
         out.push_str("    }\n}\n");
         Ok(out)
+    }
+
+    /// Does the citizen body contain chrome that reads `theme.brand()` /
+    /// `theme.accent()`? (wordmark, clock, or the about-trigger button)
+    fn chrome_needs_theme(&self) -> bool {
+        if self.theme_field.is_none() {
+            return false;
+        }
+        let trigger = self.about.as_ref().map(|a| a.trigger_field.as_str());
+        let mut needs = false;
+        scan_widgets(&self.body, &mut |p| match (p.kind.as_str(), &p.binding) {
+            ("wordmark", _) | ("clock", _) => needs = true,
+            ("button", Binding::TwoWay { path, .. }) => {
+                if path.segments.last().map(String::as_str) == trigger {
+                    needs = true;
+                }
+            }
+            _ => {}
+        });
+        needs
     }
 
     fn emit_widgets(&self, nodes: &[WidgetNode], depth: usize, out: &mut String) -> Result<(), Error> {
@@ -537,17 +633,42 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                 let _ = writeln!(out, "{pad}ui.separator();");
             }
             ("wordmark", Binding::None) => {
-                let _ = writeln!(
-                    out,
-                    "{pad}ui.heading(egui::RichText::new(\"{label}\").strong());"
-                );
+                if self.theme_field.is_some() {
+                    // Two-tone wordmark in the theme's brand colours, split
+                    // at the camel hump (CopperTrace house style).
+                    let (head, tail) = split_wordmark(label);
+                    let _ = writeln!(out, "{pad}ui.scope(|ui| {{");
+                    let _ = writeln!(out, "{pad}    ui.spacing_mut().item_spacing.x = 0.0;");
+                    let _ = writeln!(out, "{pad}    let (brand_a, brand_b) = theme.brand();");
+                    let _ = writeln!(
+                        out,
+                        "{pad}    ui.heading(egui::RichText::new(\"{head}\").size(20.0).strong().color(brand_a));"
+                    );
+                    if !tail.is_empty() {
+                        let _ = writeln!(
+                            out,
+                            "{pad}    ui.heading(egui::RichText::new(\"{tail}\").size(20.0).strong().color(brand_b));"
+                        );
+                    }
+                    let _ = writeln!(out, "{pad}}});");
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "{pad}ui.heading(egui::RichText::new(\"{label}\").strong());"
+                    );
+                }
             }
             ("label", Binding::Read { path, .. }) | ("clock", Binding::Read { path, .. }) => {
                 let field = self.port_field(path)?;
                 if p.kind == "clock" {
+                    let style = if self.theme_field.is_some() {
+                        ".monospace().color(theme.accent())"
+                    } else {
+                        ".monospace().weak()"
+                    };
                     let _ = writeln!(
                         out,
-                        "{pad}ui.label(egui::RichText::new({port}.{field}.get()).monospace().weak());",
+                        "{pad}ui.label(egui::RichText::new({port}.{field}.get()){style});",
                         port = self.citizen_port,
                     );
                 } else {
@@ -565,7 +686,14 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                 // whoever owns the consequence (a modal, the host) sets it
                 // back to false.
                 let field = self.port_field(path)?;
-                let _ = writeln!(out, "{pad}if ui.button(\"{label}\").clicked() {{");
+                let is_about = self.theme_field.is_some()
+                    && self.about.as_ref().map(|a| a.trigger_field.as_str()) == Some(field.as_str());
+                let button = if is_about {
+                    format!("ui.button(egui::RichText::new(\"{label}\").color(theme.accent()))")
+                } else {
+                    format!("ui.button(\"{label}\")")
+                };
+                let _ = writeln!(out, "{pad}if {button}.clicked() {{");
                 let _ = writeln!(out, "{pad}    {}.{field}.set(true);", self.citizen_port);
                 let _ = writeln!(out, "{pad}}}");
             }
@@ -602,6 +730,9 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                 let _ = writeln!(out, "{pad}    }});");
                 let _ = writeln!(out, "{pad}if picked != {port}.{field}.get() {{");
                 let _ = writeln!(out, "{pad}    {port}.{field}.set(picked);");
+                if self.theme_field.as_deref() == Some(field.as_str()) {
+                    let _ = writeln!(out, "{pad}    picked.apply(ui.ctx());");
+                }
                 let _ = writeln!(out, "{pad}}}");
             }
             (kind, _) => {
@@ -668,7 +799,8 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
              //! `actions::handle` once per frame, and the registry handles\n\
              //! lifecycle only.\n\n\
              mod citizens;\n\
-             mod state;\n\n\
+             mod state;\n\
+             {mod_theme}\n\
              use eframe::egui;\n\
              use egui_citizen::Registry;\n\n\
              struct App {{\n\
@@ -692,6 +824,7 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
              \x20   fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {{\n\
              \x20       let ctx = ui.ctx().clone();\n",
             app = self.app_name,
+            mod_theme = if self.theme_field.is_some() { "mod theme;\n" } else { "" },
         );
 
         if let Some(clock) = &self.clock_field {
@@ -700,9 +833,6 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
                 out,
                 "        ctx.request_repaint_after(std::time::Duration::from_millis(250));"
             );
-        }
-        if let Some(theme) = &self.theme_field {
-            let _ = writeln!(out, "        ctx.set_visuals(self.{inst}.{theme}.get().visuals());");
         }
 
         let _ = write!(
@@ -809,6 +939,17 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
             );
         }
 
+        let creator = if let Some(theme) = &self.theme_field {
+            format!(
+                "Box::new(|cc| {{\n\
+                 \x20           let app = App::new();\n\
+                 \x20           app.{inst}.{theme}.get().apply(&cc.egui_ctx);\n\
+                 \x20           Ok(Box::new(app))\n\
+                 \x20       }}),"
+            )
+        } else {
+            "Box::new(|_cc| Ok(Box::new(App::new()))),".to_owned()
+        };
         let _ = write!(
             out,
             "\nfn main() -> Result<(), eframe::Error> {{\n\
@@ -818,7 +959,7 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
              \x20           viewport: egui::ViewportBuilder::default().with_inner_size([900.0, 420.0]),\n\
              \x20           ..Default::default()\n\
              \x20       }},\n\
-             \x20       Box::new(|_cc| Ok(Box::new(App::new()))),\n\
+             \x20       {creator}\n\
              \x20   )\n\
              }}\n",
             app = self.app_name,
@@ -828,6 +969,148 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────
+
+/// Match a theme variant name to one of the shipped palettes.
+fn palette_for(variant: &str, dark_index: usize) -> &'static str {
+    if variant.contains("Light") {
+        "light"
+    } else if variant.contains("Tokyo") {
+        "tokyo"
+    } else if variant.contains("Copper") || variant.contains("Discord") {
+        "discord"
+    } else if dark_index % 2 == 0 {
+        "discord"
+    } else {
+        "tokyo"
+    }
+}
+
+/// Discord-dark (CopperTrace's Copper Dark, lineage Forge-PM).
+const PALETTE_DISCORD: &str = r#"/// Discord-dark palette (base #313338, sidebar #2B2D31, blurple #5865F2).
+fn apply_discord(ctx: &egui::Context) {
+    let base = Color32::from_rgb(0x31, 0x33, 0x38);
+    let sidebar = Color32::from_rgb(0x2b, 0x2d, 0x31);
+    let darkest = Color32::from_rgb(0x1e, 0x1f, 0x22);
+    let hover = Color32::from_rgb(0x39, 0x3c, 0x41);
+    let raised = Color32::from_rgb(0x38, 0x3a, 0x40);
+    let fg = Color32::from_rgb(0xdb, 0xde, 0xe1);
+    let fg_dim = Color32::from_rgb(0x94, 0x9b, 0xa4);
+    let blurple = Color32::from_rgb(0x58, 0x65, 0xf2);
+    let border = Color32::from_rgb(0x26, 0x28, 0x2c);
+
+    let mut v = egui::Visuals::dark();
+    v.panel_fill = base;
+    v.window_fill = sidebar;
+    v.faint_bg_color = raised;
+    v.extreme_bg_color = darkest;
+    v.selection.bg_fill = Color32::from_rgb(0x3e, 0x42, 0x70);
+    v.selection.stroke = egui::Stroke::new(1.0, blurple);
+    v.widgets.noninteractive.bg_fill = base;
+    v.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, fg_dim);
+    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, border);
+    v.widgets.inactive.bg_fill = raised;
+    v.widgets.inactive.weak_bg_fill = raised;
+    v.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, fg);
+    v.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, border);
+    v.widgets.hovered.bg_fill = hover;
+    v.widgets.hovered.weak_bg_fill = hover;
+    v.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, fg);
+    v.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, blurple);
+    v.widgets.active.bg_fill = blurple;
+    // `.strong()` text derives from this — keep it near-white.
+    v.widgets.active.fg_stroke = egui::Stroke::new(1.0, Color32::from_rgb(0xf2, 0xf3, 0xf5));
+    v.widgets.active.bg_stroke = egui::Stroke::new(1.0, blurple);
+    v.override_text_color = Some(fg);
+    v.hyperlink_color = Color32::from_rgb(0x00, 0xa8, 0xfc);
+    v.warn_fg_color = Color32::from_rgb(0xf0, 0xb2, 0x32);
+    v.error_fg_color = Color32::from_rgb(0xf2, 0x3f, 0x43);
+    v.window_stroke = egui::Stroke::new(1.0, border);
+    ctx.set_visuals(v);
+}
+"#;
+
+/// Tokyo Night Storm (CopperTrace / CopperForge lineage).
+const PALETTE_TOKYO: &str = r#"/// Tokyo Night Storm palette.
+fn apply_tokyo(ctx: &egui::Context) {
+    let bg = Color32::from_rgb(0x24, 0x28, 0x3b);
+    let bg_dark = Color32::from_rgb(0x1f, 0x23, 0x35);
+    let bg_hi = Color32::from_rgb(0x2f, 0x33, 0x4d);
+    let fg = Color32::from_rgb(0xc0, 0xca, 0xf5);
+    let fg_dim = Color32::from_rgb(0xa9, 0xb1, 0xd6);
+    let blue = Color32::from_rgb(0x7a, 0xa2, 0xf7);
+    let cyan = Color32::from_rgb(0x7d, 0xcf, 0xff);
+    let border = Color32::from_rgb(0x3b, 0x41, 0x61);
+    let selection = Color32::from_rgb(0x2e, 0x3c, 0x64);
+
+    let mut v = egui::Visuals::dark();
+    v.panel_fill = bg;
+    v.window_fill = bg_dark;
+    v.faint_bg_color = bg_hi;
+    v.extreme_bg_color = bg_dark;
+    v.selection.bg_fill = selection;
+    v.selection.stroke = egui::Stroke::new(1.0, blue);
+    v.widgets.noninteractive.bg_fill = bg;
+    v.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, fg_dim);
+    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, border);
+    v.widgets.inactive.bg_fill = bg_hi;
+    v.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, fg);
+    v.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, border);
+    v.widgets.hovered.bg_fill = selection;
+    v.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, cyan);
+    v.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, blue);
+    // `.strong()` text derives from widgets.active — keep it light.
+    v.widgets.active.bg_fill = blue;
+    v.widgets.active.fg_stroke = egui::Stroke::new(1.0, fg);
+    v.widgets.active.bg_stroke = egui::Stroke::new(1.0, cyan);
+    v.override_text_color = Some(fg);
+    v.hyperlink_color = cyan;
+    v.warn_fg_color = Color32::from_rgb(0xff, 0x9e, 0x64);
+    v.error_fg_color = Color32::from_rgb(0xf7, 0x76, 0x8e);
+    v.window_stroke = egui::Stroke::new(1.0, border);
+    ctx.set_visuals(v);
+}
+"#;
+
+/// Neutral grey "Light" (Forge-PM lineage — stock egui light is too bright).
+const PALETTE_LIGHT: &str = r#"/// Medium-grey light palette (the stock egui Light is far too bright).
+fn apply_light(ctx: &egui::Context) {
+    let panel = Color32::from_rgb(0x4a, 0x4a, 0x4d);
+    let window = Color32::from_rgb(0x3f, 0x3f, 0x42);
+    let dark = Color32::from_rgb(0x33, 0x33, 0x36);
+    let hi = Color32::from_rgb(0x5a, 0x5a, 0x5e);
+    let fg = Color32::from_rgb(0xe6, 0xe6, 0xe6);
+    let fg_dim = Color32::from_rgb(0xb0, 0xb0, 0xb4);
+    let accent = Color32::from_rgb(0x8a, 0xb4, 0xf8);
+    let border = Color32::from_rgb(0x6a, 0x6a, 0x6e);
+
+    let mut v = egui::Visuals::dark();
+    v.panel_fill = panel;
+    v.window_fill = window;
+    v.faint_bg_color = hi;
+    v.extreme_bg_color = dark;
+    v.selection.bg_fill = Color32::from_rgb(0x50, 0x62, 0x7a);
+    v.selection.stroke = egui::Stroke::new(1.0, accent);
+    v.widgets.noninteractive.bg_fill = panel;
+    v.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, fg_dim);
+    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, border);
+    v.widgets.inactive.bg_fill = hi;
+    v.widgets.inactive.weak_bg_fill = hi;
+    v.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, fg);
+    v.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, border);
+    v.widgets.hovered.bg_fill = Color32::from_rgb(0x66, 0x66, 0x6a);
+    v.widgets.hovered.weak_bg_fill = Color32::from_rgb(0x66, 0x66, 0x6a);
+    v.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, fg);
+    v.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, accent);
+    // A dark-on-accent active style turns every `.strong()` label invisible.
+    v.widgets.active.bg_fill = Color32::from_rgb(0x50, 0x62, 0x7a);
+    v.widgets.active.fg_stroke = egui::Stroke::new(1.0, Color32::WHITE);
+    v.widgets.active.bg_stroke = egui::Stroke::new(1.0, accent);
+    v.override_text_color = Some(fg);
+    v.hyperlink_color = accent;
+    v.window_stroke = egui::Stroke::new(1.0, border);
+    ctx.set_visuals(v);
+}
+"#;
 
 fn scan_widgets(nodes: &[WidgetNode], f: &mut impl FnMut(&mobius_lang::ast::Primitive)) {
     for node in nodes {
@@ -895,6 +1178,17 @@ fn render_default(field: &str, default: Option<&Expr>) -> Result<String, Error> 
             )));
         }
     })
+}
+
+/// Split a CamelCase wordmark at its first hump: `"RibbonDemo"` →
+/// `("Ribbon", "Demo")`. No hump → the whole label and an empty tail.
+fn split_wordmark(label: &str) -> (&str, &str) {
+    for (i, ch) in label.char_indices().skip(1) {
+        if ch.is_uppercase() {
+            return (&label[..i], &label[i..]);
+        }
+    }
+    (label, "")
 }
 
 fn snake_case(name: &str) -> String {
