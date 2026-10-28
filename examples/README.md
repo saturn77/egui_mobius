@@ -93,3 +93,10 @@ The book in `egui_mobius/book/` covers the citizen pattern and the
 reactive primitives in depth. The
 [`egui_mobius_template`](https://github.com/saturn77/egui_mobius_template)
 repository is a starting scaffold for new applications.
+
+## The `.mobius` examples
+
+The language-driven examples — `.mobius` source plus committed
+generated output — live under [`mobius/`](mobius) with their own
+tutorial-ladder index. They run from their `generated/` directories,
+not via `cargo run -p`.

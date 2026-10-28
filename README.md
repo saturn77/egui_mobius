@@ -125,7 +125,7 @@ architecture it describes is regular enough to *write down*.
 for exactly that (which citizens exist, what state they share, where
 they dock), and [`mobius_codegen`](crates/mobius_codegen) turns such a
 file into a complete, idiomatic cargo project you then own and edit —
-[`examples/ribbon`](examples/ribbon) is ~57 lines of source that
+[`examples/mobius/ribbon`](examples/mobius/ribbon) is ~57 lines of source that
 becomes a themed, working app. A starting point generator, not a new
 way of life: you never have to touch it, and nothing it emits depends
 on it. Longer-term, `egui_mobius` is growing toward a

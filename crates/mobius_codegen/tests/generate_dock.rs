@@ -13,7 +13,7 @@ fn dock_project_cargo_checks() {
         .expect("crate lives at <root>/crates/mobius_codegen")
         .to_path_buf();
 
-    let source = include_str!("../../../examples/dock/dock.mobius");
+    let source = include_str!("../../../examples/mobius/dock/dock.mobius");
     let generated = mobius_codegen::generate(
         source,
         &mobius_codegen::Options {

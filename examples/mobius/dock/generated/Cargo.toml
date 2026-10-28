@@ -15,9 +15,9 @@ eframe = { version = "0.36", default-features = false, features = [
 ] }
 egui = "0.36"
 egui_dock = "0.21"
-egui_lens = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/dock/../../crates/egui_lens" }
-egui_citizen = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/dock/../../crates/egui_citizen" }
-egui_mobius_reactive = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/dock/../../crates/egui_mobius_reactive" }
+egui_lens = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/mobius/dock/../../../crates/egui_lens" }
+egui_citizen = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/mobius/dock/../../../crates/egui_citizen" }
+egui_mobius_reactive = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/mobius/dock/../../../crates/egui_mobius_reactive" }
 
 # egui repaints continuously while the window resizes — unoptimized debug
 # builds freeze. Light opt for the app, full for dependencies.

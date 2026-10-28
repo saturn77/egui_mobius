@@ -6,6 +6,6 @@
 
 [project]
 out = "generated"
-mobius_root = "../.."
+mobius_root = "../../.."
 asset_root = "."
 # crate_name = "ribbon_demo"   # default: snake_case of the app name

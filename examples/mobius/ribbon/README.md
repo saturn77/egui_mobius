@@ -8,8 +8,8 @@ lifecycle wiring, theme palettes, and a resizable About window with
 banner image and dependency table.
 
 ```sh
-cargo run -p mobius_codegen --bin mobius-gen -- examples/ribbon/ribbon.mobius
-cd examples/ribbon/generated && cargo run
+cargo run -p mobius_codegen --bin mobius-gen -- examples/mobius/ribbon/ribbon.mobius
+cd examples/mobius/ribbon/generated && cargo run
 ```
 
 The output location and dependency roots come from `mobius.toml` here;

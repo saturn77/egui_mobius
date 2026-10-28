@@ -4,5 +4,5 @@
 
 [project]
 out = "generated"
-mobius_root = "../.."
+mobius_root = "../../.."
 asset_root = "."

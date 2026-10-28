@@ -24,8 +24,8 @@ routing, per-instance registry activation on tab click, the theme
 module, and the startup banner.
 
 ```sh
-cargo run -p mobius_codegen --bin mobius-gen -- examples/dock/dock.mobius
-cd examples/dock/generated && cargo run
+cargo run -p mobius_codegen --bin mobius-gen -- examples/mobius/dock/dock.mobius
+cd examples/mobius/dock/generated && cargo run
 ```
 
 This example is the second codegen gate:

@@ -50,7 +50,7 @@ fn fail_fast_parse_returns_the_first_recovered_error() {
 
 #[test]
 fn clean_source_recovers_nothing() {
-    let source = include_str!("../../../examples/ribbon/ribbon.mobius");
+    let source = include_str!("../../../examples/mobius/ribbon/ribbon.mobius");
     let out = parse_with_recovery(source);
     assert!(out.errors.is_empty(), "{:?}", out.errors);
     assert_eq!(out.file.apps.len(), 1);

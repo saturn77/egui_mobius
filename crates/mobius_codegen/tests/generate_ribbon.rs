@@ -13,12 +13,12 @@ fn ribbon_project_cargo_checks() {
         .expect("crate lives at <root>/crates/mobius_codegen")
         .to_path_buf();
 
-    let source = include_str!("../../../examples/ribbon/ribbon.mobius");
+    let source = include_str!("../../../examples/mobius/ribbon/ribbon.mobius");
     let generated = mobius_codegen::generate(
         source,
         &mobius_codegen::Options {
             mobius_root: mobius_root.clone(),
-            asset_root: Some(mobius_root.join("examples/ribbon")),
+            asset_root: Some(mobius_root.join("examples/mobius/ribbon")),
             crate_name: None,
         },
     )

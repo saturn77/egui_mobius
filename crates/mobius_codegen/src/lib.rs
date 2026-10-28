@@ -2071,14 +2071,14 @@ mod tests {
 
     #[test]
     fn ribbon_fixture_generates() {
-        let source = include_str!("../../../examples/ribbon/ribbon.mobius");
+        let source = include_str!("../../../examples/mobius/ribbon/ribbon.mobius");
         let generated = generate(
             source,
             &Options {
                 mobius_root: PathBuf::from("/tmp/mobius"),
                 asset_root: Some(PathBuf::from(concat!(
                     env!("CARGO_MANIFEST_DIR"),
-                    "/../../examples/ribbon"
+                    "/../../examples/mobius/ribbon"
                 ))),
                 crate_name: None,
             },
@@ -2107,14 +2107,16 @@ mod tests {
     fn project_config_loads_and_resolves() {
         let example = PathBuf::from(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/ribbon"
+            "/../../examples/mobius/ribbon"
         ));
         let config = load_project_config(&example.join("ribbon.mobius"))
             .expect("parses")
             .expect("example mobius.toml exists");
-        // Relative paths resolve against the toml's directory.
-        assert_eq!(config.out, Some(example.join("../../target/tmp/ribbon_demo")));
-        assert_eq!(config.asset_root, Some(example.join(".")));
+        // Relative paths resolve against the toml's directory and are
+        // absolutized (they end up inside the generated Cargo.toml).
+        let abs = |p: &str| std::path::absolute(example.join(p)).unwrap();
+        assert_eq!(config.out, Some(abs("generated")));
+        assert_eq!(config.asset_root, Some(abs(".")));
         assert_eq!(config.crate_name, None);
         // No sibling mobius.toml → None, not an error.
         assert!(load_project_config(Path::new("/nonexistent/x.mobius")).unwrap().is_none());

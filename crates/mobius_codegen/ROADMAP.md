@@ -47,7 +47,7 @@ both. The items below close the gaps that duality exposes.
 - ~~**Second citizen milestone.**~~ Done: `dock()` → DockState/Tab/
   TabViewer generation, instance-derived `CitizenId`s via
   `citizen_panel!::with_id`, multi-instancing proven in
-  `examples/dock` (Controls ×2 / Scope ×2 over Channel ×2), plus the
+  `examples/mobius/dock` (Controls ×2 / Scope ×2 over Channel ×2), plus the
   System citizen (egui_lens prefab: builtin `LoggerState`/`LogColors`
   types, `logger` primitive, generated startup banner with deps +
   system details).
