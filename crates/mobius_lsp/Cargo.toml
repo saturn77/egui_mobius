@@ -1,0 +1,17 @@
+[package]
+name        = "mobius_lsp"
+description = "Language server for .mobius — live parse diagnostics from mobius_lang."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish     = false
+
+[[bin]]
+name = "mobius-lsp"
+path = "src/main.rs"
+
+[dependencies]
+mobius_lang = { version = "0.6.0", path = "../mobius_lang" }
+lsp-server  = "0.10"
+lsp-types   = "0.97"
+serde_json  = "1"
