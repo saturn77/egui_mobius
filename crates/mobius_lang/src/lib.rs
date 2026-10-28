@@ -47,4 +47,4 @@ pub use error::{ParseError, Span};
 pub use execute::{Host, WiredApp, wire};
 pub use ir::Ir;
 pub use lower::{Diagnostic, Registry, lower};
-pub use parser::parse;
+pub use parser::{ParseOutput, parse, parse_with_recovery};

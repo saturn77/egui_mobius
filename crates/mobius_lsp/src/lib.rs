@@ -61,19 +61,22 @@ impl LineIndex {
     }
 }
 
-/// Diagnostics for one document's full text.
+/// Diagnostics for one document's full text. The recovering parser
+/// reports *every* error, not just the first — a typo at the top of the
+/// file no longer blanks out diagnostics below it.
 pub fn diagnostics(text: &str) -> Vec<Diagnostic> {
     let index = LineIndex::new(text);
-    match mobius_lang::parse(text) {
-        Ok(_) => Vec::new(),
-        Err(e) => vec![Diagnostic {
+    mobius_lang::parse_with_recovery(text)
+        .errors
+        .into_iter()
+        .map(|e| Diagnostic {
             range: index.range(text, e.span),
             severity: Some(DiagnosticSeverity::ERROR),
             source: Some("mobius".to_owned()),
             message: e.message,
             ..Default::default()
-        }],
-    }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -97,6 +100,15 @@ mod tests {
         // The parser stops somewhere in the citizen body — the range must
         // land on a real line of the source, not line 0.
         assert!(d.range.start.line >= 2, "range: {:?}", d.range);
+    }
+
+    #[test]
+    fn multiple_errors_all_reported() {
+        // An error in the citizen body AND one in @wiring — recovery means
+        // the second is no longer hidden behind the first.
+        let source = "app A {\n    citizen C (p : I.v) {\n        button \"x\" <-> p.s\n    }\n    @wiring {\n        let i = I()\n        let c = C(p = i.v);\n    }\n}\n";
+        let diags = diagnostics(source);
+        assert!(diags.len() >= 2, "got {} diagnostics: {diags:?}", diags.len());
     }
 
     #[test]

@@ -47,6 +47,15 @@ fn main() {
         Ok(source) => source,
         Err(e) => fail(&format!("cannot read {}: {e}", input.display())),
     };
+    // Compiler-style pre-flight: report every parse error, not just the
+    // first (generate() itself re-parses; that costs microseconds).
+    let parsed = mobius_lang::parse_with_recovery(&source);
+    if !parsed.errors.is_empty() {
+        for e in &parsed.errors {
+            eprintln!("{}:{}: error: {}", input.display(), e.span, e.message);
+        }
+        fail(&format!("{} parse error(s)", parsed.errors.len()));
+    }
     let options = mobius_codegen::Options {
         mobius_root,
         asset_root,
