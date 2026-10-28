@@ -15,7 +15,8 @@
 //! port      := IDENT ':' type
 //! widget    := IDENT '{' widget* '}'
 //!            | IDENT [STR] [expr '..' expr] [binding] ';'
-//! binding   := '<->' path | '<-' path | '->' expr
+//! binding   := '--' path          (wire: direction inferred from the modport grant)
+//!            | '<->' path | '<-' path | '->' expr   (explicit two-way / read / event)
 //! section   := '@' IDENT '{' stmt* '}'
 //! stmt      := 'let' IDENT (':' type ['=' expr] | '=' path '(' args ')') ';'
 //!            | 'bind' STR '=' path ';'
@@ -74,11 +75,92 @@ pub fn parse_with_recovery(source: &str) -> ParseOutput {
         }
     };
     let mut parser = Parser::new(tokens);
-    let file = parser.file();
+    let mut file = parser.file();
+    resolve_wires(&mut file);
     ParseOutput {
         file,
         comments,
         errors: parser.errors,
+    }
+}
+
+/// Resolve `--` wire bindings into `TwoWay`/`Read` from the port's modport
+/// verb: `out` fields get the widget-driven two-way binding, everything
+/// else reads. Runs on the freshly parsed AST so the checker, lowering,
+/// and codegen only ever see the two explicit directions; bad paths
+/// (unknown port/field, signal fields) fall back to `Read` and surface
+/// through the checker's existing port-access diagnostics.
+fn resolve_wires(file: &mut SourceFile) {
+    use crate::ast::{AppItem, Binding, Verb, WidgetNode};
+    use std::collections::HashMap;
+
+    for app in &mut file.apps {
+        // (interface, modport, field) → verb, owned so citizen bodies can be
+        // mutated while the table is read.
+        let mut verbs: HashMap<(String, String, String), Verb> = HashMap::new();
+        for item in &app.items {
+            if let AppItem::Interface(interface) = item {
+                for modport in &interface.modports {
+                    for entry in &modport.entries {
+                        verbs.insert(
+                            (interface.name.clone(), modport.name.clone(), entry.field.clone()),
+                            entry.verb,
+                        );
+                    }
+                }
+            }
+        }
+        for item in &mut app.items {
+            let AppItem::Citizen(citizen) = item else {
+                continue;
+            };
+            // Port name → (interface, modport) from the citizen's signature.
+            let table: Vec<(String, String, String)> = citizen
+                .ports
+                .iter()
+                .filter(|p| p.ty.path.segments.len() == 2)
+                .map(|p| {
+                    (
+                        p.name.clone(),
+                        p.ty.path.segments[0].clone(),
+                        p.ty.path.segments[1].clone(),
+                    )
+                })
+                .collect();
+            let resolve = |path: &crate::ast::Path| -> Option<Verb> {
+                let port = path.segments.first()?;
+                let field = path.segments.get(1)?;
+                let (_, iface, modport) = table.iter().find(|(name, _, _)| name == port)?;
+                verbs
+                    .get(&(iface.clone(), modport.clone(), field.clone()))
+                    .copied()
+            };
+            fn walk(
+                nodes: &mut [WidgetNode],
+                resolve: &dyn Fn(&crate::ast::Path) -> Option<Verb>,
+            ) {
+                for node in nodes {
+                    match node {
+                        WidgetNode::Container { children, .. } => walk(children, resolve),
+                        WidgetNode::For { body, .. } => walk(body, resolve),
+                        WidgetNode::Primitive(primitive) => {
+                            if let Binding::Wire { path, index } = &mut primitive.binding {
+                                let path = std::mem::replace(
+                                    path,
+                                    crate::ast::Path { segments: Vec::new(), span: primitive.span },
+                                );
+                                let index = index.take();
+                                primitive.binding = match resolve(&path) {
+                                    Some(Verb::Out) => Binding::TwoWay { path, index },
+                                    _ => Binding::Read { path, index },
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            walk(&mut citizen.body, &resolve);
+        }
     }
 }
 
@@ -668,6 +750,11 @@ impl Parser {
                 self.bump();
                 let (path, index) = self.indexed_path()?;
                 Binding::Read { path, index }
+            }
+            TokenKind::DashDash => {
+                self.bump();
+                let (path, index) = self.indexed_path()?;
+                Binding::Wire { path, index }
             }
             TokenKind::ArrowRight => {
                 self.bump();

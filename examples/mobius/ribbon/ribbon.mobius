@@ -32,10 +32,10 @@ app RibbonDemo {
             // Children of `right` read left-to-right as they appear on
             // screen; codegen handles the right_to_left reversal.
             right {
-                combo "🎨" <-> c.theme;
-                button "ℹ About" <-> c.show_about;
+                combo "🎨" -- c.theme;
+                button "ℹ About" -- c.show_about;
                 separator;
-                clock <- c.clock;
+                clock -- c.clock;
             }
         }
     }

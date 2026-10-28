@@ -86,9 +86,9 @@
     "operators": {
       "patterns": [
         {
-          "comment": "binding arrows: two-way, read, event",
+          "comment": "bindings: -- wire (modport-inferred), <-> / <- / -> explicit",
           "name": "keyword.operator.binding.mobius",
-          "match": "<->|<-|->"
+          "match": "<->|<-|->|--"
         },
         {
           "name": "keyword.operator.range.mobius",

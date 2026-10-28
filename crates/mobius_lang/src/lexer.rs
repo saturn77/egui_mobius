@@ -37,6 +37,9 @@ pub enum TokenKind {
     ArrowRight,
     /// `<-` read-only binding.
     ArrowLeft,
+    /// `--` wire binding — direction inferred from the port's modport verb
+    /// (CopperTrace topology style: `widget -- port.field`).
+    DashDash,
     Eof,
 }
 
@@ -211,9 +214,14 @@ impl<'s> Lexer<'s> {
                     if self.peek() == b'>' {
                         self.bump();
                         self.push(TokenKind::ArrowRight, start);
+                    } else if self.peek() == b'-' {
+                        self.bump();
+                        self.push(TokenKind::DashDash, start);
                     } else {
                         // Subtraction / unary minus; negatives are formed in
                         // the parser, so the lexer never makes a signed number.
+                        // NB `a--b` therefore lexes as a wire token, not
+                        // "a minus negative b" — write `a - -b` in expressions.
                         self.push(TokenKind::Minus, start);
                     }
                 }

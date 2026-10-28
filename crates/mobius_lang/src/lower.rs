@@ -291,6 +291,20 @@ impl<'a> Lowerer<'a> {
                         primitive.span,
                     );
                 }
+                // `--` is rewritten to TwoWay/Read by `parser::resolve_wires`
+                // before checking; a surviving Wire means the AST skipped the
+                // parser (built programmatically) — validate it as a read.
+                Binding::Wire { path, index } => {
+                    self.check_port_access(
+                        path,
+                        index,
+                        ports,
+                        loops,
+                        Verb::In,
+                        "`--`",
+                        primitive.span,
+                    );
+                }
                 Binding::Event(expr) => self.check_event(expr, ports),
                 Binding::None => {}
             },
@@ -1029,7 +1043,7 @@ fn lower_primitive(
         Binding::TwoWay { path, index } => IrWidgetTarget::Write {
             value: qualify(path, index),
         },
-        Binding::Read { path, index } => IrWidgetTarget::Read {
+        Binding::Read { path, index } | Binding::Wire { path, index } => IrWidgetTarget::Read {
             value: qualify(path, index),
         },
         Binding::Event(Expr::Call { path, args, .. }) => IrWidgetTarget::Event {

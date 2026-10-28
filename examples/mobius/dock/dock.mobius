@@ -52,28 +52,28 @@ app DockDemo {
             wordmark "DockDemo";
             separator;
             right {
-                combo "🎨" <-> c.theme;
-                button "ℹ About" <-> c.show_about;
+                combo "🎨" -- c.theme;
+                button "ℹ About" -- c.show_about;
                 separator;
-                clock <- c.clock;
+                clock -- c.clock;
             }
         }
     }
 
     citizen Controls (c : Channel.ctrl) {
         column {
-            slider "Level" 0.0..1.0 <-> c.level;
+            slider "Level" 0.0..1.0 -- c.level;
         }
     }
 
     citizen Scope (s : Channel.view) {
         column {
-            label <- s.level;
+            label -- s.level;
         }
     }
 
     citizen System (l : Log.view) {
-        logger <- l.state;
+        logger -- l.state;
     }
 
     @wiring {

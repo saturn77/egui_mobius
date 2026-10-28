@@ -222,6 +222,11 @@ pub enum Binding {
     Read { path: Path, index: Option<Expr> },
     /// `-> path(args)` — fire into an `emit` signal field.
     Event(Expr),
+    /// `-- path` / `-- path[i]` — wire binding; the direction comes from
+    /// the port's modport verb (`out` → TwoWay, `in` → Read). Resolved by
+    /// `parser::resolve_wires` immediately after parsing, so the checker,
+    /// lowering, and codegen only ever see `TwoWay` / `Read`.
+    Wire { path: Path, index: Option<Expr> },
     /// e.g. `separator;`
     None,
 }
