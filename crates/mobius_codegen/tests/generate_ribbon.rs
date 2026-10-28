@@ -13,18 +13,16 @@ fn ribbon_project_cargo_checks() {
         .expect("crate lives at <root>/crates/mobius_codegen")
         .to_path_buf();
 
-    let source = include_str!("fixtures/ribbon.mobius");
+    let source = include_str!("../../../examples/ribbon/ribbon.mobius");
     let generated = mobius_codegen::generate(
         source,
         &mobius_codegen::Options {
             mobius_root: mobius_root.clone(),
-            asset_root: Some(
-                Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"),
-            ),
+            asset_root: Some(mobius_root.join("examples/ribbon")),
             crate_name: None,
         },
     )
-    .expect("fixture generates");
+    .expect("example generates");
 
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(&generated.crate_name);
     if out.exists() {

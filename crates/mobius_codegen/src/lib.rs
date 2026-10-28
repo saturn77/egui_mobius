@@ -1427,19 +1427,19 @@ mod tests {
 
     #[test]
     fn ribbon_fixture_generates() {
-        let source = include_str!("../tests/fixtures/ribbon.mobius");
+        let source = include_str!("../../../examples/ribbon/ribbon.mobius");
         let generated = generate(
             source,
             &Options {
                 mobius_root: PathBuf::from("/tmp/mobius"),
                 asset_root: Some(PathBuf::from(concat!(
                     env!("CARGO_MANIFEST_DIR"),
-                    "/tests/fixtures"
+                    "/../../examples/ribbon"
                 ))),
                 crate_name: None,
             },
         )
-        .expect("fixture generates");
+        .expect("example generates");
         assert!(generated.assets.contains_key("assets/about.png"));
         assert_eq!(generated.crate_name, "ribbon_demo");
         let ribbon = &generated.files["src/citizens/ribbon.rs"];
@@ -1461,13 +1461,16 @@ mod tests {
 
     #[test]
     fn project_config_loads_and_resolves() {
-        let fixtures = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"));
-        let config = load_project_config(&fixtures.join("ribbon.mobius"))
+        let example = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/ribbon"
+        ));
+        let config = load_project_config(&example.join("ribbon.mobius"))
             .expect("parses")
-            .expect("fixture mobius.toml exists");
+            .expect("example mobius.toml exists");
         // Relative paths resolve against the toml's directory.
-        assert_eq!(config.out, Some(fixtures.join("../../../../target/tmp/ribbon_demo")));
-        assert_eq!(config.asset_root, Some(fixtures.join(".")));
+        assert_eq!(config.out, Some(example.join("../../target/tmp/ribbon_demo")));
+        assert_eq!(config.asset_root, Some(example.join(".")));
         assert_eq!(config.crate_name, None);
         // No sibling mobius.toml → None, not an error.
         assert!(load_project_config(Path::new("/nonexistent/x.mobius")).unwrap().is_none());

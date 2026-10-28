@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn clean_source_has_no_diagnostics() {
-        let source = include_str!("../../mobius_codegen/tests/fixtures/ribbon.mobius");
+        let source = include_str!("../../../examples/ribbon/ribbon.mobius");
         assert!(diagnostics(source).is_empty());
     }
 
