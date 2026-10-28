@@ -349,10 +349,25 @@ edition = "2021"
 publish = false
 
 [dependencies]
-eframe = "{egui}"
+# Glow renderer, not the default wgpu — resizing under wgpu showed frozen
+# frames and black rectangles; CopperTrace ships the same choice.
+eframe = {{ version = "{egui}", default-features = false, features = [
+    "default_fonts",
+    "glow",
+    "wayland",
+    "x11",
+] }}
 egui = "{egui}"{image_deps}
 egui_citizen = {{ path = "{citizen}" }}
 egui_mobius_reactive = {{ path = "{reactive}" }}
+
+# egui repaints continuously while the window resizes — unoptimized debug
+# builds freeze. Light opt for the app, full for dependencies.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2
 
 # Standalone — never a member of an enclosing workspace.
 [workspace]
@@ -1062,6 +1077,7 @@ egui_mobius_reactive = {{ path = "{reactive}" }}
              \x20   eframe::run_native(\n\
              \x20       \"{app}\",\n\
              \x20       eframe::NativeOptions {{\n\
+             \x20           renderer: eframe::Renderer::Glow,\n\
              \x20           viewport: egui::ViewportBuilder::default().with_inner_size([900.0, 420.0]),\n\
              \x20           ..Default::default()\n\
              \x20       }},\n\
