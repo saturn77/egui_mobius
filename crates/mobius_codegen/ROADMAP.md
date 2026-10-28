@@ -71,6 +71,15 @@ both. The items below close the gaps that duality exposes.
   from measured cluster widths. Eventually a declared choice; the
   responsive two-row behaviour is mechanical and generatable.
 
+- **Citizen-local state.** Interfaces hold two-party state (the
+  boundary); Verilog modules also have internal regs, and the runtime
+  has `citizen_panel!` extra fields (CopperTrace's ribbon keeps
+  `import_name`, `about_rev` as panel-private scratch). The DSL has no
+  syntax for it — every bound cell must arrive through a port — so a
+  private text buffer would today be forced into an interface. Wants
+  something like `local buf : string = ""` inside the citizen body,
+  mapping to `citizen_panel!` fields.
+
 - **Grammar punch list** (from building the ribbon against real apps):
   hover text on buttons, labeled containers (true `menu "🎨" { … }`),
   conditional enablement bound to state, two-tone wordmark as syntax
