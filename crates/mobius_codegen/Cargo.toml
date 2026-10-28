@@ -1,0 +1,10 @@
+[package]
+name        = "mobius_codegen"
+description = "Generate a compilable egui_mobius project from a .mobius source file."
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish     = false
+
+[dependencies]
+mobius_lang = { version = "0.6.0", path = "../mobius_lang" }
