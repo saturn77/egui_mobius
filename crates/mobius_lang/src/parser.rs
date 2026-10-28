@@ -30,10 +30,56 @@ use crate::error::{ParseError, Span};
 use crate::lexer::{Comment, LexOutput, Token, TokenKind, lex};
 
 /// Parse a `.mobius` source string, returning the AST and preserved comments.
+///
+/// Fail-fast view of [`parse_with_recovery`]: the first recorded error is
+/// returned and the partial AST is dropped. Tools that can use every error
+/// and a partial tree (the LSP, batch compilation) should call
+/// [`parse_with_recovery`] instead.
 pub fn parse(source: &str) -> Result<(SourceFile, Vec<Comment>), ParseError> {
-    let LexOutput { tokens, comments } = lex(source)?;
-    let file = Parser::new(tokens).file()?;
-    Ok((file, comments))
+    let ParseOutput {
+        file,
+        comments,
+        mut errors,
+    } = parse_with_recovery(source);
+    match errors.is_empty() {
+        true => Ok((file, comments)),
+        false => Err(errors.remove(0)),
+    }
+}
+
+/// The result of an error-recovering parse: as much AST as could be built,
+/// plus every diagnostic encountered along the way.
+pub struct ParseOutput {
+    pub file: SourceFile,
+    pub comments: Vec<Comment>,
+    pub errors: Vec<ParseError>,
+}
+
+/// Parse with error recovery: on a malformed element the parser records the
+/// error, synchronizes to the next element boundary (`;`, a balancing `}`,
+/// or an item-start keyword), and keeps going. Compiler-style multi-error
+/// reporting, and a partial AST that later stages (completion, outline) can
+/// still consume.
+pub fn parse_with_recovery(source: &str) -> ParseOutput {
+    let LexOutput { tokens, comments } = match lex(source) {
+        Ok(out) => out,
+        // Lex errors (bad character, unterminated string) stay fail-fast:
+        // without tokens there is nothing to synchronize on.
+        Err(e) => {
+            return ParseOutput {
+                file: SourceFile { apps: Vec::new() },
+                comments: Vec::new(),
+                errors: vec![e],
+            };
+        }
+    };
+    let mut parser = Parser::new(tokens);
+    let file = parser.file();
+    ParseOutput {
+        file,
+        comments,
+        errors: parser.errors,
+    }
 }
 
 /// Parse a standalone arithmetic expression — for `{cl*4+ch}` label
@@ -51,11 +97,17 @@ pub fn parse_arith(source: &str) -> Result<Expr, ParseError> {
 struct Parser {
     tokens: Vec<Token>,
     pos: usize,
+    /// Errors recorded during recovery; `parse()` surfaces only the first.
+    errors: Vec<ParseError>,
 }
 
 impl Parser {
     fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, pos: 0 }
+        Self {
+            tokens,
+            pos: 0,
+            errors: Vec::new(),
+        }
     }
 
     fn peek(&self) -> &Token {
@@ -112,19 +164,115 @@ impl Parser {
     }
 
     // ------------------------------------------------------------------
+    // Error recovery
+    //
+    // Every body loop catches a failed element, records the error, and
+    // synchronizes to the next element boundary. Two invariants keep the
+    // loops sound: recovery always consumes at least one token (no
+    // stalls), and every loop checks EOF (recovery removed the abort
+    // that used to guarantee termination).
+    // ------------------------------------------------------------------
+
+    /// Record `e`; if the failed parse consumed nothing since `before`,
+    /// consume one token so the enclosing loop makes progress.
+    fn recover(&mut self, e: ParseError, before: usize) {
+        self.errors.push(e);
+        if self.pos == before && !self.at_eof() {
+            self.bump();
+        }
+    }
+
+    /// Skip to the next `;` (consumed) or a `}` balancing the current
+    /// nesting level (left for the caller) — the boundary for widgets,
+    /// statements, and style entries.
+    fn sync_to_semi(&mut self) {
+        let mut depth = 0usize;
+        loop {
+            match self.peek().kind {
+                TokenKind::Eof => return,
+                TokenKind::Semi if depth == 0 => {
+                    self.bump();
+                    return;
+                }
+                TokenKind::LBrace => {
+                    depth += 1;
+                    self.bump();
+                }
+                TokenKind::RBrace => {
+                    if depth == 0 {
+                        return;
+                    }
+                    depth -= 1;
+                    self.bump();
+                }
+                _ => {
+                    self.bump();
+                }
+            }
+        }
+    }
+
+    /// Skip to the next app-item start (`let` / `enum` / `interface` /
+    /// `citizen` / `@`) or a `}` balancing the current level.
+    fn sync_to_item(&mut self) {
+        let mut depth = 0usize;
+        loop {
+            if depth == 0
+                && (matches!(self.peek().kind, TokenKind::At)
+                    || ["let", "enum", "interface", "citizen"]
+                        .iter()
+                        .any(|w| self.at_word(w)))
+            {
+                return;
+            }
+            match self.peek().kind {
+                TokenKind::Eof => return,
+                TokenKind::LBrace => {
+                    depth += 1;
+                    self.bump();
+                }
+                TokenKind::RBrace => {
+                    if depth == 0 {
+                        return;
+                    }
+                    depth -= 1;
+                    self.bump();
+                }
+                _ => {
+                    self.bump();
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
     // File / app
     // ------------------------------------------------------------------
 
-    fn file(&mut self) -> Result<SourceFile, ParseError> {
+    fn file(&mut self) -> SourceFile {
         let mut apps = Vec::new();
         while !self.at_eof() {
+            let before = self.pos;
             if self.at_word("app") {
-                apps.push(self.app()?);
+                match self.app() {
+                    Ok(app) => apps.push(app),
+                    Err(e) => {
+                        self.recover(e, before);
+                        // Resynchronize on the next top-level `app`.
+                        while !self.at_eof() && !self.at_word("app") {
+                            self.bump();
+                        }
+                    }
+                }
             } else {
-                return Err(self.error("expected `app` at top level"));
+                let e = self.error("expected `app` at top level");
+                self.recover(e, before);
+                while !self.at_eof() && !self.at_word("app") {
+                    self.bump();
+                }
             }
         }
-        Ok(SourceFile { apps })
+        SourceFile { apps }
     }
 
     fn app(&mut self) -> Result<App, ParseError> {
@@ -134,7 +282,17 @@ impl Parser {
         self.expect(&TokenKind::LBrace, "`{`")?;
         let mut items = Vec::new();
         while !matches!(self.peek().kind, TokenKind::RBrace) {
-            items.push(self.app_item()?);
+            if self.at_eof() {
+                return Err(self.error("unexpected end of file inside `app` (missing `}`)"));
+            }
+            let before = self.pos;
+            match self.app_item() {
+                Ok(item) => items.push(item),
+                Err(e) => {
+                    self.recover(e, before);
+                    self.sync_to_item();
+                }
+            }
         }
         let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
         Ok(App {
@@ -269,12 +427,37 @@ impl Parser {
         let mut fields = Vec::new();
         let mut modports = Vec::new();
         while !matches!(self.peek().kind, TokenKind::RBrace) {
-            if self.at_word("modport") {
-                modports.push(self.modport()?);
+            if self.at_eof() {
+                return Err(self.error("unexpected end of file inside `interface` (missing `}`)"));
+            }
+            let before = self.pos;
+            let member = if self.at_word("modport") {
+                self.modport().map(|m| modports.push(m))
             } else if modports.is_empty() {
-                fields.push(self.field()?);
+                self.field().map(|f| fields.push(f))
             } else {
-                return Err(self.error("fields must precede modports in an interface"));
+                Err(self.error("fields must precede modports in an interface"))
+            };
+            if let Err(e) = member {
+                self.recover(e, before);
+                // Next member starts at `modport`, or at `name :`.
+                loop {
+                    let next_is_colon = matches!(
+                        self.tokens.get(self.pos + 1).map(|t| &t.kind),
+                        Some(TokenKind::Colon)
+                    );
+                    match self.peek().kind {
+                        TokenKind::Eof | TokenKind::RBrace => break,
+                        TokenKind::Ident(_)
+                            if self.at_word("modport") || next_is_colon =>
+                        {
+                            break;
+                        }
+                        _ => {
+                            self.bump();
+                        }
+                    }
+                }
             }
         }
         let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
@@ -411,10 +594,7 @@ impl Parser {
         }
         self.expect(&TokenKind::RParen, "`)`")?;
         self.expect(&TokenKind::LBrace, "`{`")?;
-        let mut body = Vec::new();
-        while !matches!(self.peek().kind, TokenKind::RBrace) {
-            body.push(self.widget()?);
-        }
+        let body = self.widget_list();
         let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
         Ok(CitizenDecl {
             name,
@@ -424,6 +604,23 @@ impl Parser {
         })
     }
 
+    /// Widgets up to the enclosing `}` (not consumed), recovering at each
+    /// failed widget by skipping to the next `;` or the balancing `}`.
+    fn widget_list(&mut self) -> Vec<WidgetNode> {
+        let mut widgets = Vec::new();
+        while !matches!(self.peek().kind, TokenKind::RBrace | TokenKind::Eof) {
+            let before = self.pos;
+            match self.widget() {
+                Ok(widget) => widgets.push(widget),
+                Err(e) => {
+                    self.recover(e, before);
+                    self.sync_to_semi();
+                }
+            }
+        }
+        widgets
+    }
+
     fn widget(&mut self) -> Result<WidgetNode, ParseError> {
         if self.at_word("for") {
             return self.for_loop();
@@ -431,10 +628,7 @@ impl Parser {
         let (kind, start) = self.ident("widget or container name")?;
         if matches!(self.peek().kind, TokenKind::LBrace) {
             self.bump();
-            let mut children = Vec::new();
-            while !matches!(self.peek().kind, TokenKind::RBrace) {
-                children.push(self.widget()?);
-            }
+            let children = self.widget_list();
             let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
             return Ok(WidgetNode::Container {
                 kind,
@@ -500,10 +694,7 @@ impl Parser {
         self.expect(&TokenKind::DotDot, "`..` in loop range")?;
         let hi = self.int_literal("loop end")?;
         self.expect(&TokenKind::LBrace, "`{`")?;
-        let mut body = Vec::new();
-        while !matches!(self.peek().kind, TokenKind::RBrace) {
-            body.push(self.widget()?);
-        }
+        let body = self.widget_list();
         let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
         Ok(WidgetNode::For {
             var,
@@ -568,8 +759,15 @@ impl Parser {
         self.expect(&TokenKind::LBrace, "`{`")?;
         if name == "style" {
             let mut entries = Vec::new();
-            while !matches!(self.peek().kind, TokenKind::RBrace) {
-                entries.push(self.style_entry()?);
+            while !matches!(self.peek().kind, TokenKind::RBrace | TokenKind::Eof) {
+                let before = self.pos;
+                match self.style_entry() {
+                    Ok(entry) => entries.push(entry),
+                    Err(e) => {
+                        self.recover(e, before);
+                        self.sync_to_semi();
+                    }
+                }
             }
             let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
             Ok(AppItem::Style(StyleDecl {
@@ -578,8 +776,15 @@ impl Parser {
             }))
         } else {
             let mut stmts = Vec::new();
-            while !matches!(self.peek().kind, TokenKind::RBrace) {
-                stmts.push(self.stmt()?);
+            while !matches!(self.peek().kind, TokenKind::RBrace | TokenKind::Eof) {
+                let before = self.pos;
+                match self.stmt() {
+                    Ok(stmt) => stmts.push(stmt),
+                    Err(e) => {
+                        self.recover(e, before);
+                        self.sync_to_semi();
+                    }
+                }
             }
             let end = self.expect(&TokenKind::RBrace, "`}`")?.span;
             Ok(AppItem::Section(Section {

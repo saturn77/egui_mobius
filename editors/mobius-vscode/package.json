@@ -1,0 +1,53 @@
+{
+  "name": "mobius-lang",
+  "displayName": "mobius-lang (.mobius)",
+  "description": "Syntax highlighting and live parse diagnostics for egui_mobius .mobius composition files.",
+  "version": "0.2.0",
+  "publisher": "atlantix-eda",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./client/extension.js",
+  "activationEvents": [
+    "onLanguage:mobius"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "mobius",
+        "aliases": [
+          "mobius-lang",
+          "mobius"
+        ],
+        "extensions": [
+          ".mobius"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mobius",
+        "scopeName": "source.mobius",
+        "path": "./syntaxes/mobius.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "mobius-lang",
+      "properties": {
+        "mobius.lsp.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the mobius-lsp binary. Empty: try ~/.cargo/bin/mobius-lsp, then `mobius-lsp` on PATH."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

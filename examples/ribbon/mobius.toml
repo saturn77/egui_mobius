@@ -1,0 +1,11 @@
+# Compiler directives for ribbon.mobius — paths resolve relative to this
+# file. `mobius-gen examples/ribbon/ribbon.mobius` with no further
+# arguments lands the generated project in the workspace's target/tmp,
+# built against this checkout's crates. Explicit CLI arguments override
+# any of these.
+
+[project]
+out = "../../target/tmp/ribbon_demo"
+mobius_root = "../.."
+asset_root = "."
+# crate_name = "ribbon_demo"   # default: snake_case of the app name

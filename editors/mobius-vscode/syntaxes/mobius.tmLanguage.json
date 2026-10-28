@@ -1,0 +1,104 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "mobius",
+  "scopeName": "source.mobius",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#annotations" },
+    { "include": "#keywords" },
+    { "include": "#verbs" },
+    { "include": "#builtin-types" },
+    { "include": "#widgets" },
+    { "include": "#enum-variants" },
+    { "include": "#types" },
+    { "include": "#directive-calls" },
+    { "include": "#named-args" },
+    { "include": "#numbers" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.double-slash.mobius",
+      "match": "//.*$"
+    },
+    "strings": {
+      "name": "string.quoted.double.mobius",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.mobius",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "annotations": {
+      "comment": "@wiring / @layout / @style section markers",
+      "name": "storage.type.annotation.mobius",
+      "match": "@[A-Za-z_][A-Za-z0-9_]*"
+    },
+    "keywords": {
+      "name": "keyword.control.mobius",
+      "match": "\\b(app|interface|citizen|enum|modport|let|for|in|bind)\\b"
+    },
+    "verbs": {
+      "comment": "modport direction verbs and the signal field marker",
+      "name": "storage.modifier.mobius",
+      "match": "\\b(out|emit|drain|signal)\\b"
+    },
+    "builtin-types": {
+      "name": "storage.type.primitive.mobius",
+      "match": "\\b(f32|f64|i32|i64|u32|u64|bool|string)\\b"
+    },
+    "widgets": {
+      "comment": "containers and widget primitives (open set — the common ones)",
+      "name": "support.function.widget.mobius",
+      "match": "\\b(row|column|right|grid|group|wordmark|separator|button|combo|clock|label|slider|checkbox|radio|drag|toggle)\\b(?!\\s*=)"
+    },
+    "enum-variants": {
+      "comment": "Type::Variant paths",
+      "match": "\\b([A-Z][A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "entity.name.type.mobius" },
+        "2": { "name": "constant.other.enum.mobius" }
+      }
+    },
+    "types": {
+      "comment": "capitalized identifiers: interfaces, citizens, enums, modport views",
+      "name": "entity.name.type.mobius",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    "directive-calls": {
+      "comment": "layout/wiring directives and instantiations: dock(...), top(...), about(...)",
+      "name": "entity.name.function.mobius",
+      "match": "\\b[a-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    },
+    "named-args": {
+      "comment": "named directive arguments: trigger = ..., title = ...",
+      "name": "variable.parameter.mobius",
+      "match": "\\b[a-z_][A-Za-z0-9_]*(?=\\s*=[^=>])"
+    },
+    "numbers": {
+      "name": "constant.numeric.mobius",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    },
+    "operators": {
+      "patterns": [
+        {
+          "comment": "binding arrows: two-way, read, event",
+          "name": "keyword.operator.binding.mobius",
+          "match": "<->|<-|->"
+        },
+        {
+          "name": "keyword.operator.range.mobius",
+          "match": "\\.\\."
+        },
+        {
+          "name": "keyword.operator.assignment.mobius",
+          "match": "="
+        }
+      ]
+    }
+  }
+}
