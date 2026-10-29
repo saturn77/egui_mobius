@@ -53,6 +53,7 @@ app Workbench {
             button "⚙ Build" -> c.actions(RibbonCmd::Build);
             button "⚡ Emit" -> c.actions(RibbonCmd::Emit);
             right {
+                perspectives;
                 combo "🎨" -- c.theme;
                 button "ℹ About" -- c.show_about;
                 separator;
@@ -107,6 +108,6 @@ app Workbench {
         dock(scope0, region = center);
         dock(scope1, region = center);
         dock(system, region = bottom);
-        dock(shell, region = bottom);
+        dock(shell, region = bottom, split = right);
     }
 }

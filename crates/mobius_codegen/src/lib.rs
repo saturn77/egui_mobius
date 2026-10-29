@@ -248,6 +248,16 @@ struct CitizenDeclModel {
     body: Vec<WidgetNode>,
 }
 
+/// One `dock(instance, region = ..., split = ...)` placement.
+struct DockedModel {
+    inst: String,
+    /// left / right / bottom / center.
+    region: String,
+    /// Sub-placement inside the region's node: `split = right` puts this
+    /// group in a right-half split of the region instead of its tab bar.
+    split: Option<String>,
+}
+
 struct CitizenInstModel {
     name: String,
     /// Declaration type name.
@@ -268,7 +278,7 @@ struct Model {
     /// Citizen instances in the top bar, in order.
     top: Vec<String>,
     /// `(citizen_instance, region)` — region ∈ left/right/bottom/center.
-    docked: Vec<(String, String)>,
+    docked: Vec<DockedModel>,
     about: Option<AboutModel>,
     /// `(iface_instance, field)` written with the wall clock per frame.
     clock_writes: Vec<(String, String)>,
@@ -476,17 +486,43 @@ impl Model {
                 }
             }
         }
-        for placed in top.iter().chain(docked.iter().map(|(i, _)| i)) {
+        for placed in top.iter().chain(docked.iter().map(|d| &d.inst)) {
             if !insts.iter().any(|i| &i.name == placed) {
                 return Err(Error::Unsupported(format!(
                     "@layout places unknown citizen instance `{placed}`"
                 )));
             }
         }
-        if !docked.is_empty() && !docked.iter().any(|(_, r)| r == "center") {
+        if !docked.is_empty() && !docked.iter().any(|d| d.region == "center") {
             return Err(Error::Unsupported(
                 "dock layout needs at least one `region = center`".into(),
             ));
+        }
+        for d in &docked {
+            if d.split.is_some() && d.region == "center" {
+                return Err(Error::Unsupported(
+                    "`split = ...` applies to left/right/bottom regions, not center".into(),
+                ));
+            }
+        }
+        // The perspectives menu manipulates the dock, so it must live in a
+        // top() citizen (the TabViewer cannot lend the dock state it is
+        // rendering inside) — and only makes sense when something docks.
+        for inst in &insts {
+            let decl = decls.iter().find(|d| d.ty == inst.decl).unwrap();
+            if decl_has_perspectives(decl) {
+                if docked.iter().any(|d| d.inst == inst.name) {
+                    return Err(Error::Unsupported(format!(
+                        "`perspectives` in docked instance `{}` — it belongs in a top() citizen",
+                        inst.name
+                    )));
+                }
+                if docked.is_empty() {
+                    return Err(Error::Unsupported(
+                        "`perspectives` without any dock() layout".into(),
+                    ));
+                }
+            }
         }
 
         // Scan widget trees for host obligations (clock writers, the theme
@@ -927,11 +963,14 @@ opt-level = 2
             );
         }
 
-        let params: String = decl
+        let mut params: String = decl
             .ports
             .iter()
             .map(|p| format!(", {}: &{}", p.name, p.iface))
             .collect();
+        if decl_has_perspectives(decl) {
+            params.push_str(", workspace: &mut crate::Workspace");
+        }
         let _ = write!(
             out,
             "impl {ty} {{\n    pub fn show(&mut self, ui: &mut egui::Ui{params}) {{\n",
@@ -1172,6 +1211,11 @@ opt-level = 2
                 }
                 let _ = writeln!(out, "{pad}}}");
             }
+            ("perspectives", Binding::None) => {
+                // The 🗔 Perspectives menu — rendered by the host-owned
+                // Workspace (it holds the dock state the menu manipulates).
+                let _ = writeln!(out, "{pad}workspace.perspectives_menu(ui);");
+            }
             ("terminal", Binding::None) => {
                 // The shell prefab: scrollback + prompt + built-ins + bash
                 // passthrough, all citizen-local (see TERMINAL_IMPL).
@@ -1242,7 +1286,7 @@ opt-level = 2
     fn emit_main(&self, opts: &Options) -> String {
         let has_dock = !self.docked.is_empty();
         let need_ctx = self.about.is_some() || !self.clock_writes.is_empty();
-        let has_splits = self.docked.iter().any(|(_, r)| r != "center");
+        let has_splits = self.docked.iter().any(|d| d.region != "center");
         let dock_use = if !has_dock {
             ""
         } else if has_splits {
@@ -1270,24 +1314,189 @@ opt-level = 2
             out.push_str(
                 "/// One dock tab per docked citizen instance.\n\
                  #[derive(Clone, Copy, PartialEq)]\n\
-                 enum Tab {\n",
+                 pub enum Tab {\n",
             );
-            for (inst, _) in &self.docked {
+            for DockedModel { inst, .. } in &self.docked {
                 let _ = writeln!(out, "    {},", camel_case(inst));
             }
             out.push_str(
                 "}\n\nimpl Tab {\n    /// The instance id — registry name and citizen id.\n\
                  \x20   fn id(self) -> &'static str {\n        match self {\n",
             );
-            for (inst, _) in &self.docked {
+            for DockedModel { inst, .. } in &self.docked {
                 let _ = writeln!(out, "            Tab::{} => \"{inst}\",", camel_case(inst));
             }
             out.push_str("        }\n    }\n}\n\n");
         }
 
+        // Does a top-bar citizen carry the perspectives menu? Then the
+        // dock lives in a Workspace with named layouts and a default.
+        let has_persp = has_dock
+            && self.top.iter().any(|t| {
+                self.insts
+                    .iter()
+                    .find(|i| &i.name == t)
+                    .and_then(|i| self.decls.iter().find(|d| d.ty == i.decl))
+                    .is_some_and(decl_has_perspectives)
+            });
+
+        // The dock construction, built once — emitted inline in new() or
+        // as default_layout() when perspectives need to rebuild it.
+        let mut dock_build = String::new();
+        if has_dock {
+            let center: Vec<String> = self
+                .docked
+                .iter()
+                .filter(|d| d.region == "center" && d.split.is_none())
+                .map(|d| format!("Tab::{}", camel_case(&d.inst)))
+                .collect();
+            let _ = write!(
+                dock_build,
+                "\n        // Dock layout from the @layout dock() directives.\n\
+                 \x20       let mut dock_state = DockState::new(vec![{}]);\n",
+                center.join(", ")
+            );
+            for (region, method, fraction) in [
+                ("left", "split_left", "0.30"),
+                ("right", "split_right", "0.70"),
+                ("bottom", "split_below", "0.65"),
+            ] {
+                let tabs: Vec<String> = self
+                    .docked
+                    .iter()
+                    .filter(|d| d.region == region && d.split.is_none())
+                    .map(|d| format!("Tab::{}", camel_case(&d.inst)))
+                    .collect();
+                if tabs.is_empty() {
+                    continue;
+                }
+                // Sub-splits inside this region (`split = right/below`) need
+                // the region's node index; a bare region discards it.
+                let splits: Vec<(&str, String)> = self
+                    .docked
+                    .iter()
+                    .filter(|d| d.region == region && d.split.is_some())
+                    .map(|d| {
+                        (
+                            d.split.as_deref().unwrap(),
+                            format!("Tab::{}", camel_case(&d.inst)),
+                        )
+                    })
+                    .collect();
+                if splits.is_empty() {
+                    let _ = writeln!(
+                        dock_build,
+                        "        let _ = dock_state.main_surface_mut().{method}(NodeIndex::root(), {fraction}, vec![{}]);",
+                        tabs.join(", ")
+                    );
+                } else {
+                    let _ = writeln!(
+                        dock_build,
+                        "        let [_, {region}_node] = dock_state.main_surface_mut().{method}(NodeIndex::root(), {fraction}, vec![{}]);",
+                        tabs.join(", ")
+                    );
+                    for (dir, split_method) in
+                        [("right", "split_right"), ("below", "split_below")]
+                    {
+                        let split_tabs: Vec<&str> = splits
+                            .iter()
+                            .filter(|(d, _)| *d == dir)
+                            .map(|(_, t)| t.as_str())
+                            .collect();
+                        if !split_tabs.is_empty() {
+                            let _ = writeln!(
+                                dock_build,
+                                "        let _ = dock_state.main_surface_mut().{split_method}({region}_node, 0.5, vec![{}]);",
+                                split_tabs.join(", ")
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        if has_persp {
+            // Workspace: the dock plus in-session named perspectives
+            // (ForgePM persists these to ~/.config/<app>/perspectives.json —
+            // that upgrade is yours; the shape is ready for it).
+            out.push_str(
+                "/// The dock layout plus named perspectives (in-session).\n\
+                 pub struct Workspace {\n\
+                 \x20   pub dock: DockState<Tab>,\n\
+                 \x20   saved: Vec<(String, DockState<Tab>)>,\n\
+                 \x20   name_buf: String,\n\
+                 }\n\n\
+                 impl Workspace {\n\
+                 \x20   fn new() -> Self {\n\
+                 \x20       Self {\n\
+                 \x20           dock: default_layout(),\n\
+                 \x20           saved: Vec::new(),\n\
+                 \x20           name_buf: String::new(),\n\
+                 \x20       }\n\
+                 \x20   }\n\n\
+                 \x20   /// The 🗔 Perspectives menu (the ForgePM ribbon convention).\n\
+                 \x20   pub fn perspectives_menu(&mut self, ui: &mut egui::Ui) {\n\
+                 \x20       ui.menu_button(\"🗔 Perspectives\", |ui| {\n\
+                 \x20           if ui.button(\"Reset to default\").clicked() {\n\
+                 \x20               self.dock = default_layout();\n\
+                 \x20               ui.close();\n\
+                 \x20           }\n\
+                 \x20           if !self.saved.is_empty() {\n\
+                 \x20               ui.separator();\n\
+                 \x20           }\n\
+                 \x20           let mut apply = None;\n\
+                 \x20           let mut delete = None;\n\
+                 \x20           for (i, (name, layout)) in self.saved.iter().enumerate() {\n\
+                 \x20               ui.horizontal(|ui| {\n\
+                 \x20                   if ui.button(name).clicked() {\n\
+                 \x20                       apply = Some(layout.clone());\n\
+                 \x20                   }\n\
+                 \x20                   if ui.small_button(\"✖\").clicked() {\n\
+                 \x20                       delete = Some(i);\n\
+                 \x20                   }\n\
+                 \x20               });\n\
+                 \x20           }\n\
+                 \x20           if let Some(layout) = apply {\n\
+                 \x20               self.dock = layout;\n\
+                 \x20               ui.close();\n\
+                 \x20           }\n\
+                 \x20           if let Some(i) = delete {\n\
+                 \x20               self.saved.remove(i);\n\
+                 \x20           }\n\
+                 \x20           ui.separator();\n\
+                 \x20           ui.horizontal(|ui| {\n\
+                 \x20               ui.add(\n\
+                 \x20                   egui::TextEdit::singleline(&mut self.name_buf)\n\
+                 \x20                       .desired_width(120.0)\n\
+                 \x20                       .hint_text(\"name\"),\n\
+                 \x20               );\n\
+                 \x20               let ok = !self.name_buf.trim().is_empty();\n\
+                 \x20               if ui.add_enabled(ok, egui::Button::new(\"💾 Save current\")).clicked() {\n\
+                 \x20                   self.saved.push((self.name_buf.trim().to_owned(), self.dock.clone()));\n\
+                 \x20                   self.name_buf.clear();\n\
+                 \x20               }\n\
+                 \x20           });\n\
+                 \x20       });\n\
+                 \x20   }\n\
+                 }\n\n\
+                 /// The @layout default — Reset returns here.\n\
+                 fn default_layout() -> DockState<Tab> {\n",
+            );
+            for line in dock_build.lines() {
+                if line.is_empty() {
+                    out.push('\n');
+                } else {
+                    let _ = writeln!(out, "{}", line.strip_prefix("    ").unwrap_or(line));
+                }
+            }
+            out.push_str("    dock_state\n}\n\n");
+        }
+
         // ── App struct ──────────────────────────────────────────────────
         out.push_str("struct App {\n    registry: Registry,\n");
-        if has_dock {
+        if has_persp {
+            out.push_str("    workspace: Workspace,\n");
+        } else if has_dock {
             out.push_str("    dock_state: DockState<Tab>,\n");
         }
         for (inst, iface) in &self.iface_insts {
@@ -1304,42 +1513,12 @@ opt-level = 2
                 inst.name, inst.name
             );
         }
-        if let Some((first, _)) = self.docked.first() {
+        if let Some(DockedModel { inst: first, .. }) = self.docked.first() {
             let _ = writeln!(out, "        registry.activate(\"{first}\");");
         }
         out.push_str("        let _ = registry.drain_messages(); // discard setup messages\n");
-        if has_dock {
-            let center: Vec<String> = self
-                .docked
-                .iter()
-                .filter(|(_, r)| r == "center")
-                .map(|(i, _)| format!("Tab::{}", camel_case(i)))
-                .collect();
-            let _ = write!(
-                out,
-                "\n        // Dock layout from the @layout dock() directives.\n\
-                 \x20       let mut dock_state = DockState::new(vec![{}]);\n",
-                center.join(", ")
-            );
-            for (region, method, fraction) in [
-                ("left", "split_left", "0.30"),
-                ("right", "split_right", "0.70"),
-                ("bottom", "split_below", "0.70"),
-            ] {
-                let tabs: Vec<String> = self
-                    .docked
-                    .iter()
-                    .filter(|(_, r)| r == region)
-                    .map(|(i, _)| format!("Tab::{}", camel_case(i)))
-                    .collect();
-                if !tabs.is_empty() {
-                    let _ = writeln!(
-                        out,
-                        "        let _ = dock_state.main_surface_mut().{method}(NodeIndex::root(), {fraction}, vec![{}]);",
-                        tabs.join(", ")
-                    );
-                }
-            }
+        if has_dock && !has_persp {
+            out.push_str(&dock_build);
         }
         let logger_inst = self.logger_inst();
         out.push_str(if logger_inst.is_some() {
@@ -1347,7 +1526,9 @@ opt-level = 2
         } else {
             "        Self {\n            registry,\n"
         });
-        if has_dock {
+        if has_persp {
+            out.push_str("            workspace: Workspace::new(),\n");
+        } else if has_dock {
             out.push_str("            dock_state,\n");
         }
         for (inst, iface) in &self.iface_insts {
@@ -1371,7 +1552,7 @@ opt-level = 2
         // ── TabViewer (docked instances route by tab id) ─────────────────
         if has_dock {
             let mut used_ifaces: Vec<&str> = Vec::new();
-            for (inst_name, _) in &self.docked {
+            for DockedModel { inst: inst_name, .. } in &self.docked {
                 let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
                 for (_, iface_inst) in &inst.bindings {
                     if !used_ifaces.contains(&iface_inst.as_str()) {
@@ -1388,7 +1569,7 @@ opt-level = 2
                     .unwrap();
                 let _ = writeln!(out, "    {iface_inst}: &'a state::{iface},");
             }
-            for (inst_name, _) in &self.docked {
+            for DockedModel { inst: inst_name, .. } in &self.docked {
                 let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
                 let _ = writeln!(out, "    {}: &'a mut citizens::{},", inst.name, inst.decl);
             }
@@ -1400,7 +1581,7 @@ opt-level = 2
                  \x20       tab.id().into()\n    }\n\n\
                  \x20   fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Tab) {\n        match tab {\n",
             );
-            for (inst_name, _) in &self.docked {
+            for DockedModel { inst: inst_name, .. } in &self.docked {
                 let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
                 let args: String = inst
                     .bindings
@@ -1440,11 +1621,15 @@ opt-level = 2
         }
         for top_inst in &self.top {
             let inst = self.insts.iter().find(|i| &i.name == top_inst).unwrap();
-            let args: String = inst
+            let mut args: String = inst
                 .bindings
                 .iter()
                 .map(|(_, iface_inst)| format!(", &self.{iface_inst}"))
                 .collect();
+            let decl = self.decls.iter().find(|d| d.ty == inst.decl).unwrap();
+            if decl_has_perspectives(decl) {
+                args.push_str(", &mut self.workspace");
+            }
             let _ = write!(
                 out,
                 "\n        egui::Panel::top(\"{name}\").show(ui, |ui| {{\n\
@@ -1456,7 +1641,7 @@ opt-level = 2
         if has_dock {
             out.push_str("\n        let mut viewer = TabViewer {\n            registry: &mut self.registry,\n");
             let mut used_ifaces: Vec<&str> = Vec::new();
-            for (inst_name, _) in &self.docked {
+            for DockedModel { inst: inst_name, .. } in &self.docked {
                 let inst = self.insts.iter().find(|i| &i.name == inst_name).unwrap();
                 for (_, iface_inst) in &inst.bindings {
                     if !used_ifaces.contains(&iface_inst.as_str()) {
@@ -1467,11 +1652,15 @@ opt-level = 2
             for iface_inst in &used_ifaces {
                 let _ = writeln!(out, "            {iface_inst}: &self.{iface_inst},");
             }
-            for (inst_name, _) in &self.docked {
+            for DockedModel { inst: inst_name, .. } in &self.docked {
                 let _ = writeln!(out, "            {inst_name}: &mut self.{inst_name},");
             }
             out.push_str(
-                "        };\n        DockArea::new(&mut self.dock_state).show_inside(ui, &mut viewer);\n",
+                if has_persp {
+                    "        };\n        DockArea::new(&mut self.workspace.dock).show_inside(ui, &mut viewer);\n"
+                } else {
+                    "        };\n        DockArea::new(&mut self.dock_state).show_inside(ui, &mut viewer);\n"
+                },
             );
         } else {
             let _ = write!(
@@ -1938,9 +2127,18 @@ fn apply_light(ctx: &egui::Context) {
 
 /// Does the declaration contain the `terminal` prefab primitive?
 fn decl_has_terminal(decl: &CitizenDeclModel) -> bool {
+    decl_has_kind(decl, "terminal")
+}
+
+/// Does the declaration contain the `perspectives` menu primitive?
+fn decl_has_perspectives(decl: &CitizenDeclModel) -> bool {
+    decl_has_kind(decl, "perspectives")
+}
+
+fn decl_has_kind(decl: &CitizenDeclModel, kind: &str) -> bool {
     let mut found = false;
     scan_widgets(&decl.body, &mut |p| {
-        if p.kind == "terminal" {
+        if p.kind == kind {
             found = true;
         }
     });
@@ -2070,10 +2268,11 @@ fn scan_widgets(nodes: &[WidgetNode], f: &mut impl FnMut(&mobius_lang::ast::Prim
     }
 }
 
-/// `dock(instance, region = left);` → `(instance, region)`.
-fn parse_dock(args: &[DirectiveArg]) -> Result<(String, String), Error> {
+/// `dock(instance, region = left [, split = right]);`
+fn parse_dock(args: &[DirectiveArg]) -> Result<DockedModel, Error> {
     let mut instance = None;
     let mut region = "center".to_owned();
+    let mut split = None;
     for arg in args {
         match arg {
             DirectiveArg::Positional(Expr::Path(p)) => instance = Some(p.joined()),
@@ -2083,7 +2282,17 @@ fn parse_dock(args: &[DirectiveArg]) -> Result<(String, String), Error> {
                 };
                 region = p.joined();
             }
-            _ => return Err(Error::Unsupported("dock() takes `(instance, region = ...)`".into())),
+            DirectiveArg::Named(named) if named.name == "split" => {
+                let Expr::Path(p) = &named.value else {
+                    return Err(Error::Unsupported("dock split must be a name".into()));
+                };
+                split = Some(p.joined());
+            }
+            _ => {
+                return Err(Error::Unsupported(
+                    "dock() takes `(instance, region = ..., split = ...)`".into(),
+                ));
+            }
         }
     }
     if !matches!(region.as_str(), "left" | "right" | "bottom" | "center") {
@@ -2091,10 +2300,18 @@ fn parse_dock(args: &[DirectiveArg]) -> Result<(String, String), Error> {
             "dock region `{region}` (expected left/right/bottom/center)"
         )));
     }
-    Ok((
-        instance.ok_or_else(|| Error::Unsupported("dock() needs an instance".into()))?,
+    if let Some(s) = &split {
+        if !matches!(s.as_str(), "right" | "below") {
+            return Err(Error::Unsupported(format!(
+                "dock split `{s}` (expected right/below)"
+            )));
+        }
+    }
+    Ok(DockedModel {
+        inst: instance.ok_or_else(|| Error::Unsupported("dock() needs an instance".into()))?,
         region,
-    ))
+        split,
+    })
 }
 
 fn parse_about(

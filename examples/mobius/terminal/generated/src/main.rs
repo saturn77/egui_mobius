@@ -14,7 +14,7 @@ use egui_dock::{DockArea, DockState, NodeIndex};
 
 /// One dock tab per docked citizen instance.
 #[derive(Clone, Copy, PartialEq)]
-enum Tab {
+pub enum Tab {
     Controls0,
     Controls1,
     Scope0,
@@ -37,9 +37,82 @@ impl Tab {
     }
 }
 
+/// The dock layout plus named perspectives (in-session).
+pub struct Workspace {
+    pub dock: DockState<Tab>,
+    saved: Vec<(String, DockState<Tab>)>,
+    name_buf: String,
+}
+
+impl Workspace {
+    fn new() -> Self {
+        Self {
+            dock: default_layout(),
+            saved: Vec::new(),
+            name_buf: String::new(),
+        }
+    }
+
+    /// The 🗔 Perspectives menu (the ForgePM ribbon convention).
+    pub fn perspectives_menu(&mut self, ui: &mut egui::Ui) {
+        ui.menu_button("🗔 Perspectives", |ui| {
+            if ui.button("Reset to default").clicked() {
+                self.dock = default_layout();
+                ui.close();
+            }
+            if !self.saved.is_empty() {
+                ui.separator();
+            }
+            let mut apply = None;
+            let mut delete = None;
+            for (i, (name, layout)) in self.saved.iter().enumerate() {
+                ui.horizontal(|ui| {
+                    if ui.button(name).clicked() {
+                        apply = Some(layout.clone());
+                    }
+                    if ui.small_button("✖").clicked() {
+                        delete = Some(i);
+                    }
+                });
+            }
+            if let Some(layout) = apply {
+                self.dock = layout;
+                ui.close();
+            }
+            if let Some(i) = delete {
+                self.saved.remove(i);
+            }
+            ui.separator();
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.name_buf)
+                        .desired_width(120.0)
+                        .hint_text("name"),
+                );
+                let ok = !self.name_buf.trim().is_empty();
+                if ui.add_enabled(ok, egui::Button::new("💾 Save current")).clicked() {
+                    self.saved.push((self.name_buf.trim().to_owned(), self.dock.clone()));
+                    self.name_buf.clear();
+                }
+            });
+        });
+    }
+}
+
+/// The @layout default — Reset returns here.
+fn default_layout() -> DockState<Tab> {
+
+    // Dock layout from the @layout dock() directives.
+    let mut dock_state = DockState::new(vec![Tab::Scope0, Tab::Scope1]);
+    let _ = dock_state.main_surface_mut().split_left(NodeIndex::root(), 0.30, vec![Tab::Controls0, Tab::Controls1]);
+    let [_, bottom_node] = dock_state.main_surface_mut().split_below(NodeIndex::root(), 0.65, vec![Tab::System]);
+    let _ = dock_state.main_surface_mut().split_right(bottom_node, 0.5, vec![Tab::Shell]);
+    dock_state
+}
+
 struct App {
     registry: Registry,
-    dock_state: DockState<Tab>,
+    workspace: Workspace,
     chrome: state::Chrome,
     ch0: state::Channel,
     ch1: state::Channel,
@@ -65,14 +138,9 @@ impl App {
         let shell_state = registry.add().with_name("shell");
         registry.activate("controls0");
         let _ = registry.drain_messages(); // discard setup messages
-
-        // Dock layout from the @layout dock() directives.
-        let mut dock_state = DockState::new(vec![Tab::Scope0, Tab::Scope1]);
-        let _ = dock_state.main_surface_mut().split_left(NodeIndex::root(), 0.30, vec![Tab::Controls0, Tab::Controls1]);
-        let _ = dock_state.main_surface_mut().split_below(NodeIndex::root(), 0.70, vec![Tab::System, Tab::Shell]);
         let app = Self {
             registry,
-            dock_state,
+            workspace: Workspace::new(),
             chrome: state::Chrome::new(),
             ch0: state::Channel::new(),
             ch1: state::Channel::new(),
@@ -139,7 +207,7 @@ impl eframe::App for App {
         ctx.request_repaint_after(std::time::Duration::from_millis(250));
 
         egui::Panel::top("ribbon").show(ui, |ui| {
-            self.ribbon.show(ui, &self.chrome);
+            self.ribbon.show(ui, &self.chrome, &mut self.workspace);
         });
 
         let mut viewer = TabViewer {
@@ -154,7 +222,7 @@ impl eframe::App for App {
             system: &mut self.system,
             shell: &mut self.shell,
         };
-        DockArea::new(&mut self.dock_state).show_inside(ui, &mut viewer);
+        DockArea::new(&mut self.workspace.dock).show_inside(ui, &mut viewer);
 
         // egui_lens's System Info button sets a temp-memory flag;
         // answering it is the host's job (per egui_lens's own comment).

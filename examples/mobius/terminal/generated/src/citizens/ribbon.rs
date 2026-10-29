@@ -11,7 +11,7 @@ citizen_panel!(Ribbon, "ribbon",
 );
 
 impl Ribbon {
-    pub fn show(&mut self, ui: &mut egui::Ui, c: &Chrome) {
+    pub fn show(&mut self, ui: &mut egui::Ui, c: &Chrome, workspace: &mut crate::Workspace) {
         ui.add_space(3.0);
         let theme = c.theme.get();
         ui.horizontal(|ui| {
@@ -55,6 +55,7 @@ impl Ribbon {
                     c.theme.set(picked);
                     picked.apply(ui.ctx());
                 }
+                workspace.perspectives_menu(ui);
             });
         });
     }
