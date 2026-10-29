@@ -54,8 +54,15 @@ impl Workspace {
     }
 
     /// The 🗔 Perspectives menu (the ForgePM ribbon convention).
+    ///
+    /// Close-on-click-OUTSIDE, not egui's default close-on-any-click —
+    /// the default kills the name text field the moment it is clicked.
     pub fn perspectives_menu(&mut self, ui: &mut egui::Ui) {
-        ui.menu_button("🗔 Perspectives", |ui| {
+        let config = egui::containers::menu::MenuConfig::new()
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
+        egui::containers::menu::MenuButton::new("🗔 Perspectives")
+            .config(config)
+            .ui(ui, |ui| {
             if ui.button("Reset to default").clicked() {
                 self.dock = default_layout();
                 ui.close();
