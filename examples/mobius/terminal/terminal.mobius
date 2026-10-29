@@ -25,21 +25,21 @@ app Workbench {
         show_about : bool = false
         clock : string = ""
         actions : signal RibbonCmd
-        modport ribbon (write theme, write show_about, read clock, emit actions)
-        modport host (read theme, read show_about, write clock, drain actions)
+        role ribbon (write theme, write show_about, read clock, emit actions)
+        role host (read theme, read show_about, write clock, drain actions)
     }
 
     interface Channel {
         level : f32 = 0.5
-        modport ctrl (write level)
-        modport view (read level)
+        role ctrl (write level)
+        role view (read level)
     }
 
     interface Log {
         state : LoggerState
         colors : LogColors
-        modport view (read state, read colors)
-        modport host (write state, write colors)
+        role view (read state, read colors)
+        role host (write state, write colors)
     }
 
     citizen Ribbon (c : Chrome.ribbon) {

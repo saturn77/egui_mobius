@@ -7,9 +7,9 @@
 //! app       := 'app' IDENT '{' item* '}'
 //! item      := value | interface | citizen | section
 //! value     := 'let' IDENT ':' type ['=' expr] ';'
-//! interface := 'interface' IDENT '{' field* modport* '}'
+//! interface := 'interface' IDENT '{' field* role* '}'
 //! field     := IDENT ':' ('signal' type | type ['=' expr])
-//! modport   := 'modport' IDENT '(' verb IDENT (',' verb IDENT)* ')'
+//! role      := ('role' | 'modport') IDENT '(' verb IDENT (',' verb IDENT)* ')'
 //! verb      := 'write' | 'read' | 'emit' | 'drain'   (synonyms: 'out' = write, 'in' = read)
 //! citizen   := 'citizen' IDENT '(' [port (',' port)*] ')' '{' widget* '}'
 //! port      := IDENT ':' type
@@ -513,7 +513,7 @@ impl Parser {
                 return Err(self.error("unexpected end of file inside `interface` (missing `}`)"));
             }
             let before = self.pos;
-            let member = if self.at_word("modport") {
+            let member = if self.at_word("role") || self.at_word("modport") {
                 self.modport().map(|m| modports.push(m))
             } else if modports.is_empty() {
                 self.field().map(|f| fields.push(f))
@@ -531,7 +531,7 @@ impl Parser {
                     match self.peek().kind {
                         TokenKind::Eof | TokenKind::RBrace => break,
                         TokenKind::Ident(_)
-                            if self.at_word("modport") || next_is_colon =>
+                            if self.at_word("role") || self.at_word("modport") || next_is_colon =>
                         {
                             break;
                         }

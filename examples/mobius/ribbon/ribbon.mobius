@@ -22,8 +22,8 @@ app RibbonDemo {
         show_about : bool = false
         clock : string = ""
         actions : signal RibbonCmd
-        modport ribbon (write theme, write show_about, read clock, emit actions)
-        modport host (read theme, read show_about, write clock, drain actions)
+        role ribbon (write theme, write show_about, read clock, emit actions)
+        role host (read theme, read show_about, write clock, drain actions)
     }
 
     citizen Ribbon (c : Chrome.ribbon) {

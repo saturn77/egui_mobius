@@ -5,7 +5,7 @@ composition files (the `mobius_lang` front end of egui_mobius).
 
 Two layers:
 
-- **TextMate grammar** (declarative): keywords, modport access verbs
+- **TextMate grammar** (declarative): keywords, role access verbs
   (`write`/`read`, SV `out`/`in` synonyms), wire and event operators
   (`--`, `->`, with `<->`/`<-` as explicit-direction synonyms),
   `@wiring` / `@layout` / `@style` sections, widget primitives, enum

@@ -23,11 +23,11 @@
 app DockDemo {
     enum Theme { CopperDark, TokyoNight, Light }
 
-    // Modport verbs are access rights from the citizen's seat: `write`
+    // Role verbs are access rights from the citizen's seat: `write`
     // = this side's hand is on the pen (the theme combo and About
     // button live in the ribbon, so the ribbon writes those cells —
     // writing implies reading); `read` = observe only (the host stamps
-    // the clock; the ribbon displays it). The two modports mirror
+    // the clock; the ribbon displays it). The two roles mirror
     // exactly — every cell has one writer, which is what makes the
     // one-writer check possible. (SystemVerilog spellings `out`/`in`
     // are accepted synonyms.)
@@ -35,21 +35,21 @@ app DockDemo {
         theme : Theme = Theme::CopperDark
         show_about : bool = false
         clock : string = ""
-        modport ribbon (write theme, write show_about, read clock)
-        modport host (read theme, read show_about, write clock)
+        role ribbon (write theme, write show_about, read clock)
+        role host (read theme, read show_about, write clock)
     }
 
     interface Channel {
         level : f32 = 0.5
-        modport ctrl (write level)
-        modport view (read level)
+        role ctrl (write level)
+        role view (read level)
     }
 
     interface Log {
         state : LoggerState
         colors : LogColors
-        modport view (read state, read colors)
-        modport host (write state, write colors)
+        role view (read state, read colors)
+        role host (write state, write colors)
     }
 
     // Example 1's chrome essentials — wordmark, theme, About/version,

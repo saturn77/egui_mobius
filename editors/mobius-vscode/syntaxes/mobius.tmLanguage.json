@@ -40,10 +40,10 @@
     },
     "keywords": {
       "name": "keyword.control.mobius",
-      "match": "\\b(app|interface|citizen|enum|modport|let|for|in|bind)\\b"
+      "match": "\\b(app|interface|citizen|enum|role|modport|let|for|in|bind)\\b"
     },
     "verbs": {
-      "comment": "modport access verbs (write/read preferred; out/in SV synonyms) and the signal field marker",
+      "comment": "role access verbs (write/read preferred; out/in SV synonyms) and the signal field marker",
       "name": "storage.modifier.mobius",
       "match": "\\b(write|read|out|emit|drain|signal)\\b"
     },
