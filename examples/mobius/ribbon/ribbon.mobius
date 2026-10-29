@@ -1,3 +1,10 @@
+// Build:  cargo run -p mobius_codegen --bin mobius-gen -- examples/mobius/ribbon/ribbon.mobius
+// Run:    cd examples/mobius/ribbon/generated && cargo run
+//
+// Output location and dependency roots come from ./mobius.toml; the
+// generated project is standalone — yours to edit, no tie to the
+// generator.
+//
 // The RibbonCitizen milestone — a top command bar in the shape of
 // CopperTrace's `citizens/top_ribbon.rs`, declared as source.
 //

@@ -5,10 +5,11 @@ composition files (the `mobius_lang` front end of egui_mobius).
 
 Two layers:
 
-- **TextMate grammar** (declarative): keywords, modport verbs, binding
-  arrows (`<->` / `<-` / `->`), `@wiring` / `@layout` / `@style`
-  sections, widget primitives, enum variant paths, strings, numbers,
-  `//` comments.
+- **TextMate grammar** (declarative): keywords, modport access verbs
+  (`write`/`read`, SV `out`/`in` synonyms), wire and event operators
+  (`--`, `->`, with `<->`/`<-` as explicit-direction synonyms),
+  `@wiring` / `@layout` / `@style` sections, widget primitives, enum
+  variant paths, strings, numbers, `//` comments.
 - **Language client** → `mobius-lsp`: red squiggles from
   `mobius_lang::parse` errors as you type. Tier 1 (parse) only;
   `lower()` semantics wait on the open/closed vocabulary

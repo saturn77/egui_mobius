@@ -1,3 +1,10 @@
+// Build:  cargo run -p mobius_codegen --bin mobius-gen -- examples/mobius/dock/dock.mobius
+// Run:    cd examples/mobius/dock/generated && cargo run
+//
+// Output location and dependency roots come from ./mobius.toml; the
+// generated project is standalone — yours to edit, no tie to the
+// generator.
+//
 // The second-citizen milestone — a complete Level-1 app shape: themed
 // ribbon on top, a docked two-channel panel layout, and the System
 // logger (egui_lens) along the bottom.
