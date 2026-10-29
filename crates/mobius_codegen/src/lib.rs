@@ -645,6 +645,12 @@ opt-level = 2
             },
             dock_dep = if self.docked.is_empty() {
                 ""
+            } else if self.has_perspectives_menu() {
+                // Perspectives persist DockState as JSON (ForgePM's shape).
+                "\negui_dock = { version = \"0.21\", features = [\"serde\"] }\n\
+                 serde = { version = \"1\", features = [\"derive\"] }\n\
+                 serde_json = \"1\"\n\
+                 dirs = \"5\""
             } else {
                 "\negui_dock = \"0.21\""
             },
@@ -866,6 +872,19 @@ opt-level = 2
             .iter()
             .find(|(_, ty)| ty == &iface.name)
             .map(|(n, _)| n.clone())
+    }
+
+    /// A top-bar citizen carries the `perspectives` menu (and a dock
+    /// exists for it to manage).
+    fn has_perspectives_menu(&self) -> bool {
+        !self.docked.is_empty()
+            && self.top.iter().any(|t| {
+                self.insts
+                    .iter()
+                    .find(|i| &i.name == t)
+                    .and_then(|i| self.decls.iter().find(|d| d.ty == i.decl))
+                    .is_some_and(decl_has_perspectives)
+            })
     }
 
     /// The field a binding path names: `(port, field_model)`.
@@ -1312,9 +1331,15 @@ opt-level = 2
         // ── Tab enum (docked instances only) ────────────────────────────
         if has_dock {
             out.push_str(
-                "/// One dock tab per docked citizen instance.\n\
-                 #[derive(Clone, Copy, PartialEq)]\n\
-                 pub enum Tab {\n",
+                if self.has_perspectives_menu() {
+                    "/// One dock tab per docked citizen instance.\n\
+                     #[derive(Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]\n\
+                     pub enum Tab {\n"
+                } else {
+                    "/// One dock tab per docked citizen instance.\n\
+                     #[derive(Clone, Copy, PartialEq)]\n\
+                     pub enum Tab {\n"
+                },
             );
             for DockedModel { inst, .. } in &self.docked {
                 let _ = writeln!(out, "    {},", camel_case(inst));
@@ -1331,14 +1356,7 @@ opt-level = 2
 
         // Does a top-bar citizen carry the perspectives menu? Then the
         // dock lives in a Workspace with named layouts and a default.
-        let has_persp = has_dock
-            && self.top.iter().any(|t| {
-                self.insts
-                    .iter()
-                    .find(|i| &i.name == t)
-                    .and_then(|i| self.decls.iter().find(|d| d.ty == i.decl))
-                    .is_some_and(decl_has_perspectives)
-            });
+        let has_persp = self.has_perspectives_menu();
 
         // The dock construction, built once — emitted inline in new() or
         // as default_layout() when perspectives need to rebuild it.
@@ -1416,78 +1434,12 @@ opt-level = 2
         }
 
         if has_persp {
-            // Workspace: the dock plus in-session named perspectives
-            // (ForgePM persists these to ~/.config/<app>/perspectives.json —
-            // that upgrade is yours; the shape is ready for it).
+            // Workspace + PerspectiveStore: the ForgePM perspectives.rs
+            // shape (BTreeMap name -> DockState JSON, starred startup
+            // default, persist on every mutation).
+            out.push_str(&WORKSPACE_IMPL.replace("__CRATE__", &self.crate_name));
             out.push_str(
-                "/// The dock layout plus named perspectives (in-session).\n\
-                 pub struct Workspace {\n\
-                 \x20   pub dock: DockState<Tab>,\n\
-                 \x20   saved: Vec<(String, DockState<Tab>)>,\n\
-                 \x20   name_buf: String,\n\
-                 }\n\n\
-                 impl Workspace {\n\
-                 \x20   fn new() -> Self {\n\
-                 \x20       Self {\n\
-                 \x20           dock: default_layout(),\n\
-                 \x20           saved: Vec::new(),\n\
-                 \x20           name_buf: String::new(),\n\
-                 \x20       }\n\
-                 \x20   }\n\n\
-                 \x20   /// The 🗔 Perspectives menu (the ForgePM ribbon convention).\n\
-                 \x20   ///\n\
-                 \x20   /// Close-on-click-OUTSIDE, not egui's default close-on-any-click —\n\
-                 \x20   /// the default kills the name text field the moment it is clicked.\n\
-                 \x20   pub fn perspectives_menu(&mut self, ui: &mut egui::Ui) {\n\
-                 \x20       let config = egui::containers::menu::MenuConfig::new()\n\
-                 \x20           .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);\n\
-                 \x20       egui::containers::menu::MenuButton::new(\"🗔 Perspectives\")\n\
-                 \x20           .config(config)\n\
-                 \x20           .ui(ui, |ui| {\n\
-                 \x20           if ui.button(\"Reset to default\").clicked() {\n\
-                 \x20               self.dock = default_layout();\n\
-                 \x20               ui.close();\n\
-                 \x20           }\n\
-                 \x20           if !self.saved.is_empty() {\n\
-                 \x20               ui.separator();\n\
-                 \x20           }\n\
-                 \x20           let mut apply = None;\n\
-                 \x20           let mut delete = None;\n\
-                 \x20           for (i, (name, layout)) in self.saved.iter().enumerate() {\n\
-                 \x20               ui.horizontal(|ui| {\n\
-                 \x20                   if ui.button(name).clicked() {\n\
-                 \x20                       apply = Some(layout.clone());\n\
-                 \x20                   }\n\
-                 \x20                   if ui.small_button(\"✖\").clicked() {\n\
-                 \x20                       delete = Some(i);\n\
-                 \x20                   }\n\
-                 \x20               });\n\
-                 \x20           }\n\
-                 \x20           if let Some(layout) = apply {\n\
-                 \x20               self.dock = layout;\n\
-                 \x20               ui.close();\n\
-                 \x20           }\n\
-                 \x20           if let Some(i) = delete {\n\
-                 \x20               self.saved.remove(i);\n\
-                 \x20           }\n\
-                 \x20           ui.separator();\n\
-                 \x20           ui.horizontal(|ui| {\n\
-                 \x20               ui.add(\n\
-                 \x20                   egui::TextEdit::singleline(&mut self.name_buf)\n\
-                 \x20                       .desired_width(120.0)\n\
-                 \x20                       .hint_text(\"name\"),\n\
-                 \x20               );\n\
-                 \x20               let ok = !self.name_buf.trim().is_empty();\n\
-                 \x20               if ui.add_enabled(ok, egui::Button::new(\"💾 Save current\")).clicked() {\n\
-                 \x20                   self.saved.push((self.name_buf.trim().to_owned(), self.dock.clone()));\n\
-                 \x20                   self.name_buf.clear();\n\
-                 \x20               }\n\
-                 \x20           });\n\
-                 \x20       });\n\
-                 \x20   }\n\
-                 }\n\n\
-                 /// The @layout default — Reset returns here.\n\
-                 fn default_layout() -> DockState<Tab> {\n",
+                "/// The @layout default — Reset returns here.\nfn default_layout() -> DockState<Tab> {\n",
             );
             for line in dock_build.lines() {
                 if line.is_empty() {
@@ -2151,6 +2103,151 @@ fn decl_has_kind(decl: &CitizenDeclModel, kind: &str) -> bool {
     });
     found
 }
+
+/// The Workspace + PerspectiveStore — ForgePM's `perspectives.rs` shape:
+/// named dock layouts as serialized `DockState` JSON in a `BTreeMap`, a
+/// starred startup default, persisted to
+/// `~/.config/__CRATE__/perspectives.json` on every mutation.
+const WORKSPACE_IMPL: &str = r#"/// The dock layout plus named perspectives — saveable, deletable, with
+/// a ★ startup default, persisted across restarts.
+pub struct Workspace {
+    pub dock: DockState<Tab>,
+    store: PerspectiveStore,
+    name_buf: String,
+}
+
+/// name → serialized `DockState` JSON, plus the startup default
+/// (ForgePM's perspectives.json, verbatim shape).
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct PerspectiveStore {
+    perspectives: std::collections::BTreeMap<String, String>,
+    default: Option<String>,
+}
+
+impl PerspectiveStore {
+    fn path() -> Option<std::path::PathBuf> {
+        dirs::config_dir().map(|d| d.join("__CRATE__").join("perspectives.json"))
+    }
+
+    fn load() -> Self {
+        Self::path()
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .and_then(|j| serde_json::from_str(&j).ok())
+            .unwrap_or_default()
+    }
+
+    fn persist(&self) {
+        let Some(path) = Self::path() else { return };
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Ok(j) = serde_json::to_string_pretty(self) {
+            let _ = std::fs::write(path, j);
+        }
+    }
+}
+
+impl Workspace {
+    fn new() -> Self {
+        let store = PerspectiveStore::load();
+        // The ★ default loads on startup; otherwise the @layout default.
+        let dock = store
+            .default
+            .as_ref()
+            .and_then(|n| store.perspectives.get(n))
+            .and_then(|j| serde_json::from_str(j).ok())
+            .unwrap_or_else(default_layout);
+        Self {
+            dock,
+            store,
+            name_buf: String::new(),
+        }
+    }
+
+    /// The 🗔 Perspectives menu — ★ marks the startup default.
+    ///
+    /// Close-on-click-OUTSIDE, not egui's default close-on-any-click —
+    /// the default kills the name text field the moment it is clicked.
+    pub fn perspectives_menu(&mut self, ui: &mut egui::Ui) {
+        let config = egui::containers::menu::MenuConfig::new()
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
+        egui::containers::menu::MenuButton::new("🗔 Perspectives")
+            .config(config)
+            .ui(ui, |ui| {
+                if ui.button("Reset to default").clicked() {
+                    self.dock = default_layout();
+                    ui.close();
+                }
+                if !self.store.perspectives.is_empty() {
+                    ui.separator();
+                }
+                let mut apply = None;
+                let mut delete = None;
+                let mut star = None;
+                for (name, json) in &self.store.perspectives {
+                    ui.horizontal(|ui| {
+                        let starred = self.store.default.as_deref() == Some(name.as_str());
+                        if ui
+                            .small_button(if starred { "★" } else { "☆" })
+                            .on_hover_text("Load this perspective at startup")
+                            .clicked()
+                        {
+                            star = Some(name.clone());
+                        }
+                        if ui.button(name).clicked() {
+                            apply = Some(json.clone());
+                        }
+                        if ui.small_button("✖").clicked() {
+                            delete = Some(name.clone());
+                        }
+                    });
+                }
+                if let Some(name) = star {
+                    // Toggle: starring the current default clears it.
+                    self.store.default =
+                        if self.store.default.as_deref() == Some(name.as_str()) {
+                            None
+                        } else {
+                            Some(name)
+                        };
+                    self.store.persist();
+                }
+                if let Some(json) = apply {
+                    if let Ok(layout) = serde_json::from_str(&json) {
+                        self.dock = layout;
+                    }
+                    ui.close();
+                }
+                if let Some(name) = delete {
+                    self.store.perspectives.remove(&name);
+                    if self.store.default.as_deref() == Some(name.as_str()) {
+                        self.store.default = None;
+                    }
+                    self.store.persist();
+                }
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.name_buf)
+                            .desired_width(120.0)
+                            .hint_text("name"),
+                    );
+                    let ok = !self.name_buf.trim().is_empty();
+                    if ui.add_enabled(ok, egui::Button::new("💾 Save current")).clicked() {
+                        if let Ok(json) = serde_json::to_string(&self.dock) {
+                            self.store
+                                .perspectives
+                                .insert(self.name_buf.trim().to_owned(), json);
+                            self.store.persist();
+                        }
+                        self.name_buf.clear();
+                    }
+                });
+            });
+    }
+}
+
+"#;
 
 /// The shell prefab body — CopperTrace's `citizens/terminal.rs` shape:
 /// scrolling colour-coded output, a `$` prompt, built-ins, `bash -c`

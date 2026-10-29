@@ -13,7 +13,7 @@ use egui_citizen::Registry;
 use egui_dock::{DockArea, DockState, NodeIndex};
 
 /// One dock tab per docked citizen instance.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Tab {
     Controls0,
     Controls1,
@@ -37,23 +37,63 @@ impl Tab {
     }
 }
 
-/// The dock layout plus named perspectives (in-session).
+/// The dock layout plus named perspectives — saveable, deletable, with
+/// a ★ startup default, persisted across restarts.
 pub struct Workspace {
     pub dock: DockState<Tab>,
-    saved: Vec<(String, DockState<Tab>)>,
+    store: PerspectiveStore,
     name_buf: String,
+}
+
+/// name → serialized `DockState` JSON, plus the startup default
+/// (ForgePM's perspectives.json, verbatim shape).
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct PerspectiveStore {
+    perspectives: std::collections::BTreeMap<String, String>,
+    default: Option<String>,
+}
+
+impl PerspectiveStore {
+    fn path() -> Option<std::path::PathBuf> {
+        dirs::config_dir().map(|d| d.join("workbench").join("perspectives.json"))
+    }
+
+    fn load() -> Self {
+        Self::path()
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .and_then(|j| serde_json::from_str(&j).ok())
+            .unwrap_or_default()
+    }
+
+    fn persist(&self) {
+        let Some(path) = Self::path() else { return };
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Ok(j) = serde_json::to_string_pretty(self) {
+            let _ = std::fs::write(path, j);
+        }
+    }
 }
 
 impl Workspace {
     fn new() -> Self {
+        let store = PerspectiveStore::load();
+        // The ★ default loads on startup; otherwise the @layout default.
+        let dock = store
+            .default
+            .as_ref()
+            .and_then(|n| store.perspectives.get(n))
+            .and_then(|j| serde_json::from_str(j).ok())
+            .unwrap_or_else(default_layout);
         Self {
-            dock: default_layout(),
-            saved: Vec::new(),
+            dock,
+            store,
             name_buf: String::new(),
         }
     }
 
-    /// The 🗔 Perspectives menu (the ForgePM ribbon convention).
+    /// The 🗔 Perspectives menu — ★ marks the startup default.
     ///
     /// Close-on-click-OUTSIDE, not egui's default close-on-any-click —
     /// the default kills the name text field the moment it is clicked.
@@ -63,46 +103,76 @@ impl Workspace {
         egui::containers::menu::MenuButton::new("🗔 Perspectives")
             .config(config)
             .ui(ui, |ui| {
-            if ui.button("Reset to default").clicked() {
-                self.dock = default_layout();
-                ui.close();
-            }
-            if !self.saved.is_empty() {
-                ui.separator();
-            }
-            let mut apply = None;
-            let mut delete = None;
-            for (i, (name, layout)) in self.saved.iter().enumerate() {
-                ui.horizontal(|ui| {
-                    if ui.button(name).clicked() {
-                        apply = Some(layout.clone());
+                if ui.button("Reset to default").clicked() {
+                    self.dock = default_layout();
+                    ui.close();
+                }
+                if !self.store.perspectives.is_empty() {
+                    ui.separator();
+                }
+                let mut apply = None;
+                let mut delete = None;
+                let mut star = None;
+                for (name, json) in &self.store.perspectives {
+                    ui.horizontal(|ui| {
+                        let starred = self.store.default.as_deref() == Some(name.as_str());
+                        if ui
+                            .small_button(if starred { "★" } else { "☆" })
+                            .on_hover_text("Load this perspective at startup")
+                            .clicked()
+                        {
+                            star = Some(name.clone());
+                        }
+                        if ui.button(name).clicked() {
+                            apply = Some(json.clone());
+                        }
+                        if ui.small_button("✖").clicked() {
+                            delete = Some(name.clone());
+                        }
+                    });
+                }
+                if let Some(name) = star {
+                    // Toggle: starring the current default clears it.
+                    self.store.default =
+                        if self.store.default.as_deref() == Some(name.as_str()) {
+                            None
+                        } else {
+                            Some(name)
+                        };
+                    self.store.persist();
+                }
+                if let Some(json) = apply {
+                    if let Ok(layout) = serde_json::from_str(&json) {
+                        self.dock = layout;
                     }
-                    if ui.small_button("✖").clicked() {
-                        delete = Some(i);
+                    ui.close();
+                }
+                if let Some(name) = delete {
+                    self.store.perspectives.remove(&name);
+                    if self.store.default.as_deref() == Some(name.as_str()) {
+                        self.store.default = None;
+                    }
+                    self.store.persist();
+                }
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.name_buf)
+                            .desired_width(120.0)
+                            .hint_text("name"),
+                    );
+                    let ok = !self.name_buf.trim().is_empty();
+                    if ui.add_enabled(ok, egui::Button::new("💾 Save current")).clicked() {
+                        if let Ok(json) = serde_json::to_string(&self.dock) {
+                            self.store
+                                .perspectives
+                                .insert(self.name_buf.trim().to_owned(), json);
+                            self.store.persist();
+                        }
+                        self.name_buf.clear();
                     }
                 });
-            }
-            if let Some(layout) = apply {
-                self.dock = layout;
-                ui.close();
-            }
-            if let Some(i) = delete {
-                self.saved.remove(i);
-            }
-            ui.separator();
-            ui.horizontal(|ui| {
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.name_buf)
-                        .desired_width(120.0)
-                        .hint_text("name"),
-                );
-                let ok = !self.name_buf.trim().is_empty();
-                if ui.add_enabled(ok, egui::Button::new("💾 Save current")).clicked() {
-                    self.saved.push((self.name_buf.trim().to_owned(), self.dock.clone()));
-                    self.name_buf.clear();
-                }
             });
-        });
     }
 }
 
