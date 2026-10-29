@@ -1,0 +1,112 @@
+// Build:  cargo run -p mobius_codegen --bin mobius-gen -- examples/mobius/terminal/terminal.mobius
+// Run:    cd examples/mobius/terminal/generated && cargo run
+//
+// Output location and dependency roots come from ./mobius.toml; the
+// generated project is standalone — yours to edit, no tie to the
+// generator.
+//
+// Example 3 of the tutorial ladder — the Workbench: example 2's docked
+// channels and System logger, a nearly full ribbon (file group firing
+// Path B events, theme, About, clock), and the terminal prefab: a
+// shell citizen in the shape of CopperTrace's `citizens/terminal.rs` —
+// colour-coded scrollback, `$` prompt, built-ins (`help`, `ver`,
+// `info`, `clear`) and `bash -c` passthrough.
+//
+// The Shell citizen demonstrates a fully self-contained prefab: all
+// its state (scrollback, input buffer) is citizen-local, so it has NO
+// ports — the first port-less citizen in the ladder.
+
+app Workbench {
+    enum Theme { CopperDark, TokyoNight, Light }
+    enum RibbonCmd { New, Open, Save, Build, Emit }
+
+    interface Chrome {
+        theme : Theme = Theme::CopperDark
+        show_about : bool = false
+        clock : string = ""
+        actions : signal RibbonCmd
+        modport ribbon (write theme, write show_about, read clock, emit actions)
+        modport host (read theme, read show_about, write clock, drain actions)
+    }
+
+    interface Channel {
+        level : f32 = 0.5
+        modport ctrl (write level)
+        modport view (read level)
+    }
+
+    interface Log {
+        state : LoggerState
+        colors : LogColors
+        modport view (read state, read colors)
+        modport host (write state, write colors)
+    }
+
+    citizen Ribbon (c : Chrome.ribbon) {
+        row {
+            wordmark "Workbench";
+            separator;
+            button "New" -> c.actions(RibbonCmd::New);
+            button "Open" -> c.actions(RibbonCmd::Open);
+            button "💾 Save" -> c.actions(RibbonCmd::Save);
+            separator;
+            button "⚙ Build" -> c.actions(RibbonCmd::Build);
+            button "⚡ Emit" -> c.actions(RibbonCmd::Emit);
+            right {
+                combo "🎨" -- c.theme;
+                button "ℹ About" -- c.show_about;
+                separator;
+                clock -- c.clock;
+            }
+        }
+    }
+
+    citizen Controls (c : Channel.ctrl) {
+        column {
+            slider "Level" 0.0..1.0 -- c.level;
+        }
+    }
+
+    citizen Scope (s : Channel.view) {
+        column {
+            label -- s.level;
+        }
+    }
+
+    citizen System (l : Log.view) {
+        logger -- l.state;
+    }
+
+    citizen Shell () {
+        terminal;
+    }
+
+    @wiring {
+        let chrome = Chrome();
+        let ch0 = Channel();
+        let ch1 = Channel();
+        let log = Log();
+        let ribbon = Ribbon(c = chrome.ribbon);
+        let controls0 = Controls(c = ch0.ctrl);
+        let controls1 = Controls(c = ch1.ctrl);
+        let scope0 = Scope(s = ch0.view);
+        let scope1 = Scope(s = ch1.view);
+        let system = System(l = log.view);
+        let shell = Shell();
+    }
+
+    @layout {
+        top(ribbon);
+        about(trigger = chrome.show_about,
+              title   = "Workbench",
+              tagline = "Example 3 of the .mobius tutorial — the terminal prefab (a port-less shell citizen), the egui_lens logger, and a nearly full ribbon.",
+              deps    = true,
+              resizable = true);
+        dock(controls0, region = left);
+        dock(controls1, region = left);
+        dock(scope0, region = center);
+        dock(scope1, region = center);
+        dock(system, region = bottom);
+        dock(shell, region = bottom);
+    }
+}

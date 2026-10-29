@@ -1,0 +1,9 @@
+# Compiler directives for terminal.mobius — paths resolve relative to
+# this file. `mobius-gen examples/mobius/terminal/terminal.mobius` puts
+# the generated project in ./generated — committed, browsable, runnable
+# in place.
+
+[project]
+out = "generated"
+mobius_root = "../../.."
+asset_root = "."
