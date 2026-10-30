@@ -1145,11 +1145,17 @@ opt-level = 2
                     );
                 } else {
                     // Typed display: strings label directly, floats get a
-                    // stable precision, everything else goes through Display.
+                    // stable precision, declared enums format via Debug
+                    // (they derive Debug, not Display — ShutterFrame tray
+                    // pilot finding #7), everything else through Display.
                     let line = match field.rust_ty.as_str() {
                         "String" => format!("ui.label({port}.{}.get());", field.name),
                         "f32" | "f64" => format!(
                             "ui.label(format!(\"{{:.2}}\", {port}.{}.get()));",
+                            field.name
+                        ),
+                        ty if self.enums.iter().any(|e| e.name == ty) => format!(
+                            "ui.label(format!(\"{{:?}}\", {port}.{}.get()));",
                             field.name
                         ),
                         _ => format!(
