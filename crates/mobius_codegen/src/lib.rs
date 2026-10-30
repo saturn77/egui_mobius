@@ -1271,6 +1271,45 @@ opt-level = 2
                 let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
+            ("checkbox", Binding::TwoWay { path, .. })
+            | ("toggle", Binding::TwoWay { path, .. }) => {
+                // Bool-cell widgets (ShutterFrame tray pilot finding #4):
+                // `checkbox` renders egui's checkbox, `toggle` the
+                // selectable-label style (toggle_value) — tray.rs's
+                // ▼newest/▲oldest sort flip.
+                let (port, field) = self.port_field(decl, path)?;
+                if field.rust_ty != "bool" {
+                    return Err(Error::Unsupported(format!(
+                        "{} on non-bool field `{}` (type `{}`)",
+                        p.kind, field.name, field.rust_ty
+                    )));
+                }
+                let widget = match p.kind.as_str() {
+                    "checkbox" => format!("ui.checkbox(&mut value, \"{label}\")"),
+                    _ => format!("ui.toggle_value(&mut value, \"{label}\")"),
+                };
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let _ = writeln!(out, "{pad}if {widget}.changed() {{");
+                let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
+                let _ = writeln!(out, "{pad}}}");
+            }
+            ("checkbox", Binding::Read { path, .. })
+            | ("toggle", Binding::Read { path, .. }) => {
+                // Read-side bool display: the widget renders disabled —
+                // this role observes the cell, it doesn't hold the pen.
+                let (port, field) = self.port_field(decl, path)?;
+                if field.rust_ty != "bool" {
+                    return Err(Error::Unsupported(format!(
+                        "{} on non-bool field `{}` (type `{}`)",
+                        p.kind, field.name, field.rust_ty
+                    )));
+                }
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let _ = writeln!(
+                    out,
+                    "{pad}ui.add_enabled(false, egui::Checkbox::new(&mut value, \"{label}\"));",
+                );
+            }
             ("input", Binding::TwoWay { path, .. }) => {
                 // Single-line text entry on a `string` cell; the label is
                 // the hint text (ShutterFrame tray pilot finding #1 — the
