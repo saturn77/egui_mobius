@@ -1204,6 +1204,25 @@ opt-level = 2
                 let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
+            ("input", Binding::TwoWay { path, .. }) => {
+                // Single-line text entry on a `string` cell; the label is
+                // the hint text (ShutterFrame tray pilot finding #1 — the
+                // inline "New project…" naming row).
+                let (port, field) = self.port_field(decl, path)?;
+                if field.rust_ty != "String" {
+                    return Err(Error::Unsupported(format!(
+                        "input on non-string field `{}` (type `{}`)",
+                        field.name, field.rust_ty
+                    )));
+                }
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let _ = writeln!(
+                    out,
+                    "{pad}if ui.add(egui::TextEdit::singleline(&mut value).hint_text(\"{label}\")).changed() {{",
+                );
+                let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
+                let _ = writeln!(out, "{pad}}}");
+            }
             ("combo", Binding::TwoWay { path, .. }) => {
                 let (port, field) = self.port_field(decl, path)?;
                 let enum_name = field.enum_name.clone().ok_or_else(|| {
