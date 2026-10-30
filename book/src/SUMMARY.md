@@ -26,6 +26,11 @@
 
 - [Writing a citizen app](tutorial/writing-a-citizen-app.md)
 
+# The Mobius Language
+
+- [Shared state — cells, roles, and the wire](mobius-lang/shared-state.md)
+- [Signals and threaded backends](mobius-lang/signals-and-backends.md)
+
 # Patterns
 
 - [Stored vs stateless panels](patterns/stored-vs-stateless.md)
