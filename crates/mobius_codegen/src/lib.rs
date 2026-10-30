@@ -32,7 +32,8 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use mobius_lang::ast::{
-    App, AppItem, Binding, CitizenDecl, DirectiveArg, Expr, FieldKind, Stmt, Verb, WidgetNode,
+    App, AppItem, ArrayDefault, Binding, CitizenDecl, DirectiveArg, Expr, FieldKind, Stmt, Verb,
+    WidgetNode,
 };
 
 /// Pinned for the generated project; tracks the workspace's egui line.
@@ -227,6 +228,18 @@ struct FieldModel {
     rust_ty: String,
     default: String,
     enum_name: Option<String>,
+    /// Set for `name : [T; N]` fields — a fixed-length bank of cells,
+    /// `[Dynamic<T>; N]` in the generated state (each element its own
+    /// reactive cell, matching indexed bindings `path[i]`).
+    array: Option<ArrayInfo>,
+}
+
+#[derive(Clone)]
+struct ArrayInfo {
+    len: usize,
+    /// Per-element rendered defaults (`{e0, e1, …}`); `None` broadcasts
+    /// `FieldModel::default` to every element.
+    elements: Option<Vec<String>>,
 }
 
 struct IfaceModel {
@@ -367,6 +380,37 @@ impl Model {
                             rust_ty: rust_type(&ty_name),
                             default: render_default(&field.name, &ty_name, default.as_ref())?,
                             enum_name,
+                            array: None,
+                        });
+                    }
+                    FieldKind::Array { elem, len, default } => {
+                        let ty_name = elem.path.joined();
+                        let enum_name =
+                            enums.iter().find(|e| e.name == ty_name).map(|e| e.name.clone());
+                        let (broadcast, elements) = match default {
+                            Some(ArrayDefault::Broadcast(expr)) => (
+                                render_default(&field.name, &ty_name, Some(expr))?,
+                                None,
+                            ),
+                            Some(ArrayDefault::Elements(exprs)) => {
+                                let mut rendered = Vec::with_capacity(exprs.len());
+                                for e in exprs {
+                                    rendered.push(render_default(
+                                        &field.name,
+                                        &ty_name,
+                                        Some(e),
+                                    )?);
+                                }
+                                (String::new(), Some(rendered))
+                            }
+                            None => (render_default(&field.name, &ty_name, None)?, None),
+                        };
+                        fields.push(FieldModel {
+                            name: field.name.clone(),
+                            rust_ty: rust_type(&ty_name),
+                            default: broadcast,
+                            enum_name,
+                            array: Some(ArrayInfo { len: *len, elements }),
                         });
                     }
                     FieldKind::Signal { ty } => {
@@ -378,12 +422,6 @@ impl Model {
                             payload_ty: rust_type(&ty_name),
                             payload_enum,
                         });
-                    }
-                    FieldKind::Array { .. } => {
-                        return Err(Error::Unsupported(format!(
-                            "array field `{}` (v0)",
-                            field.name
-                        )));
                     }
                 }
             }
@@ -775,7 +813,18 @@ opt-level = 2
                 name = iface.name,
             );
             for f in &iface.fields {
-                let _ = writeln!(out, "    pub {}: Dynamic<{}>,", f.name, f.rust_ty);
+                match &f.array {
+                    Some(a) => {
+                        let _ = writeln!(
+                            out,
+                            "    pub {}: [Dynamic<{}>; {}],",
+                            f.name, f.rust_ty, a.len
+                        );
+                    }
+                    None => {
+                        let _ = writeln!(out, "    pub {}: Dynamic<{}>,", f.name, f.rust_ty);
+                    }
+                }
             }
             let _ = write!(
                 out,
@@ -783,7 +832,30 @@ opt-level = 2
                 name = iface.name,
             );
             for f in &iface.fields {
-                let _ = writeln!(out, "            {}: Dynamic::new({}),", f.name, f.default);
+                match &f.array {
+                    Some(ArrayInfo { elements: Some(elems), .. }) => {
+                        let inits = elems
+                            .iter()
+                            .map(|e| format!("Dynamic::new({e})"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        let _ = writeln!(out, "            {}: [{inits}],", f.name);
+                    }
+                    Some(ArrayInfo { elements: None, .. }) => {
+                        let _ = writeln!(
+                            out,
+                            "            {}: std::array::from_fn(|_| Dynamic::new({})),",
+                            f.name, f.default
+                        );
+                    }
+                    None => {
+                        let _ = writeln!(
+                            out,
+                            "            {}: Dynamic::new({}),",
+                            f.name, f.default
+                        );
+                    }
+                }
             }
             out.push_str("        }\n    }\n}\n");
         }
@@ -960,6 +1032,7 @@ opt-level = 2
                             rust_ty: f.rust_ty.clone(),
                             default: f.default.clone(),
                             enum_name: f.enum_name.clone(),
+                            array: f.array.clone(),
                         },
                     ));
                 }
@@ -1148,8 +1221,20 @@ opt-level = 2
                         return Err(Error::Unsupported(format!("container `{other}` at {span:?}")));
                     }
                 },
-                WidgetNode::For { span, .. } => {
-                    return Err(Error::Unsupported(format!("`for` loops (v0) at {span:?}")));
+                WidgetNode::For { var, lo, hi, body, span } => {
+                    // Generate loop: unrolled here, Verilog-style. Each
+                    // iteration emits the body with the loop variable
+                    // substituted into binding indices and event payloads.
+                    if hi < lo || hi - lo > 256 {
+                        return Err(Error::Unsupported(format!(
+                            "`for` range {lo}..{hi} at {span:?} (must be ascending, ≤256)"
+                        )));
+                    }
+                    for i in *lo..*hi {
+                        let unrolled: Vec<WidgetNode> =
+                            body.iter().map(|n| subst_loop_var(n, var, i)).collect();
+                        self.emit_widgets(decl, &unrolled, depth, out)?;
+                    }
                 }
                 WidgetNode::Primitive(p) => self.emit_primitive(decl, p, &pad, out)?,
             }
@@ -1197,8 +1282,9 @@ opt-level = 2
                     );
                 }
             }
-            ("label", Binding::Read { path, .. }) | ("clock", Binding::Read { path, .. }) => {
+            ("label", Binding::Read { path, index }) | ("clock", Binding::Read { path, index }) => {
                 let (port, field) = self.port_field(decl, path)?;
+                let idx = index_suffix(index)?;
                 if p.kind == "clock" {
                     let style = if themed {
                         ".monospace().color(theme.accent())"
@@ -1207,7 +1293,7 @@ opt-level = 2
                     };
                     let _ = writeln!(
                         out,
-                        "{pad}ui.label(egui::RichText::new({port}.{name}.get()){style});",
+                        "{pad}ui.label(egui::RichText::new({port}.{name}{idx}.get()){style});",
                         name = field.name,
                     );
                 } else {
@@ -1216,17 +1302,17 @@ opt-level = 2
                     // (they derive Debug, not Display — ShutterFrame tray
                     // pilot finding #7), everything else through Display.
                     let line = match field.rust_ty.as_str() {
-                        "String" => format!("ui.label({port}.{}.get());", field.name),
+                        "String" => format!("ui.label({port}.{}{idx}.get());", field.name),
                         "f32" | "f64" => format!(
-                            "ui.label(format!(\"{{:.2}}\", {port}.{}.get()));",
+                            "ui.label(format!(\"{{:.2}}\", {port}.{}{idx}.get()));",
                             field.name
                         ),
                         ty if self.enums.iter().any(|e| e.name == ty) => format!(
-                            "ui.label(format!(\"{{:?}}\", {port}.{}.get()));",
+                            "ui.label(format!(\"{{:?}}\", {port}.{}{idx}.get()));",
                             field.name
                         ),
                         _ => format!(
-                            "ui.label(format!(\"{{}}\", {port}.{}.get()));",
+                            "ui.label(format!(\"{{}}\", {port}.{}{idx}.get()));",
                             field.name
                         ),
                     };
@@ -1256,23 +1342,24 @@ opt-level = 2
                 let _ = writeln!(out, "{pad}    {port}.{}.set(true);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
-            ("slider", Binding::TwoWay { path, .. }) => {
+            ("slider", Binding::TwoWay { path, index }) => {
                 let (port, field) = self.port_field(decl, path)?;
+                let idx = index_suffix(index)?;
                 let (lo, hi) = p.range.as_ref().ok_or_else(|| {
                     Error::Unsupported(format!("slider `{}` needs a `lo..hi` range", field.name))
                 })?;
-                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}{idx}.get();", field.name);
                 let _ = writeln!(
                     out,
                     "{pad}if ui.add(egui::Slider::new(&mut value, {lo}..={hi}).text(\"{label}\")).changed() {{",
                     lo = render_number(lo),
                     hi = render_number(hi),
                 );
-                let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
+                let _ = writeln!(out, "{pad}    {port}.{}{idx}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
-            ("checkbox", Binding::TwoWay { path, .. })
-            | ("toggle", Binding::TwoWay { path, .. }) => {
+            ("checkbox", Binding::TwoWay { path, index })
+            | ("toggle", Binding::TwoWay { path, index }) => {
                 // Bool-cell widgets (ShutterFrame tray pilot finding #4):
                 // `checkbox` renders egui's checkbox, `toggle` the
                 // selectable-label style (toggle_value) — tray.rs's
@@ -1284,17 +1371,18 @@ opt-level = 2
                         p.kind, field.name, field.rust_ty
                     )));
                 }
+                let idx = index_suffix(index)?;
                 let widget = match p.kind.as_str() {
                     "checkbox" => format!("ui.checkbox(&mut value, \"{label}\")"),
                     _ => format!("ui.toggle_value(&mut value, \"{label}\")"),
                 };
-                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}{idx}.get();", field.name);
                 let _ = writeln!(out, "{pad}if {widget}.changed() {{");
-                let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
+                let _ = writeln!(out, "{pad}    {port}.{}{idx}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
-            ("checkbox", Binding::Read { path, .. })
-            | ("toggle", Binding::Read { path, .. }) => {
+            ("checkbox", Binding::Read { path, index })
+            | ("toggle", Binding::Read { path, index }) => {
                 // Read-side bool display: the widget renders disabled —
                 // this role observes the cell, it doesn't hold the pen.
                 let (port, field) = self.port_field(decl, path)?;
@@ -1304,13 +1392,14 @@ opt-level = 2
                         p.kind, field.name, field.rust_ty
                     )));
                 }
-                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let idx = index_suffix(index)?;
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}{idx}.get();", field.name);
                 let _ = writeln!(
                     out,
                     "{pad}ui.add_enabled(false, egui::Checkbox::new(&mut value, \"{label}\"));",
                 );
             }
-            ("input", Binding::TwoWay { path, .. }) => {
+            ("input", Binding::TwoWay { path, index }) => {
                 // Single-line text entry on a `string` cell; the label is
                 // the hint text (ShutterFrame tray pilot finding #1 — the
                 // inline "New project…" naming row).
@@ -1321,12 +1410,13 @@ opt-level = 2
                         field.name, field.rust_ty
                     )));
                 }
-                let _ = writeln!(out, "{pad}let mut value = {port}.{}.get();", field.name);
+                let idx = index_suffix(index)?;
+                let _ = writeln!(out, "{pad}let mut value = {port}.{}{idx}.get();", field.name);
                 let _ = writeln!(
                     out,
                     "{pad}if ui.add(egui::TextEdit::singleline(&mut value).hint_text(\"{label}\")).changed() {{",
                 );
-                let _ = writeln!(out, "{pad}    {port}.{}.set(value);", field.name);
+                let _ = writeln!(out, "{pad}    {port}.{}{idx}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
             }
             ("combo", Binding::TwoWay { path, .. }) => {
@@ -2561,6 +2651,76 @@ fn run_os_command(cmd: &str) -> Vec<String> {
     }
 }
 "#;
+
+/// Substitute a generate-loop variable with its literal value: binding
+/// indices (`path[i]` → `path[3]`) and event payload arguments
+/// (`-> t.open(i)` → `-> t.open(3)`). Containers and nested loops recurse;
+/// a nested loop shadowing the variable stops the substitution.
+fn subst_loop_var(node: &WidgetNode, var: &str, value: i64) -> WidgetNode {
+    let subst_expr = |e: &Expr| -> Expr {
+        match e {
+            Expr::Path(p) if p.segments.len() == 1 && p.segments[0] == var => {
+                Expr::Int(value, p.span.clone())
+            }
+            other => other.clone(),
+        }
+    };
+    match node {
+        WidgetNode::Container { kind, children, span } => WidgetNode::Container {
+            kind: kind.clone(),
+            children: children.iter().map(|n| subst_loop_var(n, var, value)).collect(),
+            span: span.clone(),
+        },
+        WidgetNode::For { var: v, lo, hi, body, span } if v != var => WidgetNode::For {
+            var: v.clone(),
+            lo: *lo,
+            hi: *hi,
+            body: body.iter().map(|n| subst_loop_var(n, var, value)).collect(),
+            span: span.clone(),
+        },
+        WidgetNode::For { .. } => node.clone(),
+        WidgetNode::Primitive(p) => {
+            let mut p = (**p).clone();
+            p.binding = match &p.binding {
+                Binding::TwoWay { path, index } => Binding::TwoWay {
+                    path: path.clone(),
+                    index: index.as_ref().map(&subst_expr),
+                },
+                Binding::Read { path, index } => Binding::Read {
+                    path: path.clone(),
+                    index: index.as_ref().map(&subst_expr),
+                },
+                Binding::Wire { path, index } => Binding::Wire {
+                    path: path.clone(),
+                    index: index.as_ref().map(&subst_expr),
+                },
+                Binding::Event(expr) => Binding::Event(match expr {
+                    Expr::Call { path, args, span } => Expr::Call {
+                        path: path.clone(),
+                        args: args.iter().map(&subst_expr).collect(),
+                        span: span.clone(),
+                    },
+                    other => other.clone(),
+                }),
+                Binding::None => Binding::None,
+            };
+            WidgetNode::Primitive(Box::new(p))
+        }
+    }
+}
+
+/// `[i]` suffix for an indexed binding — array-bank cell access. The
+/// index must be a literal by emission time (loop unrolling substitutes
+/// generate variables first).
+fn index_suffix(index: &Option<Expr>) -> Result<String, Error> {
+    match index {
+        None => Ok(String::new()),
+        Some(Expr::Int(i, _)) => Ok(format!("[{i}]")),
+        Some(other) => Err(Error::Unsupported(format!(
+            "non-literal array index {other:?} (use a `for` generate loop)"
+        ))),
+    }
+}
 
 fn scan_widgets(nodes: &[WidgetNode], f: &mut impl FnMut(&mobius_lang::ast::Primitive)) {
     for node in nodes {
