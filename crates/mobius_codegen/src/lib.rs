@@ -721,7 +721,9 @@ opt-level = 2
 "#,
             name = self.crate_name,
             egui = EGUI_VERSION,
-            image_deps = if self.about.as_ref().is_some_and(|a| a.image.is_some()) {
+            image_deps = if self.about.as_ref().is_some_and(|a| a.image.is_some())
+                || self.decls.iter().any(|d| has_image_container(&d.body))
+            {
                 "\negui_extras = { version = \"0.36\", features = [\"image\"] }\n\
                  image = { version = \"0.25\", default-features = false, features = [\"png\"] }"
             } else {
@@ -1195,6 +1197,72 @@ opt-level = 2
         for node in nodes {
             match node {
                 WidgetNode::Container { kind, children, span } => match kind.as_str() {
+                    // `image { src -- t.thumbs[i]; click -> t.open(i); }` —
+                    // a connection-block widget (the block form parses as a
+                    // container whose children are the connections). `src`
+                    // wires a string cell holding an image path; `click`
+                    // optionally fires a signal. Chosen over chained
+                    // bindings for future connections (drag, context).
+                    "image" => {
+                        let mut src: Option<(String, String)> = None;
+                        let mut click: Option<String> = None;
+                        for child in children {
+                            let WidgetNode::Primitive(cp) = child else {
+                                return Err(Error::Unsupported(format!(
+                                    "image block entries must be connections at {span:?}"
+                                )));
+                            };
+                            match (cp.kind.as_str(), &cp.binding) {
+                                ("src", Binding::Read { path, index })
+                                | ("src", Binding::TwoWay { path, index }) => {
+                                    let (port, field) = self.port_field(decl, path)?;
+                                    if field.rust_ty != "String" {
+                                        return Err(Error::Unsupported(format!(
+                                            "image src on non-string field `{}`",
+                                            field.name
+                                        )));
+                                    }
+                                    let idx = index_suffix(index)?;
+                                    src = Some((port, format!("{}{idx}", field.name)));
+                                }
+                                ("click", Binding::Event(expr)) => {
+                                    click = Some(self.render_event(decl, expr)?);
+                                }
+                                (k, _) => {
+                                    return Err(Error::Unsupported(format!(
+                                        "image block connection `{k}` at {span:?} \
+                                         (supported: src --, click ->)"
+                                    )));
+                                }
+                            }
+                        }
+                        let (port, access) = src.ok_or_else(|| {
+                            Error::Unsupported(format!(
+                                "image block needs a `src --` connection at {span:?}"
+                            ))
+                        })?;
+                        let _ = writeln!(out, "{pad}let src = {port}.{access}.get();");
+                        let _ = writeln!(out, "{pad}if !src.is_empty() {{");
+                        let _ = writeln!(
+                            out,
+                            "{pad}    let img = egui::Image::new(format!(\"file://{{src}}\"))\n\
+                             {pad}        .max_size(egui::vec2(150.0, 120.0));"
+                        );
+                        match click {
+                            Some(push) => {
+                                let _ = writeln!(
+                                    out,
+                                    "{pad}    if ui.add(egui::Button::image(img)).clicked() {{\n\
+                                     {pad}        {push}\n\
+                                     {pad}    }}"
+                                );
+                            }
+                            None => {
+                                let _ = writeln!(out, "{pad}    ui.add(img);");
+                            }
+                        }
+                        let _ = writeln!(out, "{pad}}}");
+                    }
                     "row" => {
                         let _ = writeln!(out, "{pad}ui.horizontal(|ui| {{");
                         self.emit_widgets(decl, children, depth + 1, out)?;
@@ -1418,6 +1486,61 @@ opt-level = 2
                 );
                 let _ = writeln!(out, "{pad}    {port}.{}{idx}.set(value);", field.name);
                 let _ = writeln!(out, "{pad}}}");
+            }
+            ("combo", Binding::TwoWay { path, index }) if p.items.is_some() => {
+                // `combo "Project" -- t.project in t.projects;` — options
+                // from a string array bank, selection into a string cell
+                // (ShutterFrame tray pilot finding #2).
+                let (port, field) = self.port_field(decl, path)?;
+                if field.rust_ty != "String" {
+                    return Err(Error::Unsupported(format!(
+                        "items combo on non-string field `{}`",
+                        field.name
+                    )));
+                }
+                let idx = index_suffix(index)?;
+                let items_path = p.items.as_ref().unwrap();
+                let (items_port, items_field) = self.port_field(decl, items_path)?;
+                let Some(ArrayInfo { .. }) = items_field.array else {
+                    return Err(Error::Unsupported(format!(
+                        "combo items `{}` is not an array bank",
+                        items_field.name
+                    )));
+                };
+                if items_field.rust_ty != "String" {
+                    return Err(Error::Unsupported(format!(
+                        "combo items `{}` is not a string bank",
+                        items_field.name
+                    )));
+                }
+                let _ = writeln!(
+                    out,
+                    "{pad}let mut selected = {port}.{name}{idx}.get();",
+                    name = field.name,
+                );
+                let _ = writeln!(out, "{pad}let before = selected.clone();");
+                let _ = writeln!(
+                    out,
+                    "{pad}egui::ComboBox::from_id_salt(\"{snake}-{name}\")\n\
+                     {pad}    .selected_text(selected.clone())\n\
+                     {pad}    .show_ui(ui, |ui| {{\n\
+                     {pad}        for opt in {items_port}.{items_name}.iter() {{\n\
+                     {pad}            let v = opt.get();\n\
+                     {pad}            if v.is_empty() {{ continue; }}\n\
+                     {pad}            ui.selectable_value(&mut selected, v.clone(), v);\n\
+                     {pad}        }}\n\
+                     {pad}    }});",
+                    snake = decl.snake,
+                    name = field.name,
+                    items_name = items_field.name,
+                );
+                let _ = writeln!(
+                    out,
+                    "{pad}if selected != before {{\n\
+                     {pad}    {port}.{name}{idx}.set(selected);\n\
+                     {pad}}}",
+                    name = field.name,
+                );
             }
             ("combo", Binding::TwoWay { path, .. }) => {
                 let (port, field) = self.port_field(decl, path)?;
@@ -2197,7 +2320,8 @@ opt-level = 2
             );
         }
 
-        let has_image = self.about.as_ref().is_some_and(|a| a.image.is_some());
+        let has_image = self.about.as_ref().is_some_and(|a| a.image.is_some())
+            || self.decls.iter().any(|d| has_image_container(&d.body));
         let creator = if self.theme.is_some() || has_image {
             let mut lines = String::new();
             if has_image {
@@ -2720,6 +2844,18 @@ fn index_suffix(index: &Option<Expr>) -> Result<String, Error> {
             "non-literal array index {other:?} (use a `for` generate loop)"
         ))),
     }
+}
+
+/// Any `image { … }` connection-block in the tree — gates the egui_extras
+/// image-loader dependency and the loader install, like the About image.
+fn has_image_container(nodes: &[WidgetNode]) -> bool {
+    nodes.iter().any(|n| match n {
+        WidgetNode::Container { kind, children, .. } => {
+            kind == "image" || has_image_container(children)
+        }
+        WidgetNode::For { body, .. } => has_image_container(body),
+        WidgetNode::Primitive(_) => false,
+    })
 }
 
 fn scan_widgets(nodes: &[WidgetNode], f: &mut impl FnMut(&mobius_lang::ast::Primitive)) {

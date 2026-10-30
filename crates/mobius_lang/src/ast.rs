@@ -211,6 +211,9 @@ pub struct Primitive {
     /// `lo..hi` for `slider` / `drag`.
     pub range: Option<(Expr, Expr)>,
     pub binding: Binding,
+    /// `in <path>` — the array bank supplying a `combo`'s options
+    /// (`combo "Project" -- t.project in t.projects;`).
+    pub items: Option<Path>,
     pub span: Span,
 }
 

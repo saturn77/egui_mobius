@@ -763,12 +763,21 @@ impl Parser {
             _ => Binding::None,
         };
 
+        // `in <path>` — options source for `combo` (an array bank).
+        let items = if self.at_word("in") {
+            self.bump();
+            Some(self.path()?)
+        } else {
+            None
+        };
+
         let end = self.expect(&TokenKind::Semi, "`;` after widget")?.span;
         Ok(WidgetNode::Primitive(Box::new(Primitive {
             kind,
             label,
             range,
             binding,
+            items,
             span: start.to(end),
         })))
     }
