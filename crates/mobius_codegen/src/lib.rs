@@ -32,7 +32,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use mobius_lang::ast::{
-    App, AppItem, Binding, CitizenDecl, DirectiveArg, Expr, FieldKind, Stmt, WidgetNode,
+    App, AppItem, Binding, CitizenDecl, DirectiveArg, Expr, FieldKind, Stmt, Verb, WidgetNode,
 };
 
 /// Pinned for the generated project; tracks the workspace's egui line.
@@ -232,13 +232,32 @@ struct FieldModel {
 struct IfaceModel {
     name: String,
     fields: Vec<FieldModel>,
-    /// `(field_name, payload_enum)` of the single signal field, if any.
-    signal: Option<(String, String)>,
+    /// Path B signal fields, in declaration order. Each gets its own
+    /// typed outbox on emitting citizens and its own `actions` handler
+    /// (multi-signal + non-enum payloads: ShutterFrame tray pilot
+    /// finding #5 — `OpenCapture(i)` / `DeleteRecent(i)` need separate
+    /// indexed signals).
+    signals: Vec<SignalModel>,
+}
+
+#[derive(Clone)]
+struct SignalModel {
+    /// Field name in the `.mobius` interface (`open`, `actions`, …).
+    name: String,
+    /// Payload as a Rust type: a declared enum name, `f32`, `String`, …
+    payload_ty: String,
+    /// Set when the payload is a declared enum — drives variant match
+    /// arms in the generated actions stub and the state-module import.
+    payload_enum: Option<String>,
 }
 
 struct PortModel {
     name: String,
     iface: String,
+    /// Signal fields this port's role may `emit`. Outboxes and drains
+    /// are generated only for these — a `drain`-side role never grows
+    /// an outbox (one-writer discipline, enforced in generation too).
+    emits: Vec<String>,
 }
 
 struct CitizenDeclModel {
@@ -336,7 +355,7 @@ impl Model {
         let mut ifaces = Vec::new();
         for iface in &iface_decls {
             let mut fields = Vec::new();
-            let mut signal = None;
+            let mut signals: Vec<SignalModel> = Vec::new();
             for field in &iface.fields {
                 match &field.kind {
                     FieldKind::State { ty, default } => {
@@ -351,15 +370,14 @@ impl Model {
                         });
                     }
                     FieldKind::Signal { ty } => {
-                        if signal
-                            .replace((field.name.clone(), ty.path.joined()))
-                            .is_some()
-                        {
-                            return Err(Error::Unsupported(format!(
-                                "multiple signal fields in `{}` (v0)",
-                                iface.name
-                            )));
-                        }
+                        let ty_name = ty.path.joined();
+                        let payload_enum =
+                            enums.iter().find(|e| e.name == ty_name).map(|e| e.name.clone());
+                        signals.push(SignalModel {
+                            name: field.name.clone(),
+                            payload_ty: rust_type(&ty_name),
+                            payload_enum,
+                        });
                     }
                     FieldKind::Array { .. } => {
                         return Err(Error::Unsupported(format!(
@@ -372,7 +390,7 @@ impl Model {
             ifaces.push(IfaceModel {
                 name: iface.name.clone(),
                 fields,
-                signal,
+                signals,
             });
         }
 
@@ -383,8 +401,9 @@ impl Model {
         for citizen in &citizens {
             let mut ports = Vec::new();
             for port in &citizen.ports {
-                // `Chrome.ribbon` — the modport view is not checked here
-                // (that's lower()'s job); codegen needs the interface type.
+                // `Chrome.ribbon` — the modport view is not access-checked
+                // here (that's lower()'s job); codegen needs the interface
+                // type plus the role's emit rights for outbox generation.
                 let iface = port.ty.path.segments[0].clone();
                 if !ifaces.iter().any(|i| i.name == iface) {
                     return Err(Error::Unsupported(format!(
@@ -392,9 +411,36 @@ impl Model {
                         port.name, citizen.name
                     )));
                 }
+                let role = port.ty.path.segments.get(1);
+                let emits = iface_decls
+                    .iter()
+                    .find(|i| i.name == iface)
+                    .map(|i| match role {
+                        Some(role) => i
+                            .modports
+                            .iter()
+                            .find(|m| &m.name == role)
+                            .map(|m| {
+                                m.entries
+                                    .iter()
+                                    .filter(|e| e.verb == Verb::Emit)
+                                    .map(|e| e.field.clone())
+                                    .collect()
+                            })
+                            .unwrap_or_default(),
+                        // Role-less port: permissive, all signals.
+                        None => i
+                            .fields
+                            .iter()
+                            .filter(|f| matches!(f.kind, FieldKind::Signal { .. }))
+                            .map(|f| f.name.clone())
+                            .collect(),
+                    })
+                    .unwrap_or_default();
                 ports.push(PortModel {
                     name: port.name.clone(),
                     iface,
+                    emits,
                 });
             }
             decls.push(CitizenDeclModel {
@@ -843,16 +889,22 @@ opt-level = 2
         out
     }
 
-    /// The Path B signal reachable from a declaration's ports, if any:
-    /// `(port, signal_field, payload_enum)`.
-    fn decl_signal(&self, decl: &CitizenDeclModel) -> Option<(String, String, String)> {
-        decl.ports.iter().find_map(|port| {
-            self.ifaces
-                .iter()
-                .find(|i| i.name == port.iface)
-                .and_then(|i| i.signal.clone())
-                .map(|(field, payload)| (port.name.clone(), field, payload))
-        })
+    /// Every Path B signal reachable from a declaration's ports:
+    /// `(port_name, iface_name, signal)` in port order. Signal field
+    /// names must be unique across a citizen's ports — each one becomes
+    /// an `outbox_<name>` field on the generated citizen.
+    fn decl_signals(&self, decl: &CitizenDeclModel) -> Vec<(String, String, SignalModel)> {
+        let mut out = Vec::new();
+        for port in &decl.ports {
+            if let Some(iface) = self.ifaces.iter().find(|i| i.name == port.iface) {
+                for sig in &iface.signals {
+                    if port.emits.contains(&sig.name) {
+                        out.push((port.name.clone(), iface.name.clone(), sig.clone()));
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// The egui_lens logger interface, if declared:
@@ -922,8 +974,12 @@ opt-level = 2
 
     fn emit_citizen(&self, decl: &CitizenDeclModel) -> Result<String, Error> {
         let mut uses: Vec<String> = decl.ports.iter().map(|p| p.iface.clone()).collect();
-        if let Some((_, _, payload)) = self.decl_signal(decl) {
-            uses.push(payload);
+        for (_, _, sig) in self.decl_signals(decl) {
+            if let Some(e) = sig.payload_enum {
+                if !uses.contains(&e) {
+                    uses.push(e);
+                }
+            }
         }
         for e in &self.enums {
             if e.combo
@@ -955,13 +1011,24 @@ opt-level = 2
 
         let has_terminal = decl_has_terminal(decl);
         let mut extra_fields = String::new();
-        if let Some((_, signal_name, payload)) = self.decl_signal(decl) {
-            let _ = write!(
-                extra_fields,
-                "    // Path B outbox for the `{signal_name}` signal — drained by the\n\
-                 \x20   // app once per frame.\n\
-                 \x20   outbox: Vec<{payload}> = Vec::new(),\n",
-            );
+        {
+            let sigs = self.decl_signals(decl);
+            for (i, (_, _, sig)) in sigs.iter().enumerate() {
+                if sigs[..i].iter().any(|(_, _, s)| s.name == sig.name) {
+                    return Err(Error::Unsupported(format!(
+                        "duplicate signal name `{}` across `{}`'s ports",
+                        sig.name, decl.ty
+                    )));
+                }
+                let _ = write!(
+                    extra_fields,
+                    "    // Path B outbox for the `{name}` signal — drained by the\n\
+                     \x20   // app once per frame.\n\
+                     \x20   outbox_{name}: Vec<{payload}> = Vec::new(),\n",
+                    name = sig.name,
+                    payload = sig.payload_ty,
+                );
+            }
         }
         if has_terminal {
             extra_fields.push_str(
@@ -1299,30 +1366,61 @@ opt-level = 2
         Ok(())
     }
 
-    /// `-> c.actions(RibbonCmd::New)` → `self.outbox.push(RibbonCmd::New);`
+    /// `-> c.actions(RibbonCmd::New)` → `self.outbox_actions.push(RibbonCmd::New);`
+    /// `-> t.open(3)`                 → `self.outbox_open.push(3.0);`
     fn render_event(&self, decl: &CitizenDeclModel, expr: &Expr) -> Result<String, Error> {
         let Expr::Call { path, args, .. } = expr else {
             return Err(Error::Unsupported("event binding must be a call".into()));
         };
-        let (signal_port, signal_name, _) = self.decl_signal(decl).ok_or_else(|| {
-            Error::Unsupported(format!("event fired but `{}` reaches no signal field", decl.ty))
-        })?;
-        match path.segments.as_slice() {
-            [port, field] if *port == signal_port && *field == signal_name => {}
+        let sigs = self.decl_signals(decl);
+        if sigs.is_empty() {
+            return Err(Error::Unsupported(format!(
+                "event fired but `{}` reaches no signal field",
+                decl.ty
+            )));
+        }
+        let sig = match path.segments.as_slice() {
+            [port, field] => sigs
+                .iter()
+                .find(|(p, _, s)| p == port && s.name == *field)
+                .map(|(_, _, s)| s)
+                .ok_or_else(|| {
+                    Error::Unsupported(format!(
+                        "event target `{}` is not a signal field (valid: {})",
+                        path.joined(),
+                        sigs.iter()
+                            .map(|(p, _, s)| format!("{p}.{}", s.name))
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                    ))
+                })?,
             _ => {
                 return Err(Error::Unsupported(format!(
-                    "event target `{}` is not the signal field",
+                    "event target `{}` is not a signal field",
                     path.joined()
                 )));
             }
-        }
+        };
         let [arg] = args.as_slice() else {
             return Err(Error::Unsupported("event call takes exactly one argument".into()));
         };
-        let Expr::Path(variant) = arg else {
-            return Err(Error::Unsupported("event argument must be an enum variant".into()));
+        // Payload literal, typed by the signal: enum variants as paths,
+        // numbers and strings for the primitive payloads.
+        let payload = match arg {
+            Expr::Path(variant) => variant.segments.join("::"),
+            Expr::Int(i, _) => match sig.payload_ty.as_str() {
+                "f32" | "f64" => format!("{i}.0"),
+                _ => format!("{i}"),
+            },
+            Expr::Float(f, _) => format!("{f:?}"),
+            Expr::Str(s, _) => format!("{s:?}.to_owned()"),
+            other => {
+                return Err(Error::Unsupported(format!(
+                    "unsupported event payload expression {other:?}"
+                )));
+            }
         };
-        Ok(format!("self.outbox.push({});", variant.segments.join("::")))
+        Ok(format!("self.outbox_{}.push({payload});", sig.name))
     }
 
     // ── src/main.rs ─────────────────────────────────────────────────────
@@ -1671,7 +1769,7 @@ opt-level = 2
         }
         for inst in &self.insts {
             let decl = self.decls.iter().find(|d| d.ty == inst.decl).unwrap();
-            if let Some((signal_port, _, _)) = self.decl_signal(decl) {
+            for (signal_port, _, sig) in self.decl_signals(decl) {
                 let (_, iface_inst) = inst
                     .bindings
                     .iter()
@@ -1683,11 +1781,12 @@ opt-level = 2
                     .unwrap_or_default();
                 let _ = write!(
                     out,
-                    "\n        // Path B: drain the outbox and route through actions.\n\
-                     \x20       for cmd in std::mem::take(&mut self.{name}.outbox) {{\n\
-                     \x20           actions::handle(cmd, &self.{iface_inst}{log_arg});\n\
+                    "\n        // Path B: drain the `{sig_name}` outbox through actions.\n\
+                     \x20       for cmd in std::mem::take(&mut self.{name}.outbox_{sig_name}) {{\n\
+                     \x20           actions::handle_{sig_name}(cmd, &self.{iface_inst}{log_arg});\n\
                      \x20       }}\n",
                     name = inst.name,
+                    sig_name = sig.name,
                 );
             }
         }
@@ -1799,10 +1898,9 @@ opt-level = 2
             }
         }
 
-        if let Some(signal_iface) = self.ifaces.iter().find(|i| i.signal.is_some()) {
-            let payload = &signal_iface.signal.as_ref().unwrap().1;
-            let iface = &signal_iface.name;
-            let param = snake_case(iface);
+        let signal_ifaces: Vec<&IfaceModel> =
+            self.ifaces.iter().filter(|i| !i.signals.is_empty()).collect();
+        if !signal_ifaces.is_empty() {
             let logger = self.logger_iface().map(|(i, s, c)| (i.name.clone(), s, c));
             let (log_param, log_use) = match &logger {
                 Some((log_iface, _, _)) => (
@@ -1811,37 +1909,75 @@ opt-level = 2
                 ),
                 None => (String::new(), String::new()),
             };
+            // One import list across every handler: interfaces + enum payloads.
+            let mut imports: Vec<String> = Vec::new();
+            for iface in &signal_ifaces {
+                imports.push(iface.name.clone());
+                for sig in &iface.signals {
+                    if let Some(e) = &sig.payload_enum {
+                        if !imports.contains(e) {
+                            imports.push(e.clone());
+                        }
+                    }
+                }
+            }
             let _ = write!(
                 out,
                 "\nmod actions {{\n\
-                 \x20   //! Path B routing stubs — replace each arm with real work:\n\
-                 \x20   //! spawn it, send it over a channel, write results back into\n\
-                 \x20   //! `{iface}` cells.\n\n\
-                 \x20   use crate::state::{{{iface}, {payload}{log_use}}};\n\n\
-                 \x20   pub fn handle(cmd: {payload}, _{param}: &{iface}{log_param}) {{\n",
+                 \x20   //! Path B routing stubs — one handler per signal. Replace\n\
+                 \x20   //! each body with real work: spawn it, send it over a\n\
+                 \x20   //! channel, write results back into the interface cells.\n\n\
+                 \x20   use crate::state::{{{imports}{log_use}}};\n",
+                imports = imports.join(", "),
             );
-            if let Some((_, state_field, colors_field)) = &logger {
-                let _ = writeln!(
-                    out,
-                    "        let logger = egui_lens::ReactiveEventLogger::with_colors(&log.{state_field}, &log.{colors_field});"
-                );
+            for iface in &signal_ifaces {
+                let param = snake_case(&iface.name);
+                for sig in &iface.signals {
+                    let _ = write!(
+                        out,
+                        "\n    pub fn handle_{name}(cmd: {payload}, _{param}: &{iface}{log_param}) {{\n",
+                        name = sig.name,
+                        payload = sig.payload_ty,
+                        iface = iface.name,
+                    );
+                    if let Some((_, state_field, colors_field)) = &logger {
+                        let _ = writeln!(
+                            out,
+                            "        let logger = egui_lens::ReactiveEventLogger::with_colors(&log.{state_field}, &log.{colors_field});"
+                        );
+                    }
+                    if let Some(enum_name) = &sig.payload_enum {
+                        out.push_str("        match cmd {\n");
+                        let variants = self
+                            .enums
+                            .iter()
+                            .find(|e| &e.name == enum_name)
+                            .map(|e| e.variants.clone())
+                            .unwrap_or_default();
+                        for v in &variants {
+                            let act = if logger.is_some() {
+                                format!("logger.log_info(\"[{name}] {v}\")", name = sig.name)
+                            } else {
+                                format!("eprintln!(\"[{name}] {v}\")", name = sig.name)
+                            };
+                            let _ = writeln!(out, "            {enum_name}::{v} => {act},");
+                        }
+                        out.push_str("        }\n    }\n");
+                    } else {
+                        // Primitive payload — log the value itself.
+                        let act = if logger.is_some() {
+                            format!(
+                                "logger.log_info(&format!(\"[{name}] {{cmd:?}}\"));",
+                                name = sig.name
+                            )
+                        } else {
+                            format!("eprintln!(\"[{name}] {{cmd:?}}\");", name = sig.name)
+                        };
+                        let _ = writeln!(out, "        {act}\n    }}");
+                    }
+                }
             }
-            out.push_str("        match cmd {\n");
-            let variants = self
-                .enums
-                .iter()
-                .find(|e| &e.name == payload)
-                .map(|e| e.variants.clone())
-                .unwrap_or_default();
-            for v in &variants {
-                let act = if logger.is_some() {
-                    format!("logger.log_info(\"[actions] {v}\")")
-                } else {
-                    format!("eprintln!(\"[actions] {v}\")")
-                };
-                let _ = writeln!(out, "            {payload}::{v} => {act},");
-            }
-            out.push_str("        }\n    }\n}\n");
+            out.push_str("}\n");
         }
 
         let has_terminal_any = self.decls.iter().any(decl_has_terminal);
@@ -2619,9 +2755,9 @@ mod tests {
         let clock = ribbon.find("c.clock.get()").expect("clock emitted");
         let about = ribbon.find("ℹ About").expect("about emitted");
         assert!(clock < about, "clock must be added first (rightmost)");
-        assert!(ribbon.contains("self.outbox.push(RibbonCmd::Build);"));
+        assert!(ribbon.contains("self.outbox_actions.push(RibbonCmd::Build);"));
         let main = &generated.files["src/main.rs"];
-        assert!(main.contains("actions::handle(cmd, &self.chrome);"));
+        assert!(main.contains("actions::handle_actions(cmd, &self.chrome);"));
         assert!(main.contains("about_window(&ctx, &self.chrome);"));
     }
 

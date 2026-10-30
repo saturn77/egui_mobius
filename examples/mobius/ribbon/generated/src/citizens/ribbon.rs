@@ -7,7 +7,7 @@ use crate::state::{Chrome, RibbonCmd, Theme};
 citizen_panel!(Ribbon, "ribbon",
     // Path B outbox for the `actions` signal — drained by the
     // app once per frame.
-    outbox: Vec<RibbonCmd> = Vec::new(),
+    outbox_actions: Vec<RibbonCmd> = Vec::new(),
 );
 
 impl Ribbon {
@@ -23,20 +23,20 @@ impl Ribbon {
             });
             ui.separator();
             if ui.button("New").clicked() {
-                self.outbox.push(RibbonCmd::New);
+                self.outbox_actions.push(RibbonCmd::New);
             }
             if ui.button("Open").clicked() {
-                self.outbox.push(RibbonCmd::Open);
+                self.outbox_actions.push(RibbonCmd::Open);
             }
             if ui.button("💾 Save").clicked() {
-                self.outbox.push(RibbonCmd::Save);
+                self.outbox_actions.push(RibbonCmd::Save);
             }
             ui.separator();
             if ui.button("⚙ Build").clicked() {
-                self.outbox.push(RibbonCmd::Build);
+                self.outbox_actions.push(RibbonCmd::Build);
             }
             if ui.button("⚡ Emit").clicked() {
-                self.outbox.push(RibbonCmd::Emit);
+                self.outbox_actions.push(RibbonCmd::Emit);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(egui::RichText::new(c.clock.get()).monospace().color(theme.accent()));

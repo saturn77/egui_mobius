@@ -14,7 +14,7 @@ use egui_dock::{DockArea, DockState, NodeIndex};
 
 /// One dock tab per docked citizen instance.
 #[derive(Clone, Copy, PartialEq)]
-enum Tab {
+pub enum Tab {
     Controls0,
     Controls1,
     Scope0,
@@ -65,7 +65,7 @@ impl App {
         // Dock layout from the @layout dock() directives.
         let mut dock_state = DockState::new(vec![Tab::Scope0, Tab::Scope1]);
         let _ = dock_state.main_surface_mut().split_left(NodeIndex::root(), 0.30, vec![Tab::Controls0, Tab::Controls1]);
-        let _ = dock_state.main_surface_mut().split_below(NodeIndex::root(), 0.70, vec![Tab::System]);
+        let _ = dock_state.main_surface_mut().split_below(NodeIndex::root(), 0.65, vec![Tab::System]);
         let app = Self {
             registry,
             dock_state,
@@ -214,12 +214,11 @@ const DEPENDENCIES: &[(&str, &str, &str)] = &[
 ];
 
 mod startup {
-    //! Startup banner — the CopperForge logger convention:
-    //! welcome, dependency versions, system details.
+    //! Identity & environment — the welcome/dependency banner and
+    //! host system details (the CopperForge convention), shared by
+    //! the logger banner and the terminal's `ver` / `info`.
 
-    use egui_lens::ReactiveEventLogger;
-
-    const WELCOME: &str = concat!(
+    pub const WELCOME: &str = concat!(
         "**** Welcome to DockDemo, version ", env!("CARGO_PKG_VERSION"), "\n\n",
         "    DEPENDENCIES\n",
         "    egui_citizen         : 0.6.0\n",
@@ -228,6 +227,24 @@ mod startup {
         "    egui / eframe        : 0.36\n",
         "    egui_dock            : 0.21\n",
     );
+
+    /// Linux: /etc/os-release + kernel version; elsewhere the OS constant.
+    pub fn system_details() -> String {
+        let name = std::fs::read_to_string("/etc/os-release")
+            .ok()
+            .and_then(|s| {
+                s.lines().find_map(|l| {
+                    l.strip_prefix("PRETTY_NAME=").map(|v| v.trim_matches('"').to_owned())
+                })
+            })
+            .unwrap_or_else(|| std::env::consts::OS.to_owned());
+        let kernel = std::fs::read_to_string("/proc/sys/kernel/osrelease")
+            .map(|s| s.trim().to_owned())
+            .unwrap_or_else(|_| "unknown".to_owned());
+        format!("SYSTEM DETAILS\n\n    SYSTEM\n    System Name   : {name}\n    System Kernel : {kernel}")
+    }
+
+    use egui_lens::ReactiveEventLogger;
 
     pub fn banner(log: &crate::state::Log) {
         let logger = ReactiveEventLogger::with_colors(&log.state, &log.colors);
@@ -242,22 +259,6 @@ mod startup {
         let logger = ReactiveEventLogger::with_colors(&log.state, &log.colors);
         logger.log_info(&system_details());
         logger.log_info(WELCOME);
-    }
-
-    /// Linux: /etc/os-release + kernel version; elsewhere the OS constant.
-    fn system_details() -> String {
-        let name = std::fs::read_to_string("/etc/os-release")
-            .ok()
-            .and_then(|s| {
-                s.lines().find_map(|l| {
-                    l.strip_prefix("PRETTY_NAME=").map(|v| v.trim_matches('"').to_owned())
-                })
-            })
-            .unwrap_or_else(|| std::env::consts::OS.to_owned());
-        let kernel = std::fs::read_to_string("/proc/sys/kernel/osrelease")
-            .map(|s| s.trim().to_owned())
-            .unwrap_or_else(|_| "unknown".to_owned());
-        format!("SYSTEM DETAILS\n\n    SYSTEM\n    System Name   : {name}\n    System Kernel : {kernel}")
     }
 }
 

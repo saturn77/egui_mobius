@@ -45,9 +45,9 @@ impl eframe::App for App {
 
         about_window(&ctx, &self.chrome);
 
-        // Path B: drain the outbox and route through actions.
-        for cmd in std::mem::take(&mut self.ribbon.outbox) {
-            actions::handle(cmd, &self.chrome);
+        // Path B: drain the `actions` outbox through actions.
+        for cmd in std::mem::take(&mut self.ribbon.outbox_actions) {
+            actions::handle_actions(cmd, &self.chrome);
         }
         // Registry lifecycle messages — drained after the panels show.
         for _msg in self.registry.drain_messages() {}
@@ -116,13 +116,13 @@ const DEPENDENCIES: &[(&str, &str, &str)] = &[
 ];
 
 mod actions {
-    //! Path B routing stubs — replace each arm with real work:
-    //! spawn it, send it over a channel, write results back into
-    //! `Chrome` cells.
+    //! Path B routing stubs — one handler per signal. Replace
+    //! each body with real work: spawn it, send it over a
+    //! channel, write results back into the interface cells.
 
     use crate::state::{Chrome, RibbonCmd};
 
-    pub fn handle(cmd: RibbonCmd, _chrome: &Chrome) {
+    pub fn handle_actions(cmd: RibbonCmd, _chrome: &Chrome) {
         match cmd {
             RibbonCmd::New => eprintln!("[actions] New"),
             RibbonCmd::Open => eprintln!("[actions] Open"),
