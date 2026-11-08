@@ -286,3 +286,49 @@ fn main() -> Result<(), eframe::Error> {
         }),
     )
 }
+
+#[cfg(test)]
+mod headless {
+    //! Headless harness — `egui_kittest` drives the app with no window
+    //! and no GPU: frames step on a virtual clock, and widgets are
+    //! reached through the accessibility tree. `cargo test` runs
+    //! anywhere; `cargo test -- --ignored --nocapture` prints the tree.
+    use super::App;
+    use egui_kittest::Harness;
+    use egui_kittest::kittest::Queryable;
+
+    /// The app under harness, built as `main`'s creator builds it.
+    fn harness() -> Harness<'static, App> {
+        Harness::new_eframe(|cc| {
+            let app = App::new();
+            app.chrome.theme.get().apply(&cc.egui_ctx);
+            app
+        })
+    }
+
+    #[test]
+    fn boots_and_runs_frames() {
+        let mut harness = harness();
+        for _ in 0..10 {
+            harness.step();
+        }
+    }
+
+    #[test]
+    fn controls_reach_the_accessibility_tree() {
+        let mut harness = harness();
+        harness.step();
+        assert!(
+            harness.query_all_by_label("ℹ About").next().is_some(),
+            "ℹ About is missing from the accessibility tree"
+        );
+    }
+
+    #[test]
+    #[ignore = "prints the widget tree: cargo test -- --ignored --nocapture"]
+    fn dump_widget_tree() {
+        let mut harness = harness();
+        harness.step();
+        println!("{:#?}", harness.root());
+    }
+}

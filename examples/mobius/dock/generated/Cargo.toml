@@ -19,6 +19,12 @@ egui_lens = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_
 egui_citizen = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/mobius/dock/../../../crates/egui_citizen" }
 egui_mobius_reactive = { path = "/home/james/raid_one/software_projects/atlantix/Egui/egui_mobius/examples/mobius/dock/../../../crates/egui_mobius_reactive" }
 
+# Headless harness: egui_kittest drives the app without a window or GPU —
+# `cargo test` boots it and queries the accessibility tree (see the
+# `headless` module at the end of src/main.rs).
+[dev-dependencies]
+egui_kittest = { version = "0.36", features = ["eframe"] }
+
 # egui repaints continuously while the window resizes — unoptimized debug
 # builds freeze. Light opt for the app, full for dependencies.
 [profile.dev]

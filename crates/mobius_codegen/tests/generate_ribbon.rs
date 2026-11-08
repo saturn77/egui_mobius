@@ -32,6 +32,9 @@ fn ribbon_project_cargo_checks() {
 
     let output = Command::new("cargo")
         .arg("check")
+        // --all-targets: the generated headless test module must compile
+        // too, not just the binary.
+        .arg("--all-targets")
         .arg("--quiet")
         .current_dir(&out)
         // Its own target dir: the parent `cargo test` may still hold the

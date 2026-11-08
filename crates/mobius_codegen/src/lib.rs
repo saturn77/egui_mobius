@@ -708,6 +708,12 @@ egui = "{egui}"{image_deps}{dock_dep}{lens_dep}
 egui_citizen = {{ path = "{citizen}" }}
 egui_mobius_reactive = {{ path = "{reactive}" }}
 
+# Headless harness: egui_kittest drives the app without a window or GPU —
+# `cargo test` boots it and queries the accessibility tree (see the
+# `headless` module at the end of src/main.rs).
+[dev-dependencies]
+egui_kittest = {{ version = "{egui}", features = ["eframe"] }}
+
 # egui repaints continuously while the window resizes — unoptimized debug
 # builds freeze. Light opt for the app, full for dependencies.
 [profile.dev]
@@ -2350,6 +2356,108 @@ opt-level = 2
              }}\n",
             app = self.app_name,
         );
+        out.push_str(&self.emit_headless_tests(has_image));
+        out
+    }
+
+    // ── headless harness (egui_kittest) ─────────────────────────────────
+
+    /// The `#[cfg(test)] mod headless` at the end of `main.rs`: boot the
+    /// app under `egui_kittest::Harness` with no window and no GPU, assert
+    /// the always-visible controls reach the accessibility tree, and give
+    /// agents an ignored test that prints that tree.
+    fn emit_headless_tests(&self, has_image: bool) -> String {
+        // Labels of controls drawn on every frame: the top bar always
+        // shows, and so does the first docked tab — the one new() marks
+        // active — since egui_dock renders each stack's active tab.
+        let mut labels: Vec<String> = Vec::new();
+        let mut always_shown: Vec<&str> = self.top.iter().map(String::as_str).collect();
+        if let Some(DockedModel { inst, .. }) = self.docked.first() {
+            always_shown.push(inst);
+        }
+        for inst_name in always_shown {
+            let inst = self.insts.iter().find(|i| i.name == inst_name).unwrap();
+            let decl = self.decls.iter().find(|d| d.ty == inst.decl).unwrap();
+            visible_labels(&decl.body, &mut labels);
+        }
+
+        let mut out = String::from(
+            "\n#[cfg(test)]\nmod headless {\n\
+             \x20   //! Headless harness — `egui_kittest` drives the app with no window\n\
+             \x20   //! and no GPU: frames step on a virtual clock, and widgets are\n\
+             \x20   //! reached through the accessibility tree. `cargo test` runs\n\
+             \x20   //! anywhere; `cargo test -- --ignored --nocapture` prints the tree.\n\
+             \x20   use super::App;\n\
+             \x20   use egui_kittest::Harness;\n",
+        );
+        if !labels.is_empty() {
+            out.push_str("    use egui_kittest::kittest::Queryable;\n");
+        }
+
+        // The harness builds the app exactly as main()'s creator does.
+        out.push_str(
+            "\n    /// The app under harness, built as `main`'s creator builds it.\n\
+             \x20   fn harness() -> Harness<'static, App> {\n",
+        );
+        if self.theme.is_some() || has_image {
+            out.push_str("        Harness::new_eframe(|cc| {\n");
+            if has_image {
+                out.push_str("            egui_extras::install_image_loaders(&cc.egui_ctx);\n");
+            }
+            out.push_str("            let app = App::new();\n");
+            if let Some((inst, field, _)) = &self.theme {
+                let _ = writeln!(
+                    out,
+                    "            app.{inst}.{field}.get().apply(&cc.egui_ctx);"
+                );
+            }
+            out.push_str("            app\n        })\n    }\n");
+        } else {
+            out.push_str("        Harness::new_eframe(|_cc| App::new())\n    }\n");
+        }
+
+        out.push_str(
+            "\n    #[test]\n\
+             \x20   fn boots_and_runs_frames() {\n\
+             \x20       let mut harness = harness();\n\
+             \x20       for _ in 0..10 {\n\
+             \x20           harness.step();\n\
+             \x20       }\n\
+             \x20   }\n",
+        );
+
+        if !labels.is_empty() {
+            out.push_str(
+                "\n    #[test]\n\
+                 \x20   fn controls_reach_the_accessibility_tree() {\n\
+                 \x20       let mut harness = harness();\n\
+                 \x20       harness.step();\n",
+            );
+            for label in &labels {
+                // Doubled braces: assert!'s message is itself a format
+                // string in the generated code.
+                let message = format!("{label} is missing from the accessibility tree")
+                    .replace('{', "{{")
+                    .replace('}', "}}");
+                let _ = writeln!(
+                    out,
+                    "        assert!(\n            \
+                     harness.query_all_by_label({label:?}).next().is_some(),\n            \
+                     {message:?}\n        );"
+                );
+            }
+            out.push_str("    }\n");
+        }
+
+        out.push_str(
+            "\n    #[test]\n\
+             \x20   #[ignore = \"prints the widget tree: cargo test -- --ignored --nocapture\"]\n\
+             \x20   fn dump_widget_tree() {\n\
+             \x20       let mut harness = harness();\n\
+             \x20       harness.step();\n\
+             \x20       println!(\"{:#?}\", harness.root());\n\
+             \x20   }\n}\n",
+        );
         out
     }
 }
@@ -2856,6 +2964,32 @@ fn has_image_container(nodes: &[WidgetNode]) -> bool {
         WidgetNode::For { body, .. } => has_image_container(body),
         WidgetNode::Primitive(_) => false,
     })
+}
+
+/// Labels of controls that render on every frame — feeds the generated
+/// headless tests' accessibility-tree assertions. Popup contents (`image`
+/// connection blocks) stay hidden until clicked, and `for` bodies repeat
+/// one label per pass, so both are skipped.
+fn visible_labels(nodes: &[WidgetNode], out: &mut Vec<String>) {
+    for node in nodes {
+        match node {
+            WidgetNode::Container { kind, children, .. } => {
+                if kind != "image" {
+                    visible_labels(children, out);
+                }
+            }
+            WidgetNode::For { .. } => {}
+            WidgetNode::Primitive(p) => {
+                if matches!(p.kind.as_str(), "button" | "checkbox" | "toggle")
+                    && let Some(label) = &p.label
+                    && !label.is_empty()
+                    && !out.contains(label)
+                {
+                    out.push(label.clone());
+                }
+            }
+        }
+    }
 }
 
 fn scan_widgets(nodes: &[WidgetNode], f: &mut impl FnMut(&mobius_lang::ast::Primitive)) {

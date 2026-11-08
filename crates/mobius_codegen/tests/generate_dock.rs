@@ -48,6 +48,9 @@ fn dock_project_cargo_checks() {
 
     let output = Command::new("cargo")
         .arg("check")
+        // --all-targets: the generated headless test module must compile
+        // too, not just the binary.
+        .arg("--all-targets")
         .arg("--quiet")
         .current_dir(&out)
         .env("CARGO_TARGET_DIR", out.join("target"))
