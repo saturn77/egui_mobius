@@ -12,9 +12,14 @@ impl Scope {
         ui.heading("Trace");
         let plot_scale = b.amplitude.get();
         let plot_show = b.enabled.get();
+        let plot_y = b.ymin.get() as f64..=b.ymax.get() as f64;
+        let plot_x = b.xmin.get() as f64..=b.xmax.get() as f64;
         egui_plot::Plot::new((self.citizen_id.0.as_str(), "plot"))
             .legend(egui_plot::Legend::default())
             .show(ui, |plot_ui| {
+                plot_ui.set_plot_bounds_x(plot_x.clone());
+                plot_ui.set_plot_bounds_y(plot_y.clone());
+                plot_ui.set_auto_bounds([false, false]);
                 if plot_show {
                     plot_ui.line(egui_plot::Line::new(
                         "ch0",

@@ -1310,6 +1310,13 @@ opt-level = 2
                         let mut title: Option<String> = None;
                         let mut scale: Option<(String, String)> = None;
                         let mut show: Option<(String, String)> = None;
+                        // (ymin, ymax, xmin, xmax) — each a (port, field).
+                        let mut bounds: (
+                            Option<(String, String)>,
+                            Option<(String, String)>,
+                            Option<(String, String)>,
+                            Option<(String, String)>,
+                        ) = (None, None, None, None);
                         let mut traces: Vec<(String, String, String)> = Vec::new();
                         for child in children {
                             let WidgetNode::Primitive(cp) = child else {
@@ -1334,6 +1341,23 @@ opt-level = 2
                                     let (port, field) = self.port_field(decl, path)?;
                                     show = Some((port, field.name));
                                 }
+                                // Window bounds — f32 cells pinning an axis
+                                // (a scope's fixed graticule; Blade2 pins x
+                                // the same way while running). Both ends of
+                                // an axis or neither.
+                                (
+                                    kind @ ("ymin" | "ymax" | "xmin" | "xmax"),
+                                    Binding::Read { path, index: None },
+                                ) => {
+                                    let (port, field) = self.port_field(decl, path)?;
+                                    let slot = match kind {
+                                        "ymin" => &mut bounds.0,
+                                        "ymax" => &mut bounds.1,
+                                        "xmin" => &mut bounds.2,
+                                        _ => &mut bounds.3,
+                                    };
+                                    *slot = Some((port, field.name));
+                                }
                                 ("trace", Binding::Read { path, index: None }) => {
                                     let (port, field) = self.port_field(decl, path)?;
                                     let name = cp
@@ -1342,7 +1366,11 @@ opt-level = 2
                                         .unwrap_or_else(|| field.name.clone());
                                     traces.push((name, port, field.name));
                                 }
-                                (kind @ ("trace" | "scale" | "show"), _) => {
+                                (
+                                    kind @ ("trace" | "scale" | "show" | "ymin" | "ymax"
+                                    | "xmin" | "xmax"),
+                                    _,
+                                ) => {
                                     return Err(Error::Unsupported(format!(
                                         "plot {kind} needs a read binding \
                                          (`{kind} -- port.field;`) at {:?}",
@@ -1362,6 +1390,24 @@ opt-level = 2
                                 "plot block needs at least one `trace` entry at {span:?}"
                             )));
                         }
+                        let y_pin = match (&bounds.0, &bounds.1) {
+                            (Some(min), Some(max)) => Some((min.clone(), max.clone())),
+                            (None, None) => None,
+                            _ => {
+                                return Err(Error::Unsupported(format!(
+                                    "plot needs both `ymin` and `ymax` to pin the y axis at {span:?}"
+                                )));
+                            }
+                        };
+                        let x_pin = match (&bounds.2, &bounds.3) {
+                            (Some(min), Some(max)) => Some((min.clone(), max.clone())),
+                            (None, None) => None,
+                            _ => {
+                                return Err(Error::Unsupported(format!(
+                                    "plot needs both `xmin` and `xmax` to pin the x axis at {span:?}"
+                                )));
+                            }
+                        };
                         if let Some(title) = &title {
                             let _ = writeln!(out, "{pad}ui.heading(\"{title}\");");
                         }
@@ -1377,6 +1423,14 @@ opt-level = 2
                                 "{pad}let plot_show = {port}.{field}.get();"
                             );
                         }
+                        for (name, pin) in [("y", &y_pin), ("x", &x_pin)] {
+                            if let Some(((min_p, min_f), (max_p, max_f))) = pin {
+                                let _ = writeln!(
+                                    out,
+                                    "{pad}let plot_{name} = {min_p}.{min_f}.get() as f64..={max_p}.{max_f}.get() as f64;"
+                                );
+                            }
+                        }
                         // Salted by the citizen's id so two instances of the
                         // same declaration keep distinct plot memories.
                         let _ = writeln!(
@@ -1385,6 +1439,29 @@ opt-level = 2
                         );
                         let _ = writeln!(out, "{pad}    .legend(egui_plot::Legend::default())");
                         let _ = writeln!(out, "{pad}    .show(ui, |plot_ui| {{");
+                        // Pinned axes hold the window every frame — the
+                        // fixed graticule — while unpinned axes keep
+                        // autoscaling (Blade2's running-telemetry idiom).
+                        if y_pin.is_some() || x_pin.is_some() {
+                            if x_pin.is_some() {
+                                let _ = writeln!(
+                                    out,
+                                    "{pad}        plot_ui.set_plot_bounds_x(plot_x.clone());"
+                                );
+                            }
+                            if y_pin.is_some() {
+                                let _ = writeln!(
+                                    out,
+                                    "{pad}        plot_ui.set_plot_bounds_y(plot_y.clone());"
+                                );
+                            }
+                            let _ = writeln!(
+                                out,
+                                "{pad}        plot_ui.set_auto_bounds([{}, {}]);",
+                                x_pin.is_none(),
+                                y_pin.is_none()
+                            );
+                        }
                         let (line_pad, guard) = if show.is_some() {
                             let _ = writeln!(out, "{pad}        if plot_show {{");
                             (format!("{pad}    "), true)

@@ -18,6 +18,23 @@ impl Controls {
             if ui.add(egui::Slider::new(&mut value, 0.0..=2.0).text("Amplitude")).changed() {
                 b.amplitude.set(value);
             }
+            ui.separator();
+            let mut value = b.ymin.get();
+            if ui.add(egui::Slider::new(&mut value, -4.0..=0.0).text("Y min")).changed() {
+                b.ymin.set(value);
+            }
+            let mut value = b.ymax.get();
+            if ui.add(egui::Slider::new(&mut value, 0.0..=4.0).text("Y max")).changed() {
+                b.ymax.set(value);
+            }
+            let mut value = b.xmin.get();
+            if ui.add(egui::Slider::new(&mut value, 0.0..=20.0).text("X min")).changed() {
+                b.xmin.set(value);
+            }
+            let mut value = b.xmax.get();
+            if ui.add(egui::Slider::new(&mut value, 0.0..=20.0).text("X max")).changed() {
+                b.xmax.set(value);
+            }
         });
     }
 }

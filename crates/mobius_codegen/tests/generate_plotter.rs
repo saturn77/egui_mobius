@@ -40,6 +40,11 @@ fn plotter_project_cargo_checks() {
     assert!(scope.contains("let plot_show = b.enabled.get();"));
     assert!(scope.contains("if plot_show {"));
     assert!(scope.contains(".iter().map(|&y| y * plot_scale).collect::<Vec<f32>>()"));
+    // `ymin`/`ymax`/`xmin`/`xmax` pin the window — the fixed graticule.
+    assert!(scope.contains("let plot_y = b.ymin.get() as f64..=b.ymax.get() as f64;"));
+    assert!(scope.contains("plot_ui.set_plot_bounds_y(plot_y.clone());"));
+    assert!(scope.contains("plot_ui.set_plot_bounds_x(plot_x.clone());"));
+    assert!(scope.contains("plot_ui.set_auto_bounds([false, false]);"));
     assert!(generated.files["Cargo.toml"].contains("egui_plot = \"0.37\""));
 
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(&generated.crate_name);

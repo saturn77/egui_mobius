@@ -25,14 +25,27 @@ app PlotterDemo {
         trace : Vec<f32> = [0.0, 0.31, 0.59, 0.81, 0.95, 1.0, 0.95,
                             0.81, 0.59, 0.31, 0.0, -0.31, -0.59, -0.81,
                             -0.95, -1.0, -0.95, -0.81, -0.59, -0.31, 0.0]
-        role controls (write amplitude, write enabled, write trace)
-        role scope    (read amplitude, read enabled, read trace)
+        // The display window — a scope's fixed graticule. Pinned axes
+        // hold still while the amplitude moves inside them.
+        ymin : f32 = -2.0
+        ymax : f32 = 2.0
+        xmin : f32 = 0.0
+        xmax : f32 = 20.0
+        role controls (write amplitude, write enabled, write trace,
+                       write ymin, write ymax, write xmin, write xmax)
+        role scope    (read amplitude, read enabled, read trace,
+                       read ymin, read ymax, read xmin, read xmax)
     }
 
     citizen Controls (b : Bench.controls) {
         column {
             checkbox "Enabled" <-> b.enabled;
             slider "Amplitude" 0.0..2.0 <-> b.amplitude;
+            separator;
+            slider "Y min" -4.0..0.0 <-> b.ymin;
+            slider "Y max" 0.0..4.0 <-> b.ymax;
+            slider "X min" 0.0..20.0 <-> b.xmin;
+            slider "X max" 0.0..20.0 <-> b.xmax;
         }
     }
 
@@ -40,11 +53,16 @@ app PlotterDemo {
         plot {
             title "Trace";
             // The controls' cells, consumed by the view itself: the
-            // slider is the scope's vertical gain, the checkbox the
-            // channel select. No backend yet — the trace data stays
-            // the static default until handlers land.
+            // amplitude slider is the vertical gain, the checkbox the
+            // channel select, and the min/max sliders pin the window.
+            // No backend yet — the trace data stays the static default
+            // until handlers land.
             scale -- b.amplitude;
             show  -- b.enabled;
+            ymin  -- b.ymin;
+            ymax  -- b.ymax;
+            xmin  -- b.xmin;
+            xmax  -- b.xmax;
             trace "ch0" -- b.trace;
         }
     }

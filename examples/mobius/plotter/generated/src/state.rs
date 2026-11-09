@@ -12,6 +12,10 @@ pub struct Bench {
     pub amplitude: Dynamic<f32>,
     pub enabled: Dynamic<bool>,
     pub trace: Dynamic<Vec<f32>>,
+    pub ymin: Dynamic<f32>,
+    pub ymax: Dynamic<f32>,
+    pub xmin: Dynamic<f32>,
+    pub xmax: Dynamic<f32>,
 }
 
 impl Bench {
@@ -20,6 +24,10 @@ impl Bench {
             amplitude: Dynamic::new(1.0),
             enabled: Dynamic::new(true),
             trace: Dynamic::new(vec![0.0, 0.31, 0.59, 0.81, 0.95, 1.0, 0.95, 0.81, 0.59, 0.31, 0.0, -0.31, -0.59, -0.81, -0.95, -1.0, -0.95, -0.81, -0.59, -0.31, 0.0]),
+            ymin: Dynamic::new(-2.0),
+            ymax: Dynamic::new(2.0),
+            xmin: Dynamic::new(0.0),
+            xmax: Dynamic::new(20.0),
         }
     }
 }
