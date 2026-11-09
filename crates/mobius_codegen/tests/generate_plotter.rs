@@ -34,7 +34,12 @@ fn plotter_project_cargo_checks() {
     let scope = &generated.files["src/citizens/scope.rs"];
     assert!(scope.contains("egui_plot::Plot::new((self.citizen_id.0.as_str(), \"plot\"))"));
     assert!(scope.contains("egui_plot::Line::new("));
-    assert!(scope.contains("egui_plot::PlotPoints::from_ys_f32(&b.trace.get())"));
+    // `scale --` is the vertical gain, `show --` the channel select —
+    // the controls' cells consumed by the view itself.
+    assert!(scope.contains("let plot_scale = b.amplitude.get();"));
+    assert!(scope.contains("let plot_show = b.enabled.get();"));
+    assert!(scope.contains("if plot_show {"));
+    assert!(scope.contains(".iter().map(|&y| y * plot_scale).collect::<Vec<f32>>()"));
     assert!(generated.files["Cargo.toml"].contains("egui_plot = \"0.37\""));
 
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(&generated.crate_name);

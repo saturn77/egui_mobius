@@ -10,7 +10,7 @@ browsable side by side — and each builds on the previous one.
 | 1 | [`ribbon/`](ribbon) | Chrome: the top ribbon citizen — wordmark, file-group events (Path B outbox), theme picker, clock, About modal with banner image and dependency table | `cd examples/mobius/ribbon/generated && cargo run` |
 | 2 | [`dock/`](dock) | Composition: the same citizen instantiated twice over two interface instances (citizen-as-module), `egui_dock` layout from `dock()` directives, and the **System citizen** — the egui_lens logger prefab with startup banner and working System Info | `cd examples/mobius/dock/generated && cargo run` |
 | 3 | [`terminal/`](terminal) | The Workbench: a nearly full ribbon (file group firing Path B events routed into the logger), plus the **terminal prefab** — a *port-less* shell citizen (all state citizen-local) with colour-coded scrollback, built-ins (`help`/`ver`/`info`/`clear`) and `bash -c` passthrough, CopperTrace-style | `cd examples/mobius/terminal/generated && cargo run` |
-| 4 | [`plotter/`](plotter) | The **plot block** — the EDA waveform view as declared source: a `Vec<f32>` trace cell rendered through `egui_plot` (`plot { title …; trace "ch0" -- b.trace; }`), bench controls docked beside it. SignalBench's shape on the generated path | `cd examples/mobius/plotter/generated && cargo run` |
+| 4 | [`plotter/`](plotter) | The **plot block** — the EDA waveform view as declared source: a `Vec<f32>` trace cell rendered through `egui_plot`, with `scale --` (vertical gain, the amplitude slider) and `show --` (channel select, the enable checkbox) consumed live by the view. SignalBench's shape on the generated path | `cd examples/mobius/plotter/generated && cargo run` |
 
 ## From description to source
 

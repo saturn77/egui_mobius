@@ -39,6 +39,12 @@ app PlotterDemo {
     citizen Scope (b : Bench.scope) {
         plot {
             title "Trace";
+            // The controls' cells, consumed by the view itself: the
+            // slider is the scope's vertical gain, the checkbox the
+            // channel select. No backend yet — the trace data stays
+            // the static default until handlers land.
+            scale -- b.amplitude;
+            show  -- b.enabled;
             trace "ch0" -- b.trace;
         }
     }

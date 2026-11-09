@@ -10,13 +10,19 @@ impl Scope {
     pub fn show(&mut self, ui: &mut egui::Ui, b: &Bench) {
         ui.add_space(3.0);
         ui.heading("Trace");
+        let plot_scale = b.amplitude.get();
+        let plot_show = b.enabled.get();
         egui_plot::Plot::new((self.citizen_id.0.as_str(), "plot"))
             .legend(egui_plot::Legend::default())
             .show(ui, |plot_ui| {
-                plot_ui.line(egui_plot::Line::new(
-                    "ch0",
-                    egui_plot::PlotPoints::from_ys_f32(&b.trace.get()),
-                ));
+                if plot_show {
+                    plot_ui.line(egui_plot::Line::new(
+                        "ch0",
+                        egui_plot::PlotPoints::from_ys_f32(
+                            &b.trace.get().iter().map(|&y| y * plot_scale).collect::<Vec<f32>>(),
+                        ),
+                    ));
+                }
             });
     }
 }

@@ -1308,16 +1308,31 @@ opt-level = 2
                     // on when any trace is named.
                     "plot" => {
                         let mut title: Option<String> = None;
+                        let mut scale: Option<(String, String)> = None;
+                        let mut show: Option<(String, String)> = None;
                         let mut traces: Vec<(String, String, String)> = Vec::new();
                         for child in children {
                             let WidgetNode::Primitive(cp) = child else {
                                 return Err(Error::Unsupported(format!(
-                                    "plot block children must be `title` / `trace` entries at {span:?}"
+                                    "plot block children must be `title` / `scale` / `show` / `trace` entries at {span:?}"
                                 )));
                             };
                             match (cp.kind.as_str(), &cp.binding) {
                                 ("title", Binding::None) => {
                                     title = cp.label.clone();
+                                }
+                                // Vertical gain — every sample multiplied by
+                                // an f32 cell (a scope's volts/div knob).
+                                ("scale", Binding::Read { path, index: None }) => {
+                                    let (port, field) = self.port_field(decl, path)?;
+                                    scale = Some((port, field.name));
+                                }
+                                // Channel visibility — a bool cell gates the
+                                // lines (Blade2's per-channel select); the
+                                // plot frame stays.
+                                ("show", Binding::Read { path, index: None }) => {
+                                    let (port, field) = self.port_field(decl, path)?;
+                                    show = Some((port, field.name));
                                 }
                                 ("trace", Binding::Read { path, index: None }) => {
                                     let (port, field) = self.port_field(decl, path)?;
@@ -1327,10 +1342,10 @@ opt-level = 2
                                         .unwrap_or_else(|| field.name.clone());
                                     traces.push((name, port, field.name));
                                 }
-                                ("trace", _) => {
+                                (kind @ ("trace" | "scale" | "show"), _) => {
                                     return Err(Error::Unsupported(format!(
-                                        "plot trace needs a read binding to a Vec<f32> cell \
-                                         (`trace \"NAME\" -- port.field;`) at {:?}",
+                                        "plot {kind} needs a read binding \
+                                         (`{kind} -- port.field;`) at {:?}",
                                         cp.span
                                     )));
                                 }
@@ -1350,6 +1365,18 @@ opt-level = 2
                         if let Some(title) = &title {
                             let _ = writeln!(out, "{pad}ui.heading(\"{title}\");");
                         }
+                        if let Some((port, field)) = &scale {
+                            let _ = writeln!(
+                                out,
+                                "{pad}let plot_scale = {port}.{field}.get();"
+                            );
+                        }
+                        if let Some((port, field)) = &show {
+                            let _ = writeln!(
+                                out,
+                                "{pad}let plot_show = {port}.{field}.get();"
+                            );
+                        }
                         // Salted by the citizen's id so two instances of the
                         // same declaration keep distinct plot memories.
                         let _ = writeln!(
@@ -1358,14 +1385,37 @@ opt-level = 2
                         );
                         let _ = writeln!(out, "{pad}    .legend(egui_plot::Legend::default())");
                         let _ = writeln!(out, "{pad}    .show(ui, |plot_ui| {{");
+                        let (line_pad, guard) = if show.is_some() {
+                            let _ = writeln!(out, "{pad}        if plot_show {{");
+                            (format!("{pad}    "), true)
+                        } else {
+                            (pad.clone(), false)
+                        };
                         for (name, port, field) in &traces {
-                            let _ = writeln!(
-                                out,
-                                "{pad}        plot_ui.line(egui_plot::Line::new(\n\
-                                 {pad}            \"{name}\",\n\
-                                 {pad}            egui_plot::PlotPoints::from_ys_f32(&{port}.{field}.get()),\n\
-                                 {pad}        ));"
-                            );
+                            if scale.is_some() {
+                                // from_ys_f32 wants a slice, so the scaled
+                                // samples collect into a Vec first.
+                                let _ = writeln!(
+                                    out,
+                                    "{line_pad}        plot_ui.line(egui_plot::Line::new(\n\
+                                     {line_pad}            \"{name}\",\n\
+                                     {line_pad}            egui_plot::PlotPoints::from_ys_f32(\n\
+                                     {line_pad}                &{port}.{field}.get().iter().map(|&y| y * plot_scale).collect::<Vec<f32>>(),\n\
+                                     {line_pad}            ),\n\
+                                     {line_pad}        ));"
+                                );
+                            } else {
+                                let _ = writeln!(
+                                    out,
+                                    "{line_pad}        plot_ui.line(egui_plot::Line::new(\n\
+                                     {line_pad}            \"{name}\",\n\
+                                     {line_pad}            egui_plot::PlotPoints::from_ys_f32(&{port}.{field}.get()),\n\
+                                     {line_pad}        ));"
+                                );
+                            }
+                        }
+                        if guard {
+                            let _ = writeln!(out, "{pad}        }}");
                         }
                         let _ = writeln!(out, "{pad}    }});");
                     }
