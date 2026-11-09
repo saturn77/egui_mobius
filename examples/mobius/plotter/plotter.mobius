@@ -39,13 +39,13 @@ app PlotterDemo {
 
     citizen Controls (b : Bench.controls) {
         column {
-            checkbox "Enabled" <-> b.enabled;
-            slider "Amplitude" 0.0..2.0 <-> b.amplitude;
+            checkbox "Enabled" -- b.enabled;
+            slider "Amplitude" 0.0..2.0 -- b.amplitude;
             separator;
-            slider "Y min" -4.0..0.0 <-> b.ymin;
-            slider "Y max" 0.0..4.0 <-> b.ymax;
-            slider "X min" 0.0..20.0 <-> b.xmin;
-            slider "X max" 0.0..20.0 <-> b.xmax;
+            slider "Y min" -4.0..0.0 -- b.ymin;
+            slider "Y max" 0.0..4.0 -- b.ymax;
+            slider "X min" 0.0..20.0 -- b.xmin;
+            slider "X max" 0.0..20.0 -- b.xmax;
         }
     }
 

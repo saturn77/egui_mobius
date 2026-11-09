@@ -35,8 +35,8 @@ app ControlStrip {
 
     citizen Controls (p : Panel.ui) {
         row {
-            checkbox "Enabled" <-> p.enabled;
-            slider "Gain" 0.0..10.0 <-> p.gain;
+            checkbox "Enabled" -- p.enabled;
+            slider "Gain" 0.0..10.0 -- p.gain;
             button "Ping" -> p.events(Cmd::Ping);
         }
     }

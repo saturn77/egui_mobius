@@ -20,8 +20,8 @@ app SignalBench {
     // An input panel built from widget primitives — pure source, live.
     citizen ControlsPanel (bench : Bench.controls) {
         column {
-            checkbox "Enabled"              <-> bench.enabled;
-            slider   "Amplitude" 0.0..10.0  <-> bench.amplitude;
+            checkbox "Enabled"              --  bench.enabled;
+            slider   "Amplitude" 0.0..10.0  --  bench.amplitude;
             button   "Apply"                ->  bench.commands.send(BenchCmd::Apply);
         }
     }
