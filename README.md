@@ -108,6 +108,31 @@ Other examples (reactive primitives in isolation, signal/slot
 without citizens, etc.) are catalogued in
 [`examples/README.md`](examples/README.md).
 
+## Use it with your agent
+
+Give your coding agent this repo and a description of the app you
+want. The agent's medium is a `.mobius` file: the elaborator rejects
+what it gets wrong with line-numbered errors, the generator emits a
+complete cargo project, and every generated project carries a
+headless test harness — `cargo test` boots the app with no window
+and no GPU and checks that every declared control actually reaches
+the accessibility tree.
+
+> Build me a \<thing\> with egui_mobius
+> (github.com/saturn77/egui_mobius). Describe the panels, shared
+> state, and events as a `.mobius` file, starting from
+> `examples/mobius/ribbon/ribbon.mobius`. Generate the project with
+> `cargo run -p mobius_codegen --bin mobius-gen -- <file>.mobius <out-dir>`,
+> then check your work headlessly: `cargo test` in the generated
+> project must pass, and `cargo test -- --ignored --nocapture`
+> prints the widget tree.
+
+The loop closes without a human looking at a screen: describe,
+generate, verify. And what comes out is ordinary egui Rust — a
+standalone, idiomatic cargo project you can read, hand-edit, and own
+from there, with the tests riding along. The `.mobius` file is the
+on-ramp, not a cage: nothing the generator emits depends on it.
+
 ## The workspace
 
 | Crate | Role |
