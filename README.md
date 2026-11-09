@@ -22,9 +22,11 @@ Professional applications share two things. Solid threading and async
 on the backend, and a modern UI that users can rearrange and customize
 on the frontend.
 
-`egui_mobius` gives you both. Panels become citizens, a dispatcher
-coordinates them, and `egui_mobius_reactive` is the shared substrate
-that wires them together. That assembly is what makes it a framework.
+`egui_mobius` gives you both. Panels become citizens, a registry
+manages their lifecycle, a dispatcher carries messages between the
+frontend and the backend, and `egui_mobius_reactive` is the shared
+substrate that wires them together. That assembly is what makes it a
+framework.
 
 ## Build with Citizens
 
@@ -34,9 +36,9 @@ Once a panel implements the `Citizen` trait it becomes a self-contained
 unit you drop into any host app: `cargo add` the crate, declare one
 `Dynamic<T>` field on shared state, add a `TabKind` variant, render
 it in your `TabViewer`. No event-bus wiring, no glue. Real apps grow
-by **accumulating citizens**, not by extending a core. The `Dispatcher`
-is the registry those citizens register with — the familiar
-backend-registry pattern, applied to UI panels.
+by **accumulating citizens**, not by extending a core. The `Registry`
+is the registry those citizens register with — lifecycle and
+activation arbitration only; it is never the backend path.
 
 The shipped citizens — [`egui_lens`](crates/egui_lens) (reactive event
 logger) and [`egui_quill`](crates/egui_quill) (syntax-highlighted
@@ -60,8 +62,8 @@ matches your app's complexity — the ecosystem supports each:
 
 | Level | What you reach for | When | Examples |
 |------:|--------------------|------|----------|
-| **1** | Shared `Dynamic<T>` + `Dispatcher` for panel activation | Pure UI; no backend | `getting_started`, `citizen_dock` |
-| **2** | Above + `AppMessage` routed through `Dispatcher::handle` | Synchronous backend (filter, parser, anything in-process) | `filter_plotter` 🌐, `citizen_fetch` |
+| **1** | Shared `Dynamic<T>` + `Registry` for panel lifecycle | Pure UI; no backend | `getting_started`, `citizen_dock` |
+| **2** | Above + app messages pushed to an outbox, drained to the backend | Synchronous backend (filter, parser, anything in-process) | `filter_plotter` 🌐, `citizen_fetch` |
 | **3** | Above + `egui_mobius` signal/slot + `AsyncDispatcher` | Async / multi-threaded backend | `citizen_signal_async` |
 
 🌐 = WASM-enabled (runs in browser)
@@ -110,7 +112,7 @@ without citizens, etc.) are catalogued in
 
 | Crate | Role |
 |-------|------|
-| `egui_citizen` | The citizen *pattern* — panel identity, reactive lifecycle state, dispatcher for activation arbitration and message routing. Where most app code sits. |
+| `egui_citizen` | The citizen *pattern* — panel identity, reactive lifecycle state, the `Registry` for activation arbitration and message routing. Where most app code sits. |
 | `egui_mobius_reactive` | Thread-safe reactive primitives: `Dynamic<T>` for shared cells, `Derived<T>` for auto-recomputed values. The cross-panel coupling layer. |
 | `egui_mobius` | Signal/slot bus + `AsyncDispatcher` for cross-thread async backends. Needed at level 3. |
 | `egui_mobius_widgets` | Stateful widget toolkit for retained-mode-style composition. |
