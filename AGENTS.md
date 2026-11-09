@@ -25,7 +25,9 @@ complete, standalone cargo project of ordinary egui Rust.
 
 ## Build an app from a description
 
-1. Write the app as a `.mobius` file. Learn the grammar from
+1. Write the app as a `.mobius` file. Start from the worked
+   description→source pairs in `examples/mobius/README.md` (a complete
+   minimal app, inline), then the sources themselves:
    `examples/mobius/ribbon/ribbon.mobius` (top ribbon, enums, theme,
    menu block), `terminal.mobius` (docked citizens, perspectives,
    prefab shell), and the book chapters. The surface keyword for an
