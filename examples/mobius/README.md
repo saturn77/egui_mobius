@@ -10,6 +10,7 @@ browsable side by side — and each builds on the previous one.
 | 1 | [`ribbon/`](ribbon) | Chrome: the top ribbon citizen — wordmark, file-group events (Path B outbox), theme picker, clock, About modal with banner image and dependency table | `cd examples/mobius/ribbon/generated && cargo run` |
 | 2 | [`dock/`](dock) | Composition: the same citizen instantiated twice over two interface instances (citizen-as-module), `egui_dock` layout from `dock()` directives, and the **System citizen** — the egui_lens logger prefab with startup banner and working System Info | `cd examples/mobius/dock/generated && cargo run` |
 | 3 | [`terminal/`](terminal) | The Workbench: a nearly full ribbon (file group firing Path B events routed into the logger), plus the **terminal prefab** — a *port-less* shell citizen (all state citizen-local) with colour-coded scrollback, built-ins (`help`/`ver`/`info`/`clear`) and `bash -c` passthrough, CopperTrace-style | `cd examples/mobius/terminal/generated && cargo run` |
+| 4 | [`plotter/`](plotter) | The **plot block** — the EDA waveform view as declared source: a `Vec<f32>` trace cell rendered through `egui_plot` (`plot { title …; trace "ch0" -- b.trace; }`), bench controls docked beside it. SignalBench's shape on the generated path | `cd examples/mobius/plotter/generated && cargo run` |
 
 ## From description to source
 
@@ -72,17 +73,17 @@ The ladder's briefs, in the same spirit:
   logger, a shell panel runs built-ins and bash one-liners, and the
   docked layout saves named perspectives with a startup default."* →
   [`terminal/terminal.mobius`](terminal/terminal.mobius).
-- **plotter (SignalBench)** — *"Bench controls — an amplitude slider
-  and an enable switch — a live plot of the generated trace, and a
-  logger. A worker thread drains the commands and writes the trace
-  the plot observes."* →
-  [`../mobius_lang_demo/app.mobius`](../mobius_lang_demo/app.mobius),
-  the book's filter-and-plotter shape as declared source. This one
-  runs on the *live elaboration* path (`cargo run -p mobius_lang_demo`
-  — edit the `.mobius` while it runs and it re-elaborates on save):
-  the plot panel is a citizen the host registers, not yet a widget
-  `mobius-gen` can emit. A `plot` block on the generated path is the
-  natural next connection block.
+- **plotter** — *"Bench controls — an amplitude slider and an enable
+  switch — and a scope plotting the trace."* →
+  [`plotter/plotter.mobius`](plotter/plotter.mobius), the plot block
+  on the generated path. The trace ships as a static waveform
+  default; a *live* trace needs a writer on a thread, which is the
+  handler milestone. The full live shape — worker thread draining
+  commands, writing the trace a plot observes — already runs on the
+  *live elaboration* path:
+  [`../mobius_lang_demo/app.mobius`](../mobius_lang_demo/app.mobius)
+  (`cargo run -p mobius_lang_demo` — edit the `.mobius` while it runs
+  and it re-elaborates on save).
 
 Regenerate any example from its source:
 

@@ -1,0 +1,56 @@
+// Build:  cargo run -p mobius_codegen --bin mobius-gen -- examples/mobius/plotter/plotter.mobius
+// Run:    cd examples/mobius/plotter/generated && cargo run
+//
+// Output location and dependency roots come from ./mobius.toml; the
+// generated project is standalone — yours to edit, no tie to the
+// generator.
+//
+// The plot-block milestone — SignalBench's shape on the *generated*
+// path: bench controls docked left, a scope docked center whose `plot`
+// block renders the trace cell through egui_plot. The EDA waveform
+// view as declared source.
+//
+// The trace ships as a static waveform default: nothing on the
+// generated path writes cells from a thread yet (that's the handler
+// milestone — `bind` on the live path). When handlers land, the same
+// declaration gains a live trace with no change to the citizens.
+
+app PlotterDemo {
+
+    interface Bench {
+        amplitude : f32 = 1.0
+        enabled   : bool = true
+        // One cycle of a sine, 21 samples — the demo waveform. The
+        // `controls` seat holds the pen for when a backend writes it.
+        trace : Vec<f32> = [0.0, 0.31, 0.59, 0.81, 0.95, 1.0, 0.95,
+                            0.81, 0.59, 0.31, 0.0, -0.31, -0.59, -0.81,
+                            -0.95, -1.0, -0.95, -0.81, -0.59, -0.31, 0.0]
+        role controls (write amplitude, write enabled, write trace)
+        role scope    (read amplitude, read enabled, read trace)
+    }
+
+    citizen Controls (b : Bench.controls) {
+        column {
+            checkbox "Enabled" <-> b.enabled;
+            slider "Amplitude" 0.0..2.0 <-> b.amplitude;
+        }
+    }
+
+    citizen Scope (b : Bench.scope) {
+        plot {
+            title "Trace";
+            trace "ch0" -- b.trace;
+        }
+    }
+
+    @wiring {
+        let bench = Bench();
+        let controls = Controls(b = bench.controls);
+        let scope = Scope(b = bench.scope);
+    }
+
+    @layout {
+        dock(controls, region = left);
+        dock(scope, region = center);
+    }
+}

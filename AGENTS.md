@@ -17,9 +17,10 @@ complete, standalone cargo project of ordinary egui Rust.
 - `crates/mobius_lang`: the `.mobius` parser, checker, and IR.
 - `crates/mobius_codegen`: generator (`mobius-gen` binary) emitting
   cargo projects from `.mobius` sources.
-- `examples/mobius/{terminal,dock,ribbon}`: a `.mobius` source, its
-  `mobius.toml`, and the committed `generated/` project — the grammar
-  reference by example.
+- `examples/mobius/{ribbon,dock,terminal,plotter}`: a `.mobius` source,
+  its `mobius.toml`, and the committed `generated/` project — the
+  grammar reference by example (plotter = the `plot` block, the EDA
+  waveform view over a `Vec<f32>` cell).
 - `book/src/mobius-lang/`: the language chapters (shared state, roles,
   signals, threaded backends).
 

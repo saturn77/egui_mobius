@@ -32,8 +32,8 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use mobius_lang::ast::{
-    App, AppItem, ArrayDefault, Binding, CitizenDecl, DirectiveArg, Expr, FieldKind, Stmt, Verb,
-    WidgetNode,
+    App, AppItem, ArrayDefault, Binding, CitizenDecl, DirectiveArg, Expr, FieldKind, Stmt,
+    TypeRef, Verb, WidgetNode,
 };
 
 /// Pinned for the generated project; tracks the workspace's egui line.
@@ -372,7 +372,7 @@ impl Model {
             for field in &iface.fields {
                 match &field.kind {
                     FieldKind::State { ty, default } => {
-                        let ty_name = ty.path.joined();
+                        let ty_name = type_ref_name(ty);
                         let enum_name =
                             enums.iter().find(|e| e.name == ty_name).map(|e| e.name.clone());
                         fields.push(FieldModel {
@@ -704,7 +704,7 @@ eframe = {{ version = "{egui}", default-features = false, features = [
     "wayland",
     "x11",
 ] }}
-egui = "{egui}"{image_deps}{dock_dep}{lens_dep}
+egui = "{egui}"{image_deps}{plot_dep}{dock_dep}{lens_dep}
 egui_citizen = {{ path = "{citizen}" }}
 egui_mobius_reactive = {{ path = "{reactive}" }}
 
@@ -732,6 +732,12 @@ opt-level = 2
             {
                 "\negui_extras = { version = \"0.36\", features = [\"image\"] }\n\
                  image = { version = \"0.25\", default-features = false, features = [\"png\"] }"
+            } else {
+                ""
+            },
+            // egui_plot tracks egui at a +1 version offset (0.37 ↔ 0.36).
+            plot_dep = if self.decls.iter().any(|d| has_plot_container(&d.body)) {
+                "\negui_plot = \"0.37\""
             } else {
                 ""
             },
@@ -1292,6 +1298,76 @@ opt-level = 2
                         let _ = writeln!(out, "{pad}ui.menu_button(\"{title}\", |ui| {{");
                         self.emit_widgets(decl, &entries, depth + 1, out)?;
                         let _ = writeln!(out, "{pad}}});");
+                    }
+                    // `plot { title "Tach"; trace "FAN1" -- t.rpm1; … }` —
+                    // an egui_plot line chart as a connection block (the
+                    // EDA waveform view). Each `trace` wires a `Vec<f32>`
+                    // cell to one named line; sample index is the x axis
+                    // (`PlotPoints::from_ys_f32`). Multi-trace follows the
+                    // Blade2 tach-plot shape: one `Line` per trace, legend
+                    // on when any trace is named.
+                    "plot" => {
+                        let mut title: Option<String> = None;
+                        let mut traces: Vec<(String, String, String)> = Vec::new();
+                        for child in children {
+                            let WidgetNode::Primitive(cp) = child else {
+                                return Err(Error::Unsupported(format!(
+                                    "plot block children must be `title` / `trace` entries at {span:?}"
+                                )));
+                            };
+                            match (cp.kind.as_str(), &cp.binding) {
+                                ("title", Binding::None) => {
+                                    title = cp.label.clone();
+                                }
+                                ("trace", Binding::Read { path, index: None }) => {
+                                    let (port, field) = self.port_field(decl, path)?;
+                                    let name = cp
+                                        .label
+                                        .clone()
+                                        .unwrap_or_else(|| field.name.clone());
+                                    traces.push((name, port, field.name));
+                                }
+                                ("trace", _) => {
+                                    return Err(Error::Unsupported(format!(
+                                        "plot trace needs a read binding to a Vec<f32> cell \
+                                         (`trace \"NAME\" -- port.field;`) at {:?}",
+                                        cp.span
+                                    )));
+                                }
+                                (other, _) => {
+                                    return Err(Error::Unsupported(format!(
+                                        "`{other}` inside a plot block at {:?}",
+                                        cp.span
+                                    )));
+                                }
+                            }
+                        }
+                        if traces.is_empty() {
+                            return Err(Error::Unsupported(format!(
+                                "plot block needs at least one `trace` entry at {span:?}"
+                            )));
+                        }
+                        if let Some(title) = &title {
+                            let _ = writeln!(out, "{pad}ui.heading(\"{title}\");");
+                        }
+                        // Salted by the citizen's id so two instances of the
+                        // same declaration keep distinct plot memories.
+                        let _ = writeln!(
+                            out,
+                            "{pad}egui_plot::Plot::new((self.citizen_id.0.as_str(), \"plot\"))"
+                        );
+                        let _ = writeln!(out, "{pad}    .legend(egui_plot::Legend::default())");
+                        let _ = writeln!(out, "{pad}    .show(ui, |plot_ui| {{");
+                        for (name, port, field) in &traces {
+                            let _ = writeln!(
+                                out,
+                                "{pad}        plot_ui.line(egui_plot::Line::new(\n\
+                                 {pad}            \"{name}\",\n\
+                                 {pad}            egui_plot::PlotPoints::from_ys_f32(&{port}.{field}.get()),\n\
+                                 {pad}        ));"
+                            );
+                        }
+                        let _ = writeln!(out, "{pad}    }});");
                     }
                     "row" => {
                         let _ = writeln!(out, "{pad}ui.horizontal(|ui| {{");
@@ -2990,6 +3066,18 @@ fn has_image_container(nodes: &[WidgetNode]) -> bool {
     })
 }
 
+/// Any `plot { … }` connection-block in the tree — gates the egui_plot
+/// dependency, like `image` gates egui_extras.
+fn has_plot_container(nodes: &[WidgetNode]) -> bool {
+    nodes.iter().any(|n| match n {
+        WidgetNode::Container { kind, children, .. } => {
+            kind == "plot" || has_plot_container(children)
+        }
+        WidgetNode::For { body, .. } => has_plot_container(body),
+        WidgetNode::Primitive(_) => false,
+    })
+}
+
 /// Labels of controls that render on every frame — feeds the generated
 /// headless tests' accessibility-tree assertions. Popup contents (`image`
 /// connection blocks, `menu` entries) stay hidden until clicked, and `for`
@@ -3139,6 +3227,17 @@ fn rust_type(mobius_ty: &str) -> String {
     }
 }
 
+/// A `TypeRef` with its generic parameters — `Vec<f32>` keeps the `<f32>`
+/// that `path.joined()` alone would drop.
+fn type_ref_name(ty: &TypeRef) -> String {
+    let base = ty.path.joined();
+    if ty.params.is_empty() {
+        return base;
+    }
+    let params: Vec<String> = ty.params.iter().map(type_ref_name).collect();
+    format!("{base}<{}>", params.join(", "))
+}
+
 fn render_default(field: &str, ty: &str, default: Option<&Expr>) -> Result<String, Error> {
     let Some(expr) = default else {
         // Builtin types default themselves; everything else must say.
@@ -3155,6 +3254,16 @@ fn render_default(field: &str, ty: &str, default: Option<&Expr>) -> Result<Strin
         Expr::Str(s, _) if s.is_empty() => "String::new()".into(),
         Expr::Str(s, _) => format!("{s:?}.to_string()"),
         Expr::Path(p) => p.segments.join("::"),
+        // `[]` / `[0.0, 0.5, 1.0]` — a Vec cell's default, element type
+        // carried by the field's declared type.
+        Expr::Array(items, _) if items.is_empty() => "Vec::new()".into(),
+        Expr::Array(items, _) => {
+            let mut rendered = Vec::with_capacity(items.len());
+            for item in items {
+                rendered.push(render_default(field, ty, Some(item))?);
+            }
+            format!("vec![{}]", rendered.join(", "))
+        }
         other => {
             return Err(Error::Unsupported(format!(
                 "default for `{field}`: {other:?}"
