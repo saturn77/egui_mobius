@@ -210,3 +210,38 @@ fn parse_errors_point_at_source() {
     assert_eq!(err.span.line, 2);
     assert!(err.message.contains("expected"));
 }
+
+#[test]
+fn negative_literals_in_defaults_and_ranges() {
+    let (file, _) = parse(
+        r#"app Neg {
+    interface S {
+        trace : Vec<f32> = [0.5, -0.5, -1.0]
+        level : f32 = -12.0
+        role ui (write trace, write level)
+    }
+    citizen C (s : S.ui) {
+        slider "Level" -24.0..6.0 <-> s.level;
+    }
+    @wiring { let s = S(); let c = C(s = s.ui); }
+}"#,
+    )
+    .unwrap();
+    let mobius_lang::ast::AppItem::Interface(iface) = &file.apps[0].items[0] else {
+        panic!("expected interface");
+    };
+    let mobius_lang::ast::FieldKind::State { default: Some(expr), .. } = &iface.fields[0].kind
+    else {
+        panic!("expected defaulted state field");
+    };
+    let Expr::Array(items, _) = expr else {
+        panic!("expected array default");
+    };
+    assert!(matches!(items[1], Expr::Float(f, _) if f == -0.5));
+    assert!(matches!(items[2], Expr::Float(f, _) if f == -1.0));
+    let mobius_lang::ast::FieldKind::State { default: Some(level), .. } = &iface.fields[1].kind
+    else {
+        panic!("expected defaulted level field");
+    };
+    assert!(matches!(level, Expr::Float(f, _) if *f == -12.0));
+}

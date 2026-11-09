@@ -731,7 +731,10 @@ impl Parser {
             _ => None,
         };
 
-        let range = if matches!(self.peek().kind, TokenKind::Float(_) | TokenKind::Int(_)) {
+        let range = if matches!(
+            self.peek().kind,
+            TokenKind::Float(_) | TokenKind::Int(_) | TokenKind::Minus
+        ) {
             let lo = self.expr()?;
             self.expect(&TokenKind::DotDot, "`..` in range")?;
             let hi = self.expr()?;
@@ -1079,6 +1082,23 @@ impl Parser {
             TokenKind::Float(value) => {
                 self.bump();
                 Ok(Expr::Float(value, span))
+            }
+            // Negative literals — `-1.0`, `-12`. Only literals: a general
+            // unary minus over paths/calls has no consumer yet.
+            TokenKind::Minus => {
+                self.bump();
+                let lit_span = self.peek().span;
+                match self.peek().kind.clone() {
+                    TokenKind::Int(value) => {
+                        self.bump();
+                        Ok(Expr::Int(-value, span.to(lit_span)))
+                    }
+                    TokenKind::Float(value) => {
+                        self.bump();
+                        Ok(Expr::Float(-value, span.to(lit_span)))
+                    }
+                    _ => Err(self.error("expected a number after `-`")),
+                }
             }
             TokenKind::Str(value) => {
                 self.bump();
