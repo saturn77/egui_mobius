@@ -11,11 +11,11 @@ app SignalBench {
         // dispatched data — push edge, drained by the backend's drain slot
         commands  : signal BenchCmd
 
-        // modports: each party's complete view of the boundary —
+        // roles: each party's complete view of the boundary —
         // write (out), observe (in), produce (emit), consume (drain)
-        modport controls (out amplitude, out enabled, in trace, emit commands)
-        modport display  (in  amplitude, in  enabled, in trace)
-        modport backend  (in  amplitude, in enabled, out trace, drain commands)
+        role controls (out amplitude, out enabled, in trace, emit commands)
+        role display  (in  amplitude, in  enabled, in trace)
+        role backend  (in  amplitude, in enabled, out trace, drain commands)
     }
 
     // An input panel built from widget primitives — pure source, live.

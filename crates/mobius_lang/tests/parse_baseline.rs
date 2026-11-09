@@ -200,7 +200,7 @@ fn comments_survive_lexing() {
     assert!(
         comments
             .iter()
-            .any(|c| c.text.contains("modports: each party's complete view"))
+            .any(|c| c.text.contains("roles: each party's complete view"))
     );
 }
 
