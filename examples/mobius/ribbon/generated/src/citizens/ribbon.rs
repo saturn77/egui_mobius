@@ -38,6 +38,14 @@ impl Ribbon {
             if ui.button("⚡ Emit").clicked() {
                 self.outbox_actions.push(RibbonCmd::Emit);
             }
+            ui.menu_button("🖽 Layout", |ui| {
+                if ui.button("Side by side").clicked() {
+                    self.outbox_actions.push(RibbonCmd::LayoutSplit);
+                }
+                if ui.button("Stacked").clicked() {
+                    self.outbox_actions.push(RibbonCmd::LayoutStack);
+                }
+            });
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(egui::RichText::new(c.clock.get()).monospace().color(theme.accent()));
                 ui.separator();

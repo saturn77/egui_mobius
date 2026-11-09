@@ -14,7 +14,7 @@
 
 app RibbonDemo {
     enum Theme { CopperDark, TokyoNight, Light }
-    enum RibbonCmd { New, Open, Save, Build, Emit }
+    enum RibbonCmd { New, Open, Save, Build, Emit, LayoutSplit, LayoutStack }
 
     // The ribbon's complete boundary: Path A cells plus one Path B edge.
     interface Chrome {
@@ -36,6 +36,13 @@ app RibbonDemo {
             separator;
             button "⚙ Build" -> c.actions(RibbonCmd::Build);
             button "⚡ Emit" -> c.actions(RibbonCmd::Emit);
+            // A dropdown: `title` names the button, the rest render in
+            // the popup (the ShutterFrame ribbon's layout menu, as source).
+            menu {
+                title "🖽 Layout";
+                button "Side by side" -> c.actions(RibbonCmd::LayoutSplit);
+                button "Stacked" -> c.actions(RibbonCmd::LayoutStack);
+            }
             // Children of `right` read left-to-right as they appear on
             // screen; codegen handles the right_to_left reversal.
             right {

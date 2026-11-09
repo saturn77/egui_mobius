@@ -1269,6 +1269,30 @@ opt-level = 2
                         }
                         let _ = writeln!(out, "{pad}}}");
                     }
+                    // `menu { title "🖽 Layout"; button "2×2" -> c.layout(0); … }`
+                    // — dropdown block (ShutterFrame ribbon pilot). Same
+                    // connection-block shape as `image`: the `title` entry
+                    // names the button, the rest render inside the popup.
+                    "menu" => {
+                        let mut title: Option<String> = None;
+                        let mut entries: Vec<WidgetNode> = Vec::new();
+                        for child in children {
+                            match child {
+                                WidgetNode::Primitive(cp) if cp.kind == "title" => {
+                                    title = cp.label.clone();
+                                }
+                                other => entries.push(other.clone()),
+                            }
+                        }
+                        let title = title.ok_or_else(|| {
+                            Error::Unsupported(format!(
+                                "menu block needs a `title \"…\";` entry at {span:?}"
+                            ))
+                        })?;
+                        let _ = writeln!(out, "{pad}ui.menu_button(\"{title}\", |ui| {{");
+                        self.emit_widgets(decl, &entries, depth + 1, out)?;
+                        let _ = writeln!(out, "{pad}}});");
+                    }
                     "row" => {
                         let _ = writeln!(out, "{pad}ui.horizontal(|ui| {{");
                         self.emit_widgets(decl, children, depth + 1, out)?;
@@ -2968,13 +2992,25 @@ fn has_image_container(nodes: &[WidgetNode]) -> bool {
 
 /// Labels of controls that render on every frame — feeds the generated
 /// headless tests' accessibility-tree assertions. Popup contents (`image`
-/// connection blocks) stay hidden until clicked, and `for` bodies repeat
-/// one label per pass, so both are skipped.
+/// connection blocks, `menu` entries) stay hidden until clicked, and `for`
+/// bodies repeat one label per pass, so both are skipped. A `menu`'s
+/// `title` is the dropdown button itself, always on screen.
 fn visible_labels(nodes: &[WidgetNode], out: &mut Vec<String>) {
     for node in nodes {
         match node {
             WidgetNode::Container { kind, children, .. } => {
-                if kind != "image" {
+                if kind == "menu" {
+                    for child in children {
+                        if let WidgetNode::Primitive(p) = child
+                            && p.kind == "title"
+                            && let Some(label) = &p.label
+                            && !label.is_empty()
+                            && !out.contains(label)
+                        {
+                            out.push(label.clone());
+                        }
+                    }
+                } else if kind != "image" {
                     visible_labels(children, out);
                 }
             }

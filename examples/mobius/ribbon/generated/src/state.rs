@@ -34,6 +34,8 @@ pub enum RibbonCmd {
     Save,
     Build,
     Emit,
+    LayoutSplit,
+    LayoutStack,
 }
 
 /// Path A cells of the `Chrome` interface.

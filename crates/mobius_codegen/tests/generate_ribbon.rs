@@ -24,6 +24,16 @@ fn ribbon_project_cargo_checks() {
     )
     .expect("example generates");
 
+    // The menu block: `title` names the dropdown button, the entries render
+    // inside the popup — and the headless test asserts the title (always on
+    // screen), never the popup entries (hidden until clicked).
+    let ribbon = &generated.files["src/citizens/ribbon.rs"];
+    assert!(ribbon.contains("ui.menu_button(\"🖽 Layout\", |ui| {"));
+    assert!(ribbon.contains("if ui.button(\"Side by side\").clicked() {"));
+    let main = &generated.files["src/main.rs"];
+    assert!(main.contains("query_all_by_label(\"🖽 Layout\")"));
+    assert!(!main.contains("query_all_by_label(\"Side by side\")"));
+
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(&generated.crate_name);
     if out.exists() {
         std::fs::remove_dir_all(&out).expect("clean previous output");

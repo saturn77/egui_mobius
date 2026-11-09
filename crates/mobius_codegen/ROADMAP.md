@@ -81,7 +81,10 @@ both. The items below close the gaps that duality exposes.
   mapping to `citizen_panel!` fields.
 
 - **Grammar punch list** (from building the ribbon against real apps):
-  hover text on buttons, labeled containers (true `menu "🎨" { … }`),
+  hover text on buttons, labeled containers (a dropdown landed as the
+  `menu { title "…"; … }` connection block — the image-block shape, since
+  containers carry no label; `menu "🎨" { … }` as direct syntax is still
+  open),
   conditional enablement bound to state, two-tone wordmark as syntax
   rather than camel-hump inference, modal declarations as widget trees
   instead of the `about()` directive special case.

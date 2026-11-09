@@ -129,6 +129,8 @@ mod actions {
             RibbonCmd::Save => eprintln!("[actions] Save"),
             RibbonCmd::Build => eprintln!("[actions] Build"),
             RibbonCmd::Emit => eprintln!("[actions] Emit"),
+            RibbonCmd::LayoutSplit => eprintln!("[actions] LayoutSplit"),
+            RibbonCmd::LayoutStack => eprintln!("[actions] LayoutStack"),
         }
     }
 }
@@ -210,6 +212,10 @@ mod headless {
         assert!(
             harness.query_all_by_label("⚡ Emit").next().is_some(),
             "⚡ Emit is missing from the accessibility tree"
+        );
+        assert!(
+            harness.query_all_by_label("🖽 Layout").next().is_some(),
+            "🖽 Layout is missing from the accessibility tree"
         );
         assert!(
             harness.query_all_by_label("ℹ About").next().is_some(),
